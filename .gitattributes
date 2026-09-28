@@ -1,0 +1,5 @@
+# Keep LF everywhere: shell scripts break on CRLF, and Dart/Gradle do not care.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ttf binary
