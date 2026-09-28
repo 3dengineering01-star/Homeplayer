@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Play triangle inside the 66dp safe zone of the 108dp adaptive icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M45,37 C45,34.8 47.4,33.4 49.3,34.6 L74.3,51.1 C76,52.2 76,54.8 74.3,55.9 L49.3,72.4 C47.4,73.6 45,72.2 45,70 Z" />
+</vector>

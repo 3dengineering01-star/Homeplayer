@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homeplay — your music and video, from your own server</title>
+<meta name="description" content="One Android app for music and video from Jellyfin and Navidrome. Plays everything, works away from home without port forwarding, no account, no ads.">
+<style>
+  :root {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --line: #262a33;
+    --text: #e8eaef;
+    --muted: #9aa1ad;
+    --accent: #7cc4ff;
+    --accent-ink: #06121d;
+    --ok: #7ddc9a;
+    --err: #ff8a80;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --line: #e1e4ea;
+      --text: #151820;
+      --muted: #5b6270;
+      --accent: #0b6bcb;
+      --accent-ink: #ffffff;
+      --ok: #16803c;
+      --err: #b3261e;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 20px 0; display: flex; align-items: center; gap: 10px; font-weight: 650; }
+  .logo {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center; font-size: 14px;
+  }
+  .hero { padding: 48px 0 32px; }
+  h1 { font-size: clamp(30px, 6vw, 48px); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+  .lead { font-size: clamp(17px, 2.4vw, 20px); color: var(--muted); max-width: 620px; margin: 0 0 28px; }
+  .cta {
+    display: inline-block; padding: 12px 20px; border-radius: 10px;
+    background: var(--accent); color: var(--accent-ink);
+    font-weight: 650; text-decoration: none;
+  }
+  .note { color: var(--muted); font-size: 14px; margin-top: 12px; }
+  h2 { font-size: 24px; margin: 0 0 20px; letter-spacing: -0.01em; }
+  section { padding: 36px 0; border-top: 1px solid var(--line); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; vertical-align: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 550; }
+  .table-scroll { overflow-x: auto; }
+  form { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; max-width: 560px; }
+  label { display: block; font-weight: 550; margin: 14px 0 6px; }
+  label:first-child { margin-top: 0; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 14px; }
+  input[type=email], select, textarea {
+    width: 100%; padding: 10px 12px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text);
+    font: inherit;
+  }
+  textarea { min-height: 80px; resize: vertical; }
+  .checks { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  .checks label { font-weight: 400; margin: 0; display: flex; align-items: center; gap: 6px; }
+  button {
+    margin-top: 18px; padding: 12px 20px; border: 0; border-radius: 10px;
+    background: var(--accent); color: var(--accent-ink); font: inherit; font-weight: 650; cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: default; }
+  #status { margin-top: 12px; font-size: 15px; }
+  #status.ok { color: var(--ok); }
+  #status.err { color: var(--err); }
+  footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+  .hp { position: absolute; left: -9999px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><span class="logo">▶</span> Homeplay</header>
+
+  <div class="hero">
+    <h1>Your music and your movies.<br>One app. Your server.</h1>
+    <p class="lead">An Android player for Jellyfin and Navidrome that plays every file you throw at it,
+      and keeps working when you leave the house, without opening ports on your router.</p>
+    <a class="cta" href="#waitlist">Join the waitlist</a>
+    <p class="note">In development. Android first, iOS later. No spam: one email when the beta opens.</p>
+  </div>
+
+  <section>
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Music and video in one place</h3>
+        <p>Movies and shows from Jellyfin, music from Jellyfin or Navidrome/Subsonic. No need for two or three separate apps.</p>
+      </div>
+      <div class="card">
+        <h3>Plays everything</h3>
+        <p>Built on mpv. MKV, HEVC, AV1, DTS, TrueHD, ASS and PGS subtitles, FLAC, gapless. Direct play whenever possible.</p>
+      </div>
+      <div class="card">
+        <h3>Works away from home</h3>
+        <p>Connects over Tailscale out of the box. No port forwarding, and it doesn't care if your ISP puts you behind CGNAT.</p>
+      </div>
+      <div class="card">
+        <h3>Offline and on the road</h3>
+        <p>Downloads for flights and bad coverage, a data-saver mode, and Android Auto for music. <span class="tag">planned</span></p>
+      </div>
+      <div class="card">
+        <h3>No account, no ads, no tracking</h3>
+        <p>The app talks to your server and nothing else. This page has no analytics either.</p>
+      </div>
+      <div class="card">
+        <h3>Pay once</h3>
+        <p>Free core player. Extra features as a one-time purchase, not another subscription.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why another player?</h2>
+    <div class="table-scroll">
+    <table>
+      <tr><th></th><th>Today</th><th>Homeplay</th></tr>
+      <tr><td>Remote playback</td><td>Plex now charges for it</td><td>Your own server, free</td></tr>
+      <tr><td>Infuse-level video player on Android</td><td>Doesn't exist</td><td>That's the goal</td></tr>
+      <tr><td>Music and video</td><td>Separate apps</td><td>One app</td></tr>
+      <tr><td>Outside the home network</td><td>Port forwarding, reverse proxy</td><td>Tailscale, no setup</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section id="waitlist">
+    <h2>Join the waitlist</h2>
+    <form id="form" novalidate>
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com">
+
+      <label>What server do you run? <span class="hint">(pick all that apply)</span></label>
+      <div class="checks">
+        <label><input type="checkbox" name="server" value="jellyfin"> Jellyfin</label>
+        <label><input type="checkbox" name="server" value="plex"> Plex</label>
+        <label><input type="checkbox" name="server" value="emby"> Emby</label>
+        <label><input type="checkbox" name="server" value="navidrome"> Navidrome / Subsonic</label>
+        <label><input type="checkbox" name="server" value="smb"> Just a shared folder / NAS</label>
+        <label><input type="checkbox" name="server" value="none"> Nothing yet</label>
+      </div>
+
+      <label for="platform">Your phone</label>
+      <select id="platform" name="platform">
+        <option value="android">Android</option>
+        <option value="ios">iPhone</option>
+        <option value="both">Both</option>
+      </select>
+
+      <label for="price">Would you pay €15 once for the full version?</label>
+      <select id="price" name="price">
+        <option value="yes">Yes</option>
+        <option value="maybe">Maybe, depends on how good it is</option>
+        <option value="no">No, I only use free apps</option>
+      </select>
+
+      <label for="pain">What annoys you most about your current player? <span class="hint">(optional)</span></label>
+      <textarea id="pain" name="pain" maxlength="1000"></textarea>
+
+      <input class="hp" type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+      <button id="submit" type="submit">Notify me</button>
+      <div id="status" role="status"></div>
+    </form>
+  </section>
+
+  <footer>Homeplay is an independent project, not affiliated with Jellyfin, Navidrome, Plex or Tailscale.</footer>
+</div>
+
+<script>
+  const FORM_ENDPOINT = "https://formspree.io/f/mqpawabz";
+
+  const form = document.getElementById("form");
+  const status = document.getElementById("status");
+  const button = document.getElementById("submit");
+
+  function show(text, kind) {
+    status.textContent = text;
+    status.className = kind;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = form.email.value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      show("Please enter a valid email.", "err");
+      return;
+    }
+    if (!FORM_ENDPOINT) {
+      show("The waitlist isn't connected yet.", "err");
+      return;
+    }
+    const data = {
+      email,
+      server: [...form.querySelectorAll("input[name=server]:checked")].map(c => c.value).join(","),
+      platform: form.platform.value,
+      price: form.price.value,
+      pain: form.pain.value.trim(),
+      _gotcha: form._gotcha.value,
+    };
+    button.disabled = true;
+    try {
+      const res = await fetch(FORM_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error(res.status);
+      form.reset();
+      show("You're on the list. Thanks!", "ok");
+    } catch {
+      show("Something went wrong. Please try again in a minute.", "err");
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
