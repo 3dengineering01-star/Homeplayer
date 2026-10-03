@@ -22,6 +22,18 @@ class JellyfinItem {
   bool get hasPrimaryImage => (_j['ImageTags'] as Map?)?.containsKey('Primary') ?? false;
   double get imageAspect => ((_j['PrimaryImageAspectRatio'] as num?)?.toDouble() ?? 1).clamp(0.6, 1.8);
 
+  Map<String, dynamic> get _user => (_j['UserData'] as Map<String, dynamic>?) ?? const {};
+  bool get played => (_user['Played'] as bool?) ?? false;
+
+  /// Where playback stopped last time; zero when there is nothing to resume.
+  Duration get resumePosition => Duration(microseconds: ((_user['PlaybackPositionTicks'] as num?) ?? 0).toInt() ~/ 10);
+
+  /// 0..1 for something started but not finished, otherwise null.
+  double? get progress {
+    final p = _user['PlayedPercentage'] as num?;
+    return p == null || p <= 0 ? null : (p / 100).clamp(0.0, 1.0);
+  }
+
   String? get subtitle {
     switch (type) {
       case 'Episode':
@@ -111,6 +123,7 @@ class JellyfinClient {
         'sortOrder': 'Ascending',
         'fields': 'PrimaryImageAspectRatio',
         'enableImageTypes': 'Primary',
+        'enableUserData': 'true',
       }));
 
   Uri? imageUrl(JellyfinItem item, {int height = 300}) => item.hasPrimaryImage
@@ -165,14 +178,17 @@ class JellyfinClient {
     final info = await _playbackInfo(item.id, const {});
     final source = ((info['MediaSources'] as List?) ?? const []).cast<Map<String, dynamic>>().firstOrNull;
     if (source == null) return direct;
+    final played = direct.copyWith(
+      reporter: _reporter(item, source['Id'] as String?, info['PlaySessionId'] as String?, 'DirectPlay'),
+    );
 
     final audio = ((source['MediaStreams'] as List?) ?? const [])
         .cast<Map<String, dynamic>>()
         .where((s) => s['Type'] == 'Audio')
         .toList();
-    if (audio.isEmpty) return direct;
+    if (audio.isEmpty) return played;
     final current = audio.firstWhere((s) => s['Index'] == source['DefaultAudioStreamIndex'], orElse: () => audio.first);
-    if (canDecodeAudio(current['Codec'] as String?)) return direct;
+    if (canDecodeAudio(current['Codec'] as String?)) return played;
     final wanted = codecLabel(current['Codec'] as String?);
 
     final playable = audio.where((s) => canDecodeAudio(s['Codec'] as String?)).toList()
@@ -180,7 +196,7 @@ class JellyfinClient {
     if (playable.isNotEmpty) {
       final alt = playable.first;
       // mpv numbers audio tracks from 1 in file order, the same order Jellyfin lists them in.
-      return direct.copyWith(
+      return played.copyWith(
         audioTrackId: '${audio.indexOf(alt) + 1}',
         notice: '$wanted isn\'t supported on this phone, playing the ${codecLabel(alt['Codec'] as String?)} track instead',
       );
@@ -197,12 +213,12 @@ class JellyfinClient {
     final url = convertedSource?['TranscodingUrl'] as String?;
     // The URL carries the access token, so it never goes to the log.
     debugPrint('homeplay conversion for ${item.name}: ${url == null ? 'refused' : 'ok'}');
-    if (url == null) return direct.copyWith(notice: '$wanted isn\'t supported on this phone, and the server can\'t convert it');
-    final playSessionId = converted['PlaySessionId'] as String?;
+    if (url == null) return played.copyWith(notice: '$wanted isn\'t supported on this phone, and the server can\'t convert it');
     return direct.copyWith(
       url: Uri.parse('$_base$url'),
       notice: '$wanted isn\'t supported on this phone, so the server converts the sound. Subtitles are off in this mode.',
-      onClose: () => _reportStopped(item.id, source['Id'] as String?, playSessionId),
+      // Its stop report also ends the conversion on the server.
+      reporter: _reporter(item, convertedSource?['Id'] as String?, converted['PlaySessionId'] as String?, 'Transcode'),
     );
   }
 
@@ -228,17 +244,18 @@ class JellyfinClient {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  /// Ends the play session, which also stops a conversion running for it.
-  Future<void> _reportStopped(String itemId, String? mediaSourceId, String? playSessionId) async {
+  PlaybackReporter _reporter(JellyfinItem item, String? mediaSourceId, String? playSessionId, String playMethod) =>
+      _JellyfinReporter(this, item.id, mediaSourceId ?? item.id, playSessionId, playMethod);
+
+  Future<void> _report(String path, Map<String, dynamic> body) async {
     try {
       await http
-          .post(
-            Uri.parse('$_base/Sessions/Playing/Stopped'),
-            headers: {...headers, 'Content-Type': 'application/json'},
-            body: jsonEncode({'ItemId': itemId, 'MediaSourceId': mediaSourceId, 'PlaySessionId': playSessionId}),
-          )
+          .post(Uri.parse('$_base$path'),
+              headers: {...headers, 'Content-Type': 'application/json'}, body: jsonEncode(body))
           .timeout(_timeout);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('homeplay report $path failed: $e');
+    }
   }
 
   PlayItem toPlayItem(JellyfinItem item) => PlayItem(
@@ -248,5 +265,37 @@ class JellyfinClient {
         artwork: imageUrl(item, height: 600),
         isVideo: item.isVideo,
         headers: headers,
+        reporter: _reporter(item, null, null, 'DirectPlay'),
       );
+}
+
+/// Jellyfin keeps the resume point and the played mark from these reports.
+class _JellyfinReporter implements PlaybackReporter {
+  _JellyfinReporter(this._client, this._itemId, this._mediaSourceId, this._playSessionId, this._playMethod);
+
+  final JellyfinClient _client;
+  final String _itemId;
+  final String _mediaSourceId;
+  final String? _playSessionId;
+  final String _playMethod;
+
+  Map<String, dynamic> _body(Duration position, {bool paused = false}) => {
+        'ItemId': _itemId,
+        'MediaSourceId': _mediaSourceId,
+        'PlaySessionId': _playSessionId,
+        'PlayMethod': _playMethod,
+        'PositionTicks': position.inMicroseconds * 10,
+        'IsPaused': paused,
+        'CanSeek': true,
+      };
+
+  @override
+  Future<void> started(Duration position) => _client._report('/Sessions/Playing', _body(position));
+
+  @override
+  Future<void> progress(Duration position, {required bool paused}) =>
+      _client._report('/Sessions/Playing/Progress', _body(position, paused: paused));
+
+  @override
+  Future<void> stopped(Duration position) => _client._report('/Sessions/Playing/Stopped', _body(position));
 }

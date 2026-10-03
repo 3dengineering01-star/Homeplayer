@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
@@ -10,11 +11,12 @@ import 'common.dart';
 const _timeout = Duration(seconds: 15);
 
 class SubsonicEntry {
-  const SubsonicEntry({required this.id, required this.title, this.subtitle, this.coverArt});
+  const SubsonicEntry({required this.id, required this.title, this.subtitle, this.coverArt, this.duration});
   final String id;
   final String title;
   final String? subtitle;
   final String? coverArt;
+  final Duration? duration;
 }
 
 /// Subsonic API with token auth (Navidrome, Gonic, Airsonic and others).
@@ -118,6 +120,7 @@ class SubsonicClient {
           title: '${s['title']}',
           subtitle: s['artist'] as String?,
           coverArt: s['coverArt'] as String?,
+          duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
         ),
     ];
   }
@@ -131,5 +134,35 @@ class SubsonicClient {
         url: _uri('stream', {'id': song.id}),
         artwork: coverUrl(song.coverArt, size: 600),
         isVideo: false,
+        reporter: _Scrobbler(this, song),
       );
+
+  Future<void> _scrobble(String id, {required bool submission}) async {
+    try {
+      await _call('scrobble', {'id': id, 'submission': '$submission'});
+    } catch (e) {
+      debugPrint('homeplay scrobble failed: $e');
+    }
+  }
+}
+
+/// "Now playing" when a track starts; a counted play once half of it (or 4 minutes) was heard,
+/// the usual scrobbling rule.
+class _Scrobbler implements PlaybackReporter {
+  _Scrobbler(this._client, this._song);
+  final SubsonicClient _client;
+  final SubsonicEntry _song;
+
+  @override
+  Future<void> started(Duration position) => _client._scrobble(_song.id, submission: false);
+
+  @override
+  Future<void> progress(Duration position, {required bool paused}) async {}
+
+  @override
+  Future<void> stopped(Duration position) async {
+    final total = _song.duration;
+    final needed = total == null ? const Duration(seconds: 30) : (total ~/ 2 < const Duration(minutes: 4) ? total ~/ 2 : const Duration(minutes: 4));
+    if (position >= needed) await _client._scrobble(_song.id, submission: true);
+  }
 }

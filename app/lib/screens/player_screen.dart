@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
+import '../api/common.dart';
 import '../services/playback.dart';
 
 /// Full-screen view of [Playback]. Leaving it stops a video; music keeps playing.
@@ -125,8 +126,8 @@ class _SeekBarState extends State<_SeekBar> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(_fmt(Duration(milliseconds: current.round()))),
-                Text(_fmt(dur.data!)),
+                Text(formatDuration(Duration(milliseconds: current.round()))),
+                Text(formatDuration(dur.data!)),
               ]),
             ),
           ]);
@@ -158,10 +159,4 @@ class _Transport extends StatelessWidget {
       IconButton(iconSize: 40, onPressed: hasNext ? pb.skipToNext : null, icon: const Icon(Icons.skip_next)),
     ]);
   }
-}
-
-String _fmt(Duration d) {
-  final h = d.inHours, m = d.inMinutes % 60, s = d.inSeconds % 60;
-  final ss = s.toString().padLeft(2, '0');
-  return h > 0 ? '$h:${m.toString().padLeft(2, '0')}:$ss' : '$m:$ss';
 }

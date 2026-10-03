@@ -17,7 +17,7 @@ class PlayItem {
     this.headers = const {},
     this.audioTrackId,
     this.notice,
-    this.onClose,
+    this.reporter,
   });
 
   final String title;
@@ -35,10 +35,10 @@ class PlayItem {
   /// Shown to the user when playback starts, e.g. why another audio track was picked.
   final String? notice;
 
-  /// Called when the player closes, e.g. to let the server stop a conversion.
-  final Future<void> Function()? onClose;
+  /// Tells the server what is playing; null when the server keeps no history.
+  final PlaybackReporter? reporter;
 
-  PlayItem copyWith({Uri? url, String? audioTrackId, String? notice, Future<void> Function()? onClose}) => PlayItem(
+  PlayItem copyWith({Uri? url, String? audioTrackId, String? notice, PlaybackReporter? reporter}) => PlayItem(
         title: title,
         subtitle: subtitle,
         url: url ?? this.url,
@@ -47,8 +47,16 @@ class PlayItem {
         headers: headers,
         audioTrackId: audioTrackId ?? this.audioTrackId,
         notice: notice ?? this.notice,
-        onClose: onClose ?? this.onClose,
+        reporter: reporter ?? this.reporter,
       );
+}
+
+/// Playback events for the server: Jellyfin keeps the resume point and the played mark from
+/// them, Subsonic counts plays. Implementations swallow network errors.
+abstract class PlaybackReporter {
+  Future<void> started(Duration position);
+  Future<void> progress(Duration position, {required bool paused});
+  Future<void> stopped(Duration position);
 }
 
 /// Audio codecs the bundled libmpv decodes, as Jellyfin names them. The media_kit build has
@@ -99,4 +107,11 @@ String describeError(Object e) {
   }
   if (s.contains('TimeoutException')) return 'The server did not answer in time.';
   return s;
+}
+
+/// 1:05:09 or 4:07.
+String formatDuration(Duration d) {
+  final h = d.inHours, m = d.inMinutes % 60, s = d.inSeconds % 60;
+  final ss = s.toString().padLeft(2, '0');
+  return h > 0 ? '$h:${m.toString().padLeft(2, '0')}:$ss' : '$m:$ss';
 }

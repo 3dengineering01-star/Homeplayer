@@ -57,22 +57,40 @@ class Playback extends BaseAudioHandler with SeekHandler {
   PlayItem? get currentItem => items.value.isEmpty ? null : items.value[current.value];
 
   final Set<int> _audioSwitched = {};
+
+  // Server reports: which queue entries got their stop report, and a heartbeat for progress.
+  final Set<int> _stopReported = {};
+  Duration _lastPosition = Duration.zero;
+  Timer? _heartbeat;
+  Future<void> _lastStopReport = Future.value();
+
+  /// Completes once the server has the latest stop report, so a list reloaded after it
+  /// shows the right resume point.
+  Future<void> get reportsSent => _lastStopReport.timeout(const Duration(seconds: 3), onTimeout: () {});
+
   AudioSession? _session;
   bool _resumeAfterInterruption = false;
 
-  Future<void> start(List<PlayItem> queueItems, int index) async {
-    _closeItems();
+  /// Plays [queueItems] from [index], optionally from [startAt] (a resume point).
+  Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt}) async {
+    _endReport(current.value, player.state.position);
     _audioSwitched.clear();
+    _stopReported.clear();
     items.value = queueItems;
     current.value = index;
     queue.add([for (final i in queueItems) _mediaItem(i)]);
     mediaItem.add(_mediaItem(queueItems[index]));
     await _session?.setActive(true);
     await player.open(Playlist(
-      [for (final i in queueItems) Media(i.url.toString(), httpHeaders: i.headers)],
+      [
+        for (var n = 0; n < queueItems.length; n++)
+          Media(queueItems[n].url.toString(), httpHeaders: queueItems[n].headers, start: n == index ? startAt : null),
+      ],
       index: index,
     ));
     _notice();
+    _beginReport(startAt ?? Duration.zero);
+    _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) => _reportProgress());
   }
 
   @override
@@ -88,21 +106,33 @@ class Playback extends BaseAudioHandler with SeekHandler {
   Future<void> seek(Duration position) async {
     await player.seek(position);
     playbackState.add(playbackState.value.copyWith(updatePosition: position));
+    _reportProgress(position);
   }
 
   @override
-  Future<void> skipToNext() => player.next();
+  Future<void> skipToNext() {
+    _endReport(current.value, player.state.position);
+    return player.next();
+  }
 
   @override
-  Future<void> skipToPrevious() => player.previous();
+  Future<void> skipToPrevious() {
+    _endReport(current.value, player.state.position);
+    return player.previous();
+  }
 
   @override
-  Future<void> skipToQueueItem(int index) => player.jump(index);
+  Future<void> skipToQueueItem(int index) {
+    _endReport(current.value, player.state.position);
+    return player.jump(index);
+  }
 
   @override
   Future<void> stop() async {
+    _endReport(current.value, player.state.position);
+    _heartbeat?.cancel();
+    _heartbeat = null;
     await player.stop();
-    _closeItems();
     items.value = const [];
     current.value = 0;
     queue.add(const []);
@@ -112,10 +142,20 @@ class Playback extends BaseAudioHandler with SeekHandler {
     await super.stop();
   }
 
-  void _closeItems() {
-    for (final item in items.value) {
-      item.onClose?.call();
-    }
+  void _beginReport(Duration position) {
+    _stopReported.remove(current.value); // it may be played again after going back
+    currentItem?.reporter?.started(position);
+  }
+
+  void _reportProgress([Duration? position]) {
+    if (currentItem == null || _stopReported.contains(current.value)) return;
+    currentItem?.reporter?.progress(position ?? player.state.position, paused: !player.state.playing);
+  }
+
+  /// Once per queue entry: when it is left, skipped or finished.
+  void _endReport(int index, Duration position) {
+    if (index >= items.value.length || !_stopReported.add(index)) return;
+    _lastStopReport = items.value[index].reporter?.stopped(position) ?? Future.value();
   }
 
   MediaItem _mediaItem(PlayItem i) => MediaItem(
@@ -135,11 +175,15 @@ class Playback extends BaseAudioHandler with SeekHandler {
     final s = player.stream;
     s.playlist.listen((p) {
       if (items.value.isEmpty || p.index < 0 || p.index >= items.value.length || p.index == current.value) return;
+      // Not reported yet means the previous entry played to its end.
+      _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
       current.value = p.index;
       mediaItem.add(_mediaItem(items.value[p.index]));
       _notice();
       _broadcast();
+      _beginReport(Duration.zero);
     });
+    s.position.listen((p) => _lastPosition = p);
     s.duration.listen((d) {
       final m = mediaItem.value;
       if (m != null && d > Duration.zero) mediaItem.add(m.copyWith(duration: d));
@@ -154,9 +198,15 @@ class Playback extends BaseAudioHandler with SeekHandler {
       _audioSwitched.add(current.value);
       player.setAudioTrack(track);
     });
-    s.playing.listen((_) => _broadcast());
+    s.playing.listen((_) {
+      _broadcast();
+      _reportProgress();
+    });
     s.buffering.listen((_) => _broadcast());
-    s.completed.listen((_) => _broadcast());
+    s.completed.listen((done) {
+      _broadcast();
+      if (done) _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
+    });
     s.log.listen((l) => debugPrint('homeplay mpv [${l.level}] ${l.prefix}: ${l.text.trim()}'));
     // mpv reports recoverable problems here too (e.g. a hardware decoder it then falls back from),
     // so they are only logged.

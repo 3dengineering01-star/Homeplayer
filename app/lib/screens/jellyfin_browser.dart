@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../services/playback.dart';
 import '../widgets/async_list.dart';
 import 'player_screen.dart';
 
 /// Libraries at the top level, then any folder: series, season, album...
-class JellyfinBrowser extends StatelessWidget {
+class JellyfinBrowser extends StatefulWidget {
   const JellyfinBrowser({super.key, required this.client, required this.title, this.parentId});
 
   final JellyfinClient client;
   final String title;
   final String? parentId;
+
+  @override
+  State<JellyfinBrowser> createState() => _JellyfinBrowserState();
+}
+
+class _JellyfinBrowserState extends State<JellyfinBrowser> {
+  /// Bumped to reload the list, e.g. to show new progress after watching.
+  int _generation = 0;
+
+  JellyfinClient get client => widget.client;
 
   IconData _icon(JellyfinItem item) => switch (item.type) {
         'CollectionFolder' || 'UserView' => Icons.folder,
@@ -20,17 +31,28 @@ class JellyfinBrowser extends StatelessWidget {
         _ => item.isFolder ? Icons.folder : Icons.movie,
       };
 
-  Future<void> _tap(BuildContext context, List<JellyfinItem> items, JellyfinItem item) async {
+  Future<void> _tap(List<JellyfinItem> items, JellyfinItem item) async {
     final nav = Navigator.of(context);
     if (item.isFolder || !item.isPlayable) {
-      nav.push(MaterialPageRoute(builder: (_) => JellyfinBrowser(client: client, title: item.name, parentId: item.id)));
+      await nav.push(MaterialPageRoute(
+          builder: (_) => JellyfinBrowser(client: client, title: item.name, parentId: item.id)));
+      if (mounted) setState(() => _generation++);
       return;
     }
+
+    Duration? startAt;
+    if (item.isVideo && !item.played && item.resumePosition > const Duration(seconds: 30)) {
+      final choice = await _askResume(item.resumePosition);
+      if (choice == null) return;
+      startAt = choice;
+    }
+
     // Episodes and tracks play through their season or album; a movie plays on its own.
     final playable = item.type == 'Episode' || item.type == 'Audio'
         ? items.where((i) => i.type == item.type).toList()
         : [item];
 
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -41,16 +63,56 @@ class JellyfinBrowser extends StatelessWidget {
           return client.toPlayItem(i);
         })));
     nav.pop();
-    await Playback.instance.start(queue, playable.indexOf(item));
-    nav.push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
+    await Playback.instance.start(queue, playable.indexOf(item), startAt: startAt);
+    await nav.push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
+    // The pop completes before the player screen is disposed, so end a video here and wait
+    // for its stop report; otherwise the reload would show the previous resume point.
+    final pb = Playback.instance;
+    if (pb.currentItem?.isVideo ?? false) await pb.stop();
+    await pb.reportsSent;
+    if (mounted) setState(() => _generation++);
+  }
+
+  /// Duration.zero to start over, the resume point to continue, null when dismissed.
+  Future<Duration?> _askResume(Duration position) => showModalBottomSheet<Duration>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              leading: const Icon(Icons.play_circle_outline),
+              title: Text('Resume from ${formatDuration(position)}'),
+              onTap: () => Navigator.pop(context, position),
+            ),
+            ListTile(
+              leading: const Icon(Icons.replay),
+              title: const Text('Start over'),
+              onTap: () => Navigator.pop(context, Duration.zero),
+            ),
+          ]),
+        ),
+      );
+
+  Widget? _subtitle(JellyfinItem item) {
+    final text = item.subtitle;
+    final progress = item.played ? null : item.progress;
+    if ((text == null || text.isEmpty) && progress == null) return null;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (text != null && text.isNotEmpty) Text(text),
+      if (progress != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: LinearProgressIndicator(value: progress, minHeight: 3, borderRadius: BorderRadius.circular(2)),
+        ),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    final id = parentId;
+    final id = widget.parentId;
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(title: Text(widget.title)),
       body: AsyncList<JellyfinItem>(
+        key: ValueKey(_generation),
         load: () => id == null ? client.views() : client.children(id),
         itemBuilder: (context, items, i) {
           final item = items[i];
@@ -62,9 +124,13 @@ class JellyfinBrowser extends StatelessWidget {
               aspect: item.imageAspect,
             ),
             title: Text(item.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-            subtitle: item.subtitle == null || item.subtitle!.isEmpty ? null : Text(item.subtitle!),
-            trailing: item.isPlayable ? const Icon(Icons.play_arrow) : null,
-            onTap: () => _tap(context, items, item),
+            subtitle: _subtitle(item),
+            trailing: !item.isPlayable
+                ? null
+                : item.played
+                    ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, semanticLabel: 'Watched')
+                    : const Icon(Icons.play_arrow),
+            onTap: () => _tap(items, item),
           );
         },
       ),

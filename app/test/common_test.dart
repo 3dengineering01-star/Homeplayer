@@ -22,4 +22,9 @@ void main() {
     expect(canDecodeAudio(null), isTrue);
     expect(codecLabel('eac3'), 'E-AC3');
   });
+
+  test('formats durations like a player', () {
+    expect(formatDuration(const Duration(minutes: 4, seconds: 7)), '4:07');
+    expect(formatDuration(const Duration(hours: 1, minutes: 5, seconds: 9)), '1:05:09');
+  });
 }
