@@ -5,6 +5,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../api/common.dart';
 import '../services/playback.dart';
+import '../widgets/track_sheet.dart';
 
 /// Full-screen view of [Playback]. Leaving it stops a video; music keeps playing.
 class PlayerScreen extends StatefulWidget {
@@ -44,6 +45,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
               backgroundColor: Colors.black,
               foregroundColor: Colors.white,
               title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              actions: [
+                IconButton(
+                  tooltip: 'Audio and subtitles',
+                  icon: const Icon(Icons.subtitles_outlined),
+                  onPressed: () => showTrackSheet(context, _pb),
+                ),
+              ],
             ),
             // Subtitles are drawn by libass into the video, not by Flutter on top of it.
             body: Video(controller: _pb.video, subtitleViewConfiguration: const SubtitleViewConfiguration(visible: false)),

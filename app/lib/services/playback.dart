@@ -5,8 +5,10 @@ import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
+import 'track_choice.dart';
 
 /// The one player of the app. It outlives the player screen, so music keeps going in the
 /// background, and it drives the media notification, lock screen and headset buttons.
@@ -29,6 +31,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
       ),
     );
     await instance._initSession();
+    instance._prefs = await SharedPreferences.getInstance();
   }
 
   // libass keeps ASS styling (colour, position, fades); it needs a bundled font on Android.
@@ -56,7 +59,11 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   PlayItem? get currentItem => items.value.isEmpty ? null : items.value[current.value];
 
-  final Set<int> _audioSwitched = {};
+  // Remembered track languages, applied once per queue entry when its tracks are known.
+  SharedPreferences? _prefs;
+  static const _audioLanguageKey = 'audio_language';
+  static const _subtitleLanguageKey = 'subtitle_language';
+  final Set<int> _tracksApplied = {};
 
   // Server reports: which queue entries got their stop report, and a heartbeat for progress.
   final Set<int> _stopReported = {};
@@ -75,7 +82,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// Plays [queueItems] from [index], optionally from [startAt] (a resume point).
   Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt}) async {
     _endReport(current.value, player.state.position);
-    _audioSwitched.clear();
+    _tracksApplied.clear();
     _stopReported.clear();
     items.value = queueItems;
     current.value = index;
@@ -96,6 +103,46 @@ class Playback extends BaseAudioHandler with SeekHandler {
     _beginReport(startAt ?? Duration.zero);
     _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) => _reportProgress());
     if (kDebugMode) _cacheLog ??= Timer.periodic(const Duration(seconds: 5), (_) => _logCache());
+  }
+
+  /// mpv's own audio and subtitle track ids ('1', '2'... or 'no'); media_kit reports tracks
+  /// mpv picked by itself as 'auto'.
+  Future<({String audio, String subtitle})> activeTrackIds() async {
+    final native = player.platform as NativePlayer;
+    return (audio: await native.getProperty('aid'), subtitle: await native.getProperty('sid'));
+  }
+
+  /// Switches audio and remembers the language for the next files.
+  Future<void> selectAudio(AudioTrack track) async {
+    await player.setAudioTrack(track);
+    final language = track.language;
+    if (language != null) await _prefs?.setString(_audioLanguageKey, language);
+  }
+
+  /// Switches subtitles and remembers the choice ('off' or the language) for the next files.
+  Future<void> selectSubtitle(SubtitleTrack track) async {
+    await player.setSubtitleTrack(track);
+    final choice = track.id == 'no' ? 'off' : track.language;
+    if (choice != null) await _prefs?.setString(_subtitleLanguageKey, choice);
+  }
+
+  void _applyTrackChoice(Tracks t) {
+    final item = currentItem;
+    if (item == null || !item.isVideo || _tracksApplied.contains(current.value)) return;
+    // The first events come before the file's own tracks are known.
+    if (!t.audio.any((a) => a.id != 'auto' && a.id != 'no') && !t.video.any((v) => v.id != 'auto' && v.id != 'no')) {
+      return;
+    }
+    _tracksApplied.add(current.value);
+    final selected = player.state.track;
+    final audio = chooseAudio(t.audio,
+        forcedId: item.audioTrackId, preferredLanguage: _prefs?.getString(_audioLanguageKey));
+    if (audio != null && audio.id != selected.audio.id) player.setAudioTrack(audio);
+    if (item.audioTrackId != null && item.notice != null && audio?.id == item.audioTrackId) {
+      _notices.add(item.notice!);
+    }
+    final sub = chooseSubtitle(t.subtitle, _prefs?.getString(_subtitleLanguageKey));
+    if (sub != null && sub.id != selected.subtitle.id) player.setSubtitleTrack(sub);
   }
 
   @override
@@ -174,8 +221,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
       );
 
   void _notice() {
-    final notice = currentItem?.notice;
-    if (notice != null) _notices.add(notice);
+    final item = currentItem;
+    // A fallback track's notice waits for the track choice: a remembered language may win.
+    if (item == null || item.notice == null || item.audioTrackId != null) return;
+    _notices.add(item.notice!);
   }
 
   void _listen() {
@@ -197,14 +246,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
       if (kDebugMode && d > Duration.zero) _logDecoders();
     });
     // Switch away from an audio track this libmpv can't decode, once per queue entry.
-    s.tracks.listen((t) {
-      final want = currentItem?.audioTrackId;
-      if (want == null || _audioSwitched.contains(current.value)) return;
-      final track = t.audio.where((a) => a.id == want).firstOrNull;
-      if (track == null) return;
-      _audioSwitched.add(current.value);
-      player.setAudioTrack(track);
-    });
+    s.tracks.listen(_applyTrackChoice);
     s.playing.listen((_) {
       _broadcast();
       _reportProgress();
