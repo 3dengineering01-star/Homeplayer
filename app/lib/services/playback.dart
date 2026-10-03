@@ -91,7 +91,13 @@ class Playback extends BaseAudioHandler with SeekHandler {
     await _session?.setActive(true);
     // media_kit keeps video off (vid=no) until a video output is attached; a file without
     // sound would otherwise end at once with "no audio or video streams selected".
-    if (queueItems.any((i) => i.isVideo)) await video.platform.future;
+    if (queueItems.any((i) => i.isVideo)) {
+      await video.platform.future;
+      // media_kit hands MPEG-4 Part 2 (Xvid/DivX) and MPEG-2 to MediaCodec too; on the Pixel
+      // that stutters (frames out of order, no position) while software decoding of these
+      // SD-era codecs is cheap. Keep hardware for the modern codecs only.
+      await (player.platform as NativePlayer).setProperty('hwdec-codecs', 'h264,hevc,vp8,vp9,av1');
+    }
     await player.open(Playlist(
       [
         for (var n = 0; n < queueItems.length; n++)
@@ -325,8 +331,14 @@ class Playback extends BaseAudioHandler with SeekHandler {
     final speed = int.tryParse(await native.getProperty('cache-speed')) ?? 0;
     final ahead = await native.getProperty('demuxer-cache-duration');
     final st = player.state;
+    // Dropped frames and the frame rate actually shown tell a choking decoder from a slow network.
+    final dropped = await native.getProperty('frame-drop-count');
+    final decoderDropped = await native.getProperty('decoder-frame-drop-count');
+    final fps = await native.getProperty('estimated-display-fps');
+    final sourceFps = await native.getProperty('container-fps');
     debugPrint('homeplay cache: ${(speed * 8 / 1e6).toStringAsFixed(1)} Mbit/s, ${ahead}s ahead, '
-        'pos=${st.position.inSeconds}s buffering=${st.buffering} playing=${st.playing}');
+        'pos=${st.position.inSeconds}s buffering=${st.buffering} playing=${st.playing}; '
+        'dropped=$dropped decoderDropped=$decoderDropped fps=$fps/$sourceFps');
   }
 
   /// Debug builds: which decoders this libmpv has and which one is in use.
