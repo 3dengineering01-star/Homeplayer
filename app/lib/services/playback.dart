@@ -63,6 +63,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   Duration _lastPosition = Duration.zero;
   Timer? _heartbeat;
   Future<void> _lastStopReport = Future.value();
+  Timer? _cacheLog;
 
   /// Completes once the server has the latest stop report, so a list reloaded after it
   /// shows the right resume point.
@@ -81,6 +82,9 @@ class Playback extends BaseAudioHandler with SeekHandler {
     queue.add([for (final i in queueItems) _mediaItem(i)]);
     mediaItem.add(_mediaItem(queueItems[index]));
     await _session?.setActive(true);
+    // media_kit keeps video off (vid=no) until a video output is attached; a file without
+    // sound would otherwise end at once with "no audio or video streams selected".
+    if (queueItems.any((i) => i.isVideo)) await video.platform.future;
     await player.open(Playlist(
       [
         for (var n = 0; n < queueItems.length; n++)
@@ -91,6 +95,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     _notice();
     _beginReport(startAt ?? Duration.zero);
     _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) => _reportProgress());
+    if (kDebugMode) _cacheLog ??= Timer.periodic(const Duration(seconds: 5), (_) => _logCache());
   }
 
   @override
@@ -132,6 +137,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
     _endReport(current.value, player.state.position);
     _heartbeat?.cancel();
     _heartbeat = null;
+    _cacheLog?.cancel();
+    _cacheLog = null;
     await player.stop();
     items.value = const [];
     current.value = 0;
@@ -266,6 +273,18 @@ class Playback extends BaseAudioHandler with SeekHandler {
         _resumeAfterInterruption = false;
       }
     });
+  }
+
+  /// Debug builds: how fast data arrives and how much is buffered, to tell a slow network
+  /// from a slow decoder.
+  Future<void> _logCache() async {
+    if (items.value.isEmpty) return;
+    final native = player.platform as NativePlayer;
+    final speed = int.tryParse(await native.getProperty('cache-speed')) ?? 0;
+    final ahead = await native.getProperty('demuxer-cache-duration');
+    final st = player.state;
+    debugPrint('homeplay cache: ${(speed * 8 / 1e6).toStringAsFixed(1)} Mbit/s, ${ahead}s ahead, '
+        'pos=${st.position.inSeconds}s buffering=${st.buffering} playing=${st.playing}');
   }
 
   /// Debug builds: which decoders this libmpv has and which one is in use.
