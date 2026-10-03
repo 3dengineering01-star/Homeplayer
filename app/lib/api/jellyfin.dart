@@ -17,6 +17,8 @@ class JellyfinItem {
   String get name => (_j['Name'] as String?) ?? '';
   String get type => (_j['Type'] as String?) ?? '';
   bool get isFolder => (_j['IsFolder'] as bool?) ?? false;
+  String? get collectionType => _j['CollectionType'] as String?;
+  bool get isVirtual => _j['LocationType'] == 'Virtual';
   bool get isVideo => _j['MediaType'] == 'Video';
   bool get isPlayable => !isFolder && (_j['MediaType'] == 'Video' || _j['MediaType'] == 'Audio');
   bool get hasPrimaryImage => (_j['ImageTags'] as Map?)?.containsKey('Primary') ?? false;
@@ -114,7 +116,10 @@ class JellyfinClient {
   List<JellyfinItem> _items(Map<String, dynamic> j) =>
       ((j['Items'] as List?) ?? const []).map((e) => JellyfinItem(e as Map<String, dynamic>)).toList();
 
-  Future<List<JellyfinItem>> views() async => _items(await _get('/UserViews', {'userId': account.userId!}));
+  /// Libraries, without Live TV: Jellyfin lists it even with no tuner, and this app has no TV guide.
+  Future<List<JellyfinItem>> views() async => _items(await _get('/UserViews', {'userId': account.userId!}))
+      .where((v) => v.collectionType != 'livetv')
+      .toList();
 
   Future<List<JellyfinItem>> children(String parentId) async => _items(await _get('/Items', {
         'userId': account.userId!,
@@ -124,7 +129,13 @@ class JellyfinClient {
         'fields': 'PrimaryImageAspectRatio',
         'enableImageTypes': 'Primary',
         'enableUserData': 'true',
-      }));
+        // Episodes and seasons Jellyfin knows from online metadata but has no files for.
+        // Jellyfin 12 does not always honour these filters, so they are dropped below too.
+        'excludeLocationTypes': 'Virtual',
+        'isMissing': 'false',
+      }))
+          .where((i) => !i.isVirtual)
+          .toList();
 
   Uri? imageUrl(JellyfinItem item, {int height = 300}) => item.hasPrimaryImage
       ? Uri.parse('$_base/Items/${item.id}/Images/Primary')

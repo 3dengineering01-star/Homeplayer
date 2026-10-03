@@ -66,3 +66,10 @@ String audioLabel(AudioTrack t) =>
     _join([languageName(t.language), t.title, t.codec == null ? null : codecLabel(t.codec), _channels(t.channelscount)]);
 
 String subtitleLabel(SubtitleTrack t) => _join([languageName(t.language), t.title, _subtitleFormat(t.codec)]);
+
+/// Labels in menu order; ones that would read the same get "Track N" added, as old files often
+/// carry two tracks with no language or title.
+List<String> distinctLabels(List<String> labels) => [
+      for (var i = 0; i < labels.length; i++)
+        labels.where((l) => l == labels[i]).length > 1 ? '${labels[i]} · Track ${i + 1}' : labels[i],
+    ];

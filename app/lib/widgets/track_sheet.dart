@@ -22,6 +22,8 @@ void showTrackSheet(BuildContext context, Playback pb) {
           final tracks = pb.player.state.tracks;
           final audio = tracks.audio.where((t) => t.id != 'auto' && t.id != 'no').toList();
           final subs = tracks.subtitle.where((t) => t.id != 'auto' && t.id != 'no').toList();
+          final audioLabels = distinctLabels([for (final t in audio) audioLabel(t)]);
+          final subtitleLabels = distinctLabels([for (final t in subs) subtitleLabel(t)]);
           final current = selected.data!;
           final audioId = current.audio.id == 'auto' ? ids.data?.audio : current.audio.id;
           final subtitleId = current.subtitle.id == 'auto' ? ids.data?.subtitle : current.subtitle.id;
@@ -40,10 +42,10 @@ void showTrackSheet(BuildContext context, Playback pb) {
               children: [
                 header('Audio'),
                 if (audio.isEmpty) const ListTile(title: Text('No audio')),
-                for (final t in audio)
+                for (final (i, t) in audio.indexed)
                   ListTile(
                     leading: check(audioId == t.id),
-                    title: Text(audioLabel(t)),
+                    title: Text(audioLabels[i]),
                     subtitle: canDecodeAudio(t.codec) ? null : const Text('Not supported on this phone'),
                     enabled: canDecodeAudio(t.codec),
                     onTap: () => pb.selectAudio(t),
@@ -54,10 +56,10 @@ void showTrackSheet(BuildContext context, Playback pb) {
                   title: const Text('Off'),
                   onTap: () => pb.selectSubtitle(SubtitleTrack.no()),
                 ),
-                for (final t in subs)
+                for (final (i, t) in subs.indexed)
                   ListTile(
                     leading: check(subtitleId == t.id),
-                    title: Text(subtitleLabel(t)),
+                    title: Text(subtitleLabels[i]),
                     onTap: () => pb.selectSubtitle(t),
                   ),
                 const SizedBox(height: 16),

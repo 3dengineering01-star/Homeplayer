@@ -59,5 +59,9 @@ void main() {
       expect(audioLabel(tracks[2]), 'English · AC3 · 5.1');
       expect(subtitleLabel(SubtitleTrack('1', 'Forced', 'rus', codec: 'subrip')), 'Русский · Forced · SRT');
     });
+
+    test('tracks that read the same get numbered', () {
+      expect(distinctLabels(['MP3', 'MP3', 'AAC']), ['MP3 · Track 1', 'MP3 · Track 2', 'AAC']);
+    });
   });
 }
