@@ -1,12 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 
 import '../api/common.dart';
 import '../services/playback.dart';
 import '../widgets/artwork.dart';
-import '../widgets/track_sheet.dart';
+import '../widgets/video_view.dart';
 
 /// Full-screen view of [Playback]. Leaving it stops a video; music keeps playing.
 class PlayerScreen extends StatefulWidget {
@@ -52,26 +51,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
           });
           return Scaffold(appBar: AppBar(), body: const Center(child: Text('Nothing is playing')));
         }
-        if (item.isVideo) {
-          return Scaffold(
-            backgroundColor: Colors.black,
-            appBar: AppBar(
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
-              title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-              actions: [
-                IconButton(
-                  tooltip: 'Quality, audio and subtitles',
-                  icon: const Icon(Icons.subtitles_outlined),
-                  onPressed: () => showTrackSheet(context, _pb),
-                ),
-              ],
-            ),
-            // Subtitles are drawn by libass into the video, not by Flutter on top of it.
-            body: Video(controller: _pb.video, subtitleViewConfiguration: const SubtitleViewConfiguration(visible: false)),
-          );
-        }
         final count = _pb.items.value.length;
+        if (item.isVideo) {
+          return VideoView(pb: _pb, item: item, hasPrev: index > 0, hasNext: index < count - 1);
+        }
         return Scaffold(
           appBar: AppBar(title: Text('${index + 1} / $count')),
           body: SafeArea(

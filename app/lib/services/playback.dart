@@ -16,6 +16,7 @@ import 'car_library.dart';
 import 'downloads.dart';
 import 'quality.dart';
 import 'track_choice.dart';
+import 'video_tuning.dart';
 
 /// The one player of the app. It outlives the player screen, so music keeps going in the
 /// background, and it drives the media notification, lock screen and headset buttons.
@@ -41,7 +42,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
       ),
     );
     await instance._initSession();
-    instance._prefs = await SharedPreferences.getInstance();
+    final prefs = instance._prefs = await SharedPreferences.getInstance();
+    instance.adjust.value = VideoAdjust.fromPrefs(prefs.get);
   }
 
   // libass keeps ASS styling (colour, position, fades); it needs a bundled font on Android.
@@ -100,6 +102,41 @@ class Playback extends BaseAudioHandler with SeekHandler {
   AudioSession? _session;
   bool _resumeAfterInterruption = false;
 
+  /// Subtitle size, position and colour, and the subtitle and sound delays of the video player.
+  final ValueNotifier<VideoAdjust> adjust = ValueNotifier(const VideoAdjust());
+
+  /// Applies [a] to mpv and keeps what carries over to the next videos.
+  Future<void> setAdjust(VideoAdjust a) async {
+    final before = adjust.value.mpvProperties;
+    adjust.value = a;
+    await _applyAdjust(a, only: before);
+    final prefs = _prefs;
+    if (prefs == null) return;
+    for (final e in a.toPrefs().entries) {
+      switch (e.value) {
+        case final double v:
+          await prefs.setDouble(e.key, v);
+        case final int v:
+          await prefs.setInt(e.key, v);
+        case final bool v:
+          await prefs.setBool(e.key, v);
+      }
+    }
+  }
+
+  /// Sets [a]'s mpv properties; with [only], just those that differ from it.
+  Future<void> _applyAdjust(VideoAdjust a, {Map<String, String>? only}) async {
+    final native = player.platform as NativePlayer;
+    for (final e in a.mpvProperties.entries) {
+      if (only != null && only[e.key] == e.value) continue;
+      try {
+        await native.setProperty(e.key, e.value);
+      } catch (err) {
+        debugPrint('homeplay mpv ${e.key} failed: $err');
+      }
+    }
+  }
+
   /// Plays [queueItems] from [index], optionally from [startAt] (a resume point).
   Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt}) async {
     _endReport(current.value, player.state.position);
@@ -119,7 +156,11 @@ class Playback extends BaseAudioHandler with SeekHandler {
       // that stutters (frames out of order, no position) while software decoding of these
       // SD-era codecs is cheap. Keep hardware for the modern codecs only.
       await (player.platform as NativePlayer).setProperty('hwdec-codecs', 'h264,hevc,vp8,vp9,av1');
+      // Delays and speed were for the previous file; subtitle looks carry over.
+      adjust.value = adjust.value.forNewFile();
+      await _applyAdjust(adjust.value);
     }
+    if (player.state.rate != 1.0) await player.setRate(1.0);
     await player.open(Playlist(
       [
         for (var n = 0; n < queueItems.length; n++)
