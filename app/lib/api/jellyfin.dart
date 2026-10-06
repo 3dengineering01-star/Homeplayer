@@ -217,6 +217,16 @@ class JellyfinClient {
           .where((i) => !i.isVirtual)
           .toList();
 
+  /// Tracks matching [query], for voice search in the car.
+  Future<List<JellyfinItem>> searchAudio(String query) async => _items(await _get('/Items', {
+        'userId': account.userId!,
+        'searchTerm': query,
+        'includeItemTypes': 'Audio',
+        'recursive': 'true',
+        'limit': '50',
+        'enableImageTypes': 'Primary',
+      }));
+
   /// Everything playable under a folder (a series, a season, an album), in play order, for
   /// downloading it whole.
   Future<List<JellyfinItem>> playableDescendants(String parentId) async => _items(await _get('/Items', {
