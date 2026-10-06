@@ -4,11 +4,22 @@ import '../api/common.dart';
 
 /// Loads a list, shows progress, errors with a retry button, and pull-to-refresh.
 class AsyncList<T> extends StatefulWidget {
-  const AsyncList({super.key, required this.load, required this.itemBuilder, this.emptyText = 'Nothing here'});
+  const AsyncList({
+    super.key,
+    required this.load,
+    required this.itemBuilder,
+    this.emptyText = 'Nothing here',
+    this.gridItemBuilder,
+    this.useGrid,
+  });
 
   final Future<List<T>> Function() load;
   final Widget Function(BuildContext context, List<T> items, int index) itemBuilder;
   final String emptyText;
+
+  /// Square tiles instead of rows, for lists [useGrid] picks (e.g. a folder of photos).
+  final Widget Function(BuildContext context, List<T> items, int index)? gridItemBuilder;
+  final bool Function(List<T> items)? useGrid;
 
   @override
   State<AsyncList<T>> createState() => _AsyncListState<T>();
@@ -50,10 +61,21 @@ class _AsyncListState<T> extends State<AsyncList<T>> {
               ? ListView(children: [
                   Padding(padding: const EdgeInsets.all(32), child: Center(child: Text(widget.emptyText))),
                 ])
-              : ListView.builder(
-                  itemCount: items.length,
-                  itemBuilder: (context, i) => widget.itemBuilder(context, items, i),
-                ),
+              : widget.gridItemBuilder != null && (widget.useGrid?.call(items) ?? false)
+                  ? GridView.builder(
+                      padding: const EdgeInsets.all(2),
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 130,
+                        mainAxisSpacing: 2,
+                        crossAxisSpacing: 2,
+                      ),
+                      itemCount: items.length,
+                      itemBuilder: (context, i) => widget.gridItemBuilder!(context, items, i),
+                    )
+                  : ListView.builder(
+                      itemCount: items.length,
+                      itemBuilder: (context, i) => widget.itemBuilder(context, items, i),
+                    ),
         );
       },
     );

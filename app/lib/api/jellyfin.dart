@@ -20,6 +20,7 @@ class JellyfinItem {
   String? get collectionType => _j['CollectionType'] as String?;
   bool get isVirtual => _j['LocationType'] == 'Virtual';
   bool get isVideo => _j['MediaType'] == 'Video';
+  bool get isPhoto => !isFolder && _j['MediaType'] == 'Photo';
   bool get isPlayable => !isFolder && (_j['MediaType'] == 'Video' || _j['MediaType'] == 'Audio');
   bool get hasPrimaryImage => (_j['ImageTags'] as Map?)?.containsKey('Primary') ?? false;
   double get imageAspect => ((_j['PrimaryImageAspectRatio'] as num?)?.toDouble() ?? 1).clamp(0.6, 1.8);
@@ -218,6 +219,15 @@ class JellyfinClient {
       ? Uri.parse('$_base/Items/${item.id}/Images/Primary')
           .replace(queryParameters: {'fillHeight': '$height', 'quality': '90'})
       : null;
+
+  /// A photo scaled by the server to fit [maxSide] pixels; the original may be far larger
+  /// than the screen. Jellyfin applies the EXIF rotation.
+  Uri photoUrl(JellyfinItem item, {required int maxSide}) =>
+      Uri.parse('$_base/Items/${item.id}/Images/Primary').replace(queryParameters: {
+        'maxWidth': '$maxSide',
+        'maxHeight': '$maxSide',
+        'quality': '90',
+      });
 
   /// Direct play: the file goes to mpv untouched. Transcoding comes later,
   /// for slow mobile connections. [versionId] picks one of several files; null is the default.
