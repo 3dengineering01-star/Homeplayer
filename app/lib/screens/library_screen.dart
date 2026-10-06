@@ -84,6 +84,10 @@ class _LibraryScreenState extends State<LibraryScreen> with JellyfinActions {
 
   @override
   Widget build(BuildContext context) {
+    // Music without album tags has no albums: the tracks lie in the library itself.
+    if (_square && _total == 0 && !_loading && _error == null) {
+      return JellyfinBrowser(client: client, title: widget.library.name, parentId: widget.library.id);
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.library.name),

@@ -20,7 +20,12 @@ class AppearancePicker extends StatelessWidget {
                   showSelectedIcon: false,
                   segments: [
                     for (final b in ThemeBrightness.values)
-                      ButtonSegment(value: b, label: Text(b.label), icon: Icon(_icon(b), size: 18)),
+                      // The icon goes with the label only where there is room: "System" wrapped.
+                      ButtonSegment(
+                        value: b,
+                        tooltip: b.label,
+                        label: Text(b.label, maxLines: 1, overflow: TextOverflow.fade, softWrap: false),
+                      ),
                   ],
                   selected: {look.brightness},
                   onSelectionChanged: (s) => AppearanceStore.set(look.copyWith(brightness: s.first)),
@@ -48,13 +53,6 @@ class AppearancePicker extends StatelessWidget {
           );
         },
       );
-
-  static IconData _icon(ThemeBrightness b) => switch (b) {
-        ThemeBrightness.system => Icons.brightness_auto,
-        ThemeBrightness.light => Icons.light_mode,
-        ThemeBrightness.dark => Icons.dark_mode,
-        ThemeBrightness.black => Icons.contrast,
-      };
 }
 
 class _Swatch extends StatelessWidget {
@@ -91,12 +89,13 @@ class _Swatch extends StatelessWidget {
               child: ClipOval(
                 child: Stack(fit: StackFit.expand, children: [
                   // Three tones of the palette, as a little preview.
-                  Column(children: [
-                    Expanded(child: ColoredBox(color: tones.primary)),
+                  // Containers, not bare ColoredBoxes: those have no size of their own here.
+                  Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Expanded(child: Container(color: tones.primary)),
                     Expanded(
-                      child: Row(children: [
-                        Expanded(child: ColoredBox(color: tones.secondaryContainer)),
-                        Expanded(child: ColoredBox(color: tones.tertiary)),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        Expanded(child: Container(color: tones.secondaryContainer)),
+                        Expanded(child: Container(color: tones.tertiary)),
                       ]),
                     ),
                   ]),

@@ -82,6 +82,7 @@ void main() {
     expect(m.backdropOwner, 'm');
     expect(runTimeLabel(const Duration(minutes: 48)), '48 min');
     expect(runTimeLabel(const Duration(hours: 2)), '2 h');
+    expect(runTimeLabel(const Duration(seconds: 20)), '20 s');
   });
 
   test('an episode without its own backdrop uses the series picture; its card shows its still', () {

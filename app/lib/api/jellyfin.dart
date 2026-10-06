@@ -725,8 +725,9 @@ String? posterTypes(String? collectionType) => switch (collectionType) {
       _ => null,
     };
 
-/// "2 h 15 min", "48 min".
+/// "2 h 15 min", "48 min", "20 s".
 String runTimeLabel(Duration d) {
+  if (d < const Duration(minutes: 1)) return '${d.inSeconds} s';
   final h = d.inHours, m = d.inMinutes.remainder(60);
   return h > 0 ? (m > 0 ? '$h h $m min' : '$h h') : '${d.inMinutes} min';
 }
