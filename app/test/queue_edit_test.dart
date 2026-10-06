@@ -53,4 +53,12 @@ void main() {
     expect(unshuffled(['c', 'x', 'a', 'b'], ['a', 'b', 'c']), ['a', 'b', 'c', 'x']);
     expect(unshuffled(['c', 'a'], ['a', 'b', 'c']), ['a', 'c']);
   });
+
+  test('between tracks only when a finished track has another one after it', () {
+    expect(betweenTracks(completed: true, index: 2, count: 5, repeats: false), isTrue);
+    expect(betweenTracks(completed: true, index: 4, count: 5, repeats: false), isFalse, reason: 'the queue ended');
+    expect(betweenTracks(completed: true, index: 4, count: 5, repeats: true), isTrue, reason: 'it starts over');
+    expect(betweenTracks(completed: false, index: 2, count: 5, repeats: false), isFalse);
+    expect(betweenTracks(completed: true, index: 0, count: 0, repeats: true), isFalse);
+  });
 }

@@ -64,7 +64,7 @@ class SoundSettings {
   String get filter => enabled ? equalizerFilter(gains) : '';
 
   /// mpv's volume (0..100) under this equalizer: raised bands would clip at full volume, so
-  /// the whole sound goes down by half the highest raise. The libmpv build has no volume filter,
+  /// the whole sound goes down by the curve's peak. The libmpv build has no volume filter,
   /// so this is the player's own volume.
   double get volume => enabled ? equalizerVolume(gains) : 100;
 
@@ -111,8 +111,51 @@ String equalizerFilter(List<double> gains) {
   return bands.isEmpty ? '' : 'lavfi=[${bands.join(',')}]';
 }
 
-/// Player volume (0..100) leaving room for the highest raised band: half of it in dB.
-double equalizerVolume(List<double> gains) {
-  final highest = gains.fold(0.0, (m, g) => g > m ? g : m).clamp(0.0, eqMaxGain);
-  return 100 * pow(10, -highest / 2 / 20).toDouble();
+/// Player volume (0..100) that keeps the equalized sound from clipping: down by the peak of the
+/// curve. Music is mastered close to full scale, so any raise above it crackles.
+double equalizerVolume(List<double> gains) => 100 * pow(10, -equalizerPeakDb(gains) / 20).toDouble();
+
+/// The highest point of the equalizer curve in dB (0 when nothing is raised). Neighbouring raised
+/// bands add up: Bass boost peaks above its highest band.
+double equalizerPeakDb(List<double> gains) {
+  var peak = 0.0;
+  // A point every sixth of an octave from 20 Hz to 20 kHz.
+  for (var f = 20.0; f <= 20000; f *= 1.122) {
+    var db = 0.0;
+    for (var i = 0; i < gains.length && i < eqBands.length; i++) {
+      final g = gains[i].clamp(-eqMaxGain, eqMaxGain);
+      if (g.abs() >= 0.05) db += _bandDb(eqBands[i].toDouble(), g, f);
+    }
+    if (db > peak) peak = db;
+  }
+  return peak;
 }
+
+/// Response at [f] Hz of ffmpeg's equalizer band (an RBJ peaking filter, one octave wide) at
+/// [f0] Hz raised by [gain] dB, at 48 kHz.
+double _bandDb(double f0, double gain, double f) {
+  const rate = 48000.0;
+  final a = pow(10, gain / 40).toDouble();
+  final w0 = 2 * pi * f0 / rate;
+  final alpha = sin(w0) * _sinh(log(2) / 2 * 1 * w0 / sin(w0));
+  final b0 = 1 + alpha * a, b1 = -2 * cos(w0), b2 = 1 - alpha * a;
+  final a0 = 1 + alpha / a, a1 = -2 * cos(w0), a2 = 1 - alpha / a;
+  final w = 2 * pi * f / rate;
+  // |H(e^jw)| of b(z)/a(z).
+  double mag(double c0, double c1, double c2) {
+    final re = c0 + c1 * cos(w) + c2 * cos(2 * w);
+    final im = -c1 * sin(w) - c2 * sin(2 * w);
+    return sqrt(re * re + im * im);
+  }
+
+  return 20 * log(mag(b0, b1, b2) / mag(a0, a1, a2)) / ln10;
+}
+
+double _sinh(double x) => (exp(x) - exp(-x)) / 2;
+
+/// Upper edges of the equalizer bands for Android's equalizer, which takes bands by where they
+/// end: halfway (on the octave scale) to the next band, the last one at 20 kHz.
+List<double> eqCutoffs() => [
+      for (var i = 0; i < eqBands.length; i++)
+        i == eqBands.length - 1 ? 20000.0 : sqrt(eqBands[i] * eqBands[i + 1].toDouble()),
+    ];

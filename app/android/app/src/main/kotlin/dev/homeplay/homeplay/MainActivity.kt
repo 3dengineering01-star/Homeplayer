@@ -5,6 +5,8 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.media.AudioManager
+import android.media.audiofx.DynamicsProcessing
 import android.os.Build
 import android.util.Rational
 import androidx.lifecycle.Lifecycle
@@ -31,6 +33,18 @@ class MainActivity : AudioServiceActivity() {
                     val notifications = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     notifications.cancel(AUDIO_SERVICE_NOTIFICATION_ID)
                     result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/eq").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "session" -> result.success(audioSession())
+                "apply" -> {
+                    val enabled = call.argument<Boolean>("enabled") == true
+                    val gains = call.argument<List<Double>>("gains") ?: emptyList()
+                    val cutoffs = call.argument<List<Double>>("cutoffs") ?: emptyList()
+                    result.success(applyEqualizer(enabled, gains, cutoffs))
                 }
                 else -> result.notImplemented()
             }
@@ -113,8 +127,56 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
+    // The player's audio session: mpv's AudioTrack joins it, and the equalizer works on it.
+    private fun audioSession(): Int {
+        if (session == 0) {
+            session = (applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager).generateAudioSessionId()
+        }
+        return session
+    }
+
+    /**
+     * Android's own equalizer on the player's session: [gains] in dB for bands ending at
+     * [cutoffs] Hz, then a limiter that only catches the peaks the raised bands push over full
+     * scale, so the sound keeps its level and does not crackle. False where it is not available
+     * (before Android 9, or the effect refused); the player then uses its own filters.
+     */
+    private fun applyEqualizer(enabled: Boolean, gains: List<Double>, cutoffs: List<Double>): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || gains.isEmpty() || gains.size != cutoffs.size) return false
+        return try {
+            val d = dynamics?.takeIf { bands == gains.size } ?: run {
+                dynamics?.release()
+                val config = DynamicsProcessing.Config.Builder(
+                    DynamicsProcessing.VARIANT_FAVOR_FREQUENCY_RESOLUTION, 2,
+                    true, gains.size, false, 0, false, 0, true,
+                ).setPreferredFrameDuration(10f).build()
+                DynamicsProcessing(0, audioSession(), config).also {
+                    dynamics = it
+                    bands = gains.size
+                }
+            }
+            for (i in gains.indices) {
+                d.setPreEqBandAllChannelsTo(i, DynamicsProcessing.EqBand(true, cutoffs[i].toFloat(), gains[i].toFloat()))
+            }
+            // Attack 1 ms, release 60 ms, ratio 10:1 above -1 dBFS, no make-up gain.
+            d.setLimiterAllChannelsTo(DynamicsProcessing.Limiter(true, true, 0, 1f, 60f, 10f, -1f, 0f))
+            d.setEnabled(enabled)
+            true
+        } catch (e: Exception) {
+            android.util.Log.w("homeplay", "equalizer: ${e.javaClass.simpleName}")
+            dynamics?.release()
+            dynamics = null
+            false
+        }
+    }
+
     companion object {
         // NOTIFICATION_ID in audio_service's AudioService.java (0.18).
         const val AUDIO_SERVICE_NOTIFICATION_ID = 1124
+
+        // Outlive the activity: the music plays on in the service when it is closed.
+        private var session = 0
+        private var dynamics: DynamicsProcessing? = null
+        private var bands = 0
     }
 }

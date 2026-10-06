@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -34,10 +33,11 @@ class MusicView extends StatelessWidget {
           if ((d.primaryVelocity ?? 0) > 400) Navigator.of(context).maybePop();
         },
         child: Stack(fit: StackFit.expand, children: [
-          // The cover's colours, blurred, behind everything.
-          ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40, tileMode: TileMode.decal),
-            child: artworkImage(item, fallback: ColoredBox(color: scheme.surface)),
+          // The cover's colours, blurred, behind everything: a 12-pixel copy stretched over the
+          // screen. A blur filter here was redrawn with every frame of the seek bar, and the
+          // load made the sound crackle.
+          RepaintBoundary(
+            child: artworkImage(item, cacheWidth: 12, fallback: ColoredBox(color: scheme.surface)),
           ),
           ColoredBox(color: scheme.surface.withValues(alpha: 0.72)),
           SafeArea(
