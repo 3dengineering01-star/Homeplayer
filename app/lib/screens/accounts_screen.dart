@@ -5,6 +5,7 @@ import '../api/subsonic.dart';
 import '../models/account.dart';
 import '../services/account_store.dart';
 import 'add_account_screen.dart';
+import 'backup_screen.dart';
 import 'jellyfin_browser.dart';
 import 'subsonic_browser.dart';
 
@@ -90,11 +91,20 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       title: Text(a.serverName),
                       subtitle: Text('${a.username} · ${a.baseUrl}'),
                       onTap: () => _open(a),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline),
-                        tooltip: 'Remove',
-                        onPressed: () => _remove(a),
-                      ),
+                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (a.kind == ServerKind.jellyfin)
+                          IconButton(
+                            icon: const Icon(Icons.backup_outlined),
+                            tooltip: 'Photo backup',
+                            onPressed: () => Navigator.push(
+                                context, MaterialPageRoute(builder: (_) => BackupScreen(account: a))),
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Remove',
+                          onPressed: () => _remove(a),
+                        ),
+                      ]),
                     ),
                 ]),
     );
