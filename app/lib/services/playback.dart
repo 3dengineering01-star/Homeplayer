@@ -237,9 +237,21 @@ class Playback extends BaseAudioHandler with SeekHandler {
   bool _ducked = false;
 
   /// The player's volume: room for the equalizer's raised bands, lower while ducked.
-  Future<void> _applyVolume() {
+  Future<void> _applyVolume() async {
     final base = _isMusic && equalizerWorks.value ? sound.value.volume : 100.0;
-    return player.setVolume(base * (_ducked ? 0.3 : 1));
+    await player.setVolume(base * (_ducked ? 0.3 : 1));
+    await _logSound();
+  }
+
+  /// What shapes the sound now, as mpv has it: for "too quiet" or "crackles" reports.
+  Future<void> _logSound() async {
+    final native = player.platform as NativePlayer;
+    final s = sound.value;
+    try {
+      debugPrint('homeplay sound: volume=${await native.getProperty('volume')} '
+          'af=${await native.getProperty('af')} replaygain=${await native.getProperty('replaygain')} '
+          'speed=${await native.getProperty('speed')} eq=${s.enabled} ducked=$_ducked');
+    } catch (_) {}
   }
 
   /// Pauses the music after [after], or at the end of the current track; null turns it off.
