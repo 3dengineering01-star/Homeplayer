@@ -95,8 +95,13 @@ class PlayItem {
 abstract class PlaybackReporter {
   Future<void> started(Duration position);
   Future<void> progress(Duration position, {required bool paused});
-  Future<void> stopped(Duration position);
+  /// [duration] of the file, when the player knows it.
+  Future<void> stopped(Duration position, {Duration? duration});
 }
+
+/// Watched by the rule Jellyfin applies to stop reports: past 90% (its default MaxResumePct).
+bool isWatched(Duration position, Duration? duration) =>
+    duration != null && duration > Duration.zero && position >= duration * 0.9;
 
 /// Local file for downloads, otherwise fetched from the server with [PlayItem.headers].
 extension PlayItemArtwork on PlayItem {

@@ -496,6 +496,28 @@ class JellyfinClient {
     }
   }
 
+  /// What was played of a download, sent once there is a connection: a stop report on its
+  /// own, from which the server sets the resume point or the played mark as after streaming.
+  /// False when the server did not take it, so it is sent again later.
+  Future<bool> reportPlayed(String itemId, Duration position) async {
+    try {
+      final res = await _http
+          .post(Uri.parse('$_base/Sessions/Playing/Stopped'),
+              headers: {...headers, 'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'ItemId': itemId,
+                'MediaSourceId': itemId,
+                'PlayMethod': 'DirectPlay',
+                'PositionTicks': position.inMicroseconds * 10,
+              }))
+          .timeout(_timeout);
+      return res.statusCode >= 200 && res.statusCode < 300;
+    } catch (e) {
+      debugPrint('homeplay played report for a download failed: $e');
+      return false;
+    }
+  }
+
   PlayItem toPlayItem(JellyfinItem item, {String? versionId}) => PlayItem(
         title: item.name,
         subtitle: item.subtitle,
@@ -535,5 +557,6 @@ class _JellyfinReporter implements PlaybackReporter {
       _client._report('/Sessions/Playing/Progress', _body(position, paused: paused));
 
   @override
-  Future<void> stopped(Duration position) => _client._report('/Sessions/Playing/Stopped', _body(position));
+  Future<void> stopped(Duration position, {Duration? duration}) =>
+      _client._report('/Sessions/Playing/Stopped', _body(position));
 }

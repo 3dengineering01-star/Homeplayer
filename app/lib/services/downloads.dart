@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
+import '../models/account.dart';
+import 'account_store.dart';
 
 enum DownloadState { queued, running, paused, done, failed }
 
@@ -40,6 +43,11 @@ class DownloadEntry {
     this.state = DownloadState.queued,
     this.progress = 0,
     this.size = 0,
+    this.accountId,
+    this.position = Duration.zero,
+    this.watched = false,
+    this.unsynced = false,
+    this.duration = Duration.zero,
   });
 
   factory DownloadEntry.fromJson(Map<String, dynamic> j) => DownloadEntry(
@@ -53,6 +61,11 @@ class DownloadEntry {
         state: DownloadState.values.byName(j['state'] as String),
         progress: (j['progress'] as num?)?.toDouble() ?? 0,
         size: (j['size'] as num?)?.toInt() ?? 0,
+        accountId: j['accountId'] as String?,
+        position: Duration(milliseconds: (j['positionMs'] as num?)?.toInt() ?? 0),
+        watched: j['watched'] as bool? ?? false,
+        unsynced: j['unsynced'] as bool? ?? false,
+        duration: Duration(milliseconds: (j['durationMs'] as num?)?.toInt() ?? 0),
       );
 
   /// Jellyfin item id; unique enough across servers for one phone.
@@ -73,10 +86,36 @@ class DownloadEntry {
   /// Bytes, once known.
   final int size;
 
+  /// Server it came from; null for downloads made before this was kept.
+  final String? accountId;
+
+  /// Where playback last stopped, to resume without a connection.
+  final Duration position;
+  final bool watched;
+
+  /// Played since the server last heard about it.
+  final bool unsynced;
+
+  /// Length, once played; zero before.
+  final Duration duration;
+
+  /// What the server is told: the end for a watched one, so it gets the played mark even if
+  /// it was replayed a little since; otherwise where it stopped.
+  Duration get reportedPosition => watched && duration > Duration.zero ? duration : position;
+
   String get file => 'media_$id';
   String get artworkFile => 'art_$id';
 
-  DownloadEntry copyWith({DownloadState? state, double? progress, int? size}) => DownloadEntry(
+  DownloadEntry copyWith({
+    DownloadState? state,
+    double? progress,
+    int? size,
+    Duration? position,
+    bool? watched,
+    bool? unsynced,
+    Duration? duration,
+  }) =>
+      DownloadEntry(
         id: id,
         title: title,
         isVideo: isVideo,
@@ -87,6 +126,11 @@ class DownloadEntry {
         state: state ?? this.state,
         progress: progress ?? this.progress,
         size: size ?? this.size,
+        accountId: accountId,
+        position: position ?? this.position,
+        watched: watched ?? this.watched,
+        unsynced: unsynced ?? this.unsynced,
+        duration: duration ?? this.duration,
       );
 
   Map<String, dynamic> toJson() => {
@@ -100,6 +144,11 @@ class DownloadEntry {
         'state': state.name,
         'progress': progress,
         'size': size,
+        'accountId': accountId,
+        'positionMs': position.inMilliseconds,
+        'watched': watched,
+        'unsynced': unsynced,
+        'durationMs': duration.inMilliseconds,
       };
 }
 
@@ -156,6 +205,11 @@ class Downloads {
     );
     FileDownloader().updates.listen(_onUpdate);
     await FileDownloader().start();
+    // What was played without a connection goes to the server once there is one.
+    unawaited(sync());
+    Connectivity().onConnectivityChanged.listen((net) {
+      if (!net.contains(ConnectivityResult.none)) unawaited(sync());
+    });
   }
 
   DownloadEntry? find(String itemId) => entries.value.where((e) => e.id == itemId).firstOrNull;
@@ -219,6 +273,7 @@ class Downloads {
       isVideo: item.isVideo,
       hasArtwork: hasArtwork,
       subtitles: subtitles,
+      accountId: client.account.id,
     );
   }
 
@@ -290,12 +345,88 @@ class Downloads {
     }
   }
 
-  PlayItem toPlayItem(DownloadEntry e) => downloadedPlayItem(e, _dir.path);
+  PlayItem toPlayItem(DownloadEntry e) => downloadedPlayItem(e, _dir.path, reporter: _DownloadReporter(this, e.id));
+
+  /// Keeps where a download stopped and whether it was watched, then tells the server.
+  Future<void> _played(String id, Duration position, Duration? duration) async {
+    final entry = find(id);
+    if (entry == null) return;
+    _put(entry.copyWith(
+      position: position,
+      watched: entry.watched || isWatched(position, duration),
+      unsynced: true,
+      duration: duration != null && duration > Duration.zero ? duration : null,
+    ));
+    await _save();
+    await sync();
+  }
+
+  bool _syncing = false;
+
+  /// Sends what was played of downloads to their servers; what fails stays for next time
+  /// (app start, the connection coming back, the next stop).
+  Future<void> sync() async {
+    if (_syncing) return;
+    _syncing = true;
+    try {
+      final pending = entries.value.where((e) => e.unsynced).toList();
+      if (pending.isEmpty) return;
+      final accounts = await AccountStore.load();
+      final deviceId = await AccountStore.deviceId();
+      final sent = await sendPlayed(pending, (accountId) async {
+        final account = accountFor(accounts, accountId);
+        return account == null ? null : JellyfinClient(account, deviceId);
+      });
+      for (final id in sent) {
+        final e = find(id);
+        if (e != null) _put(e.copyWith(unsynced: false));
+      }
+      if (sent.isNotEmpty) await _save();
+    } finally {
+      _syncing = false;
+    }
+  }
 }
 
-/// What the player opens for a download kept in [dir]: local files only, nothing reported
-/// to the server.
-PlayItem downloadedPlayItem(DownloadEntry e, String dir) => PlayItem(
+/// The server of a download: its own account, or for downloads from before that was kept,
+/// the only Jellyfin server (with several there is no telling).
+Account? accountFor(List<Account> accounts, String? accountId) {
+  if (accountId != null) return accounts.where((a) => a.id == accountId).firstOrNull;
+  final jellyfin = accounts.where((a) => a.kind == ServerKind.jellyfin).toList();
+  return jellyfin.length == 1 ? jellyfin.single : null;
+}
+
+/// Sends the play state of [pending] downloads; returns the ids the servers took.
+Future<Set<String>> sendPlayed(
+    Iterable<DownloadEntry> pending, Future<JellyfinClient?> Function(String? accountId) clientFor) async {
+  final sent = <String>{};
+  for (final e in pending) {
+    final client = await clientFor(e.accountId);
+    if (client != null && await client.reportPlayed(e.id, e.reportedPosition)) sent.add(e.id);
+  }
+  return sent;
+}
+
+/// Play reports of a download: kept on the phone, sent when there is a connection.
+class _DownloadReporter implements PlaybackReporter {
+  _DownloadReporter(this._downloads, this._id);
+
+  final Downloads _downloads;
+  final String _id;
+
+  @override
+  Future<void> started(Duration position) async {}
+
+  @override
+  Future<void> progress(Duration position, {required bool paused}) async {}
+
+  @override
+  Future<void> stopped(Duration position, {Duration? duration}) => _downloads._played(_id, position, duration);
+}
+
+/// What the player opens for a download kept in [dir]: local files only; [reporter] keeps
+/// what was played for the server.
+PlayItem downloadedPlayItem(DownloadEntry e, String dir, {PlaybackReporter? reporter}) => PlayItem(
       title: e.title,
       subtitle: e.subtitle,
       url: Uri.file('$dir/${e.file}'),
@@ -304,4 +435,5 @@ PlayItem downloadedPlayItem(DownloadEntry e, String dir) => PlayItem(
       subtitles: [
         for (final s in e.subtitles) ExternalSubtitle(url: Uri.file('$dir/${s.file}'), title: s.title, language: s.language),
       ],
+      reporter: reporter,
     );

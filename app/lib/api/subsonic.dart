@@ -177,7 +177,7 @@ class _Scrobbler implements PlaybackReporter {
   Future<void> progress(Duration position, {required bool paused}) async {}
 
   @override
-  Future<void> stopped(Duration position) async {
+  Future<void> stopped(Duration position, {Duration? duration}) async {
     final total = _song.duration;
     final needed = total == null ? const Duration(seconds: 30) : (total ~/ 2 < const Duration(minutes: 4) ? total ~/ 2 : const Duration(minutes: 4));
     if (position >= needed) await _client._scrobble(_song.id, submission: true);
