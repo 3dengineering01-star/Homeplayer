@@ -2,3 +2,7 @@
 .shots/
 server/**/bin/
 server/**/obj/
+# Google Play upload key and its passwords: never in git.
+app/android/key.properties
+*.jks
+*.keystore
