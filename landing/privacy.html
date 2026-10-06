@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homeplay privacy policy</title>
+<meta name="description" content="What the Homeplay Android app does with your data: it talks only to your own servers. No account, no analytics, no ads.">
+<style>
+  :root {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --line: #262a33;
+    --text: #e8eaef;
+    --muted: #9aa1ad;
+    --accent: #7cc4ff;
+    --accent-ink: #06121d;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --line: #e1e4ea;
+      --text: #151820;
+      --muted: #5b6270;
+      --accent: #0b6bcb;
+      --accent-ink: #ffffff;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 20px 0; display: flex; align-items: center; gap: 10px; font-weight: 650; }
+  header a { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center; font-size: 14px;
+  }
+  h1 { font-size: clamp(28px, 5vw, 38px); line-height: 1.15; margin: 24px 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 20px; margin: 32px 0 8px; }
+  .updated { color: var(--muted); margin: 0 0 24px; }
+  .summary { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; }
+  .summary p { margin: 0; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  a { color: var(--accent); }
+  .lang { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line); }
+  footer { padding: 32px 0 48px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); margin-top: 48px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="./"><span class="logo">▶</span> Homeplay</a></header>
+
+  <h1>Privacy policy</h1>
+  <p class="updated">Homeplay for Android · last updated 6 October 2026 · <a href="#ru">Русский</a></p>
+
+  <div class="summary">
+    <p>Homeplay talks only to the media servers you add to it (Jellyfin, Navidrome or another Subsonic server).
+      We, the developers, receive nothing: there is no Homeplay account, no analytics, no crash reporting,
+      no ads and no tracking.</p>
+  </div>
+
+  <h2>Your servers and sign-in</h2>
+  <ul>
+    <li>You enter the address of your server and sign in to it. Your password goes only to that server and is not stored on the phone.</li>
+    <li>What the app keeps to stay signed in (a Jellyfin access token, or a salted Subsonic token) is stored on the phone in Android's encrypted storage.</li>
+    <li>The app sends your server what any client does: what you browse, what you play and how far you got, so the server can show your progress and played marks.</li>
+    <li>Before converting a video for a slow connection, the app may download a few megabytes of test data from your server to measure the speed.</li>
+  </ul>
+
+  <h2>Photo and video backup (optional)</h2>
+  <ul>
+    <li>Only if you turn it on. The app then reads your photos and videos, including the place they were taken, and uploads them to the Jellyfin server you chose, where the Homeplay Backup plugin stores them in a folder you set.</li>
+    <li>They go to your server only. The app keeps a list of what it has uploaded on the phone, so it does not send anything twice.</li>
+    <li>Nothing is deleted from the phone. You can turn backup off at any time.</li>
+  </ul>
+
+  <h2>Downloads</h2>
+  <ul>
+    <li>Movies, episodes and music you download are stored in the app's own storage on the phone. Uninstalling the app removes them.</li>
+    <li>When you play downloads without a connection, the app remembers where you stopped and sends that to your server once it is reachable again.</li>
+  </ul>
+
+  <h2>Android Auto</h2>
+  <p>In the car, the app lists the music from your downloads and your servers and plays it. Android Auto gets the titles and artists of what is shown and playing, as with any music app.</p>
+
+  <h2>Permissions</h2>
+  <ul>
+    <li><b>Photos and videos, media location</b>: only for the optional backup.</li>
+    <li><b>Notifications</b>: for playback controls and download progress.</li>
+    <li><b>Network</b>: to reach your servers.</li>
+  </ul>
+
+  <h2>Third parties</h2>
+  <p>The app shares no data with third parties. Connections go directly from your phone to your server, for example over your home network or over Tailscale if you use it.</p>
+
+  <h2>Children</h2>
+  <p>Homeplay is not directed at children under 13.</p>
+
+  <h2>Changes and contact</h2>
+  <p>If this policy changes, the new version will be on this page with a new date. Questions: <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
+
+  <div class="lang" id="ru" lang="ru">
+    <h1>Политика конфиденциальности</h1>
+    <p class="updated">Homeplay для Android · обновлено 6 октября 2026</p>
+
+    <div class="summary">
+      <p>Homeplay общается только с медиасерверами, которые вы в него добавили (Jellyfin, Navidrome или другой
+        Subsonic-сервер). Мы, разработчики, не получаем ничего: нет учётной записи Homeplay, аналитики, отчётов
+        об ошибках, рекламы и слежки.</p>
+    </div>
+
+    <h2>Ваши серверы и вход</h2>
+    <ul>
+      <li>Вы вводите адрес своего сервера и входите в него. Пароль уходит только на этот сервер и на телефоне не хранится.</li>
+      <li>То, что нужно, чтобы оставаться в системе (ключ доступа Jellyfin или токен Subsonic), хранится на телефоне в зашифрованном хранилище Android.</li>
+      <li>Серверу приложение сообщает то же, что любой клиент: что вы открываете и смотрите и где остановились, чтобы сервер показывал прогресс и отметки о просмотре.</li>
+      <li>Перед сжатием видео для медленной сети приложение может скачать с вашего сервера несколько мегабайт пробных данных, чтобы замерить скорость.</li>
+    </ul>
+
+    <h2>Копирование фото и видео (по желанию)</h2>
+    <ul>
+      <li>Только если вы его включили. Тогда приложение читает фото и видео, в том числе место съёмки, и отправляет их на выбранный вами сервер Jellyfin, где плагин Homeplay Backup складывает их в заданную вами папку.</li>
+      <li>Они уходят только на ваш сервер. Список уже отправленного хранится на телефоне, чтобы ничего не отправлялось дважды.</li>
+      <li>С телефона ничего не удаляется. Копирование можно выключить в любой момент.</li>
+    </ul>
+
+    <h2>Загрузки</h2>
+    <ul>
+      <li>Скачанные фильмы, серии и музыка хранятся в собственной памяти приложения на телефоне и удаляются вместе с ним.</li>
+      <li>Если вы смотрите скачанное без сети, приложение запоминает, где вы остановились, и сообщает это вашему серверу, когда он снова доступен.</li>
+    </ul>
+
+    <h2>Android Auto</h2>
+    <p>В машине приложение показывает музыку из загрузок и с ваших серверов и играет её. Android Auto видит названия и исполнителей показанного и играющего, как у любого музыкального приложения.</p>
+
+    <h2>Разрешения</h2>
+    <ul>
+      <li><b>Фото и видео, место съёмки</b>: только для копирования по желанию.</li>
+      <li><b>Уведомления</b>: управление воспроизведением и прогресс загрузок.</li>
+      <li><b>Сеть</b>: доступ к вашим серверам.</li>
+    </ul>
+
+    <h2>Третьи лица</h2>
+    <p>Приложение не передаёт данные третьим лицам. Соединения идут напрямую с телефона на ваш сервер, например по домашней сети или через Tailscale, если вы им пользуетесь.</p>
+
+    <h2>Дети</h2>
+    <p>Homeplay не предназначен для детей младше 13 лет.</p>
+
+    <h2>Изменения и контакты</h2>
+    <p>Если политика изменится, новая версия появится на этой странице с новой датой. Вопросы: <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
+  </div>
+
+  <footer>Homeplay is an independent project, not affiliated with Jellyfin, Navidrome, Plex or Tailscale.</footer>
+</div>
+</body>
+</html>
