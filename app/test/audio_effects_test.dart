@@ -16,7 +16,7 @@ void main() {
 
   test('raised bands become mpv equalizer filters with headroom', () {
     final f = equalizerFilter([6, 0, 0, 0, 0, -3, 0, 0, 0, 0]);
-    expect(f, 'lavfi=[equalizer=f=31:t=o:w=1:g=6.0,equalizer=f=1000:t=o:w=1:g=-3.0,volume=-3.0dB]');
+    expect(f, 'lavfi=[equalizer=f=31:t=o:w=1:g=6.0,equalizer=f=1000:t=o:w=1:g=-3.0,volume=volume=-3.0dB]');
     // Only cuts: nothing clips, no volume change.
     expect(equalizerFilter([0, 0, -4, 0, 0, 0, 0, 0, 0, 0]), 'lavfi=[equalizer=f=125:t=o:w=1:g=-4.0]');
   });

@@ -106,6 +106,8 @@ class _Cover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
+        // The whole area around the cover takes the swipe, not only the picture.
+        behavior: HitTestBehavior.opaque,
         onDoubleTap: () => pb.player.state.playing ? pb.pause() : pb.play(),
         onHorizontalDragEnd: (d) {
           final v = d.primaryVelocity ?? 0;

@@ -105,7 +105,8 @@ String equalizerFilter(List<double> gains) {
     bands.add('equalizer=f=${eqBands[i]}:t=o:w=1:g=${_db(g)}');
   }
   if (bands.isEmpty) return '';
-  if (highest > 0) bands.add('volume=${_db(-highest / 2)}dB');
+  // Named: a bare value starting with '-' reads as an option name to libavfilter.
+  if (highest > 0) bands.add('volume=volume=${_db(-highest / 2)}dB');
   return 'lavfi=[${bands.join(',')}]';
 }
 

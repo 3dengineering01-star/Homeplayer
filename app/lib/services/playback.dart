@@ -227,13 +227,9 @@ class Playback extends BaseAudioHandler with SeekHandler {
     final s = sound.value;
     final filter = _isMusic ? s.filter : '';
     await native.setProperty('replaygain', _isMusic ? s.replayGain.mpv : 'no');
+    // A refused chain shows up as a player error (see _listen), which clears it again.
+    if (filter.isNotEmpty) equalizerWorks.value = true;
     await native.setProperty('af', filter);
-    if (filter.isEmpty) return;
-    // mpv keeps the old chain when it can't build the new one, without an error to the caller.
-    final now = await native.getProperty('af');
-    final works = now.isNotEmpty;
-    if (!works) debugPrint('homeplay equalizer refused by mpv');
-    equalizerWorks.value = works;
   }
 
   /// Pauses the music after [after], or at the end of the current track; null turns it off.
@@ -647,7 +643,14 @@ class Playback extends BaseAudioHandler with SeekHandler {
     s.log.listen((l) => debugPrint('homeplay mpv [${l.level}] ${l.prefix}: ${l.text.trim()}'));
     // mpv reports recoverable problems here too (e.g. a hardware decoder it then falls back from),
     // so they are only logged.
-    s.error.listen((e) => debugPrint('homeplay player error: $e'));
+    s.error.listen((e) {
+      debugPrint('homeplay player error: $e');
+      // The equalizer chain could not be built: drop it so the sound goes on without it.
+      if (e.contains('Audio filter') && sound.value.filter.isNotEmpty) {
+        equalizerWorks.value = false;
+        (player.platform as NativePlayer).setProperty('af', '');
+      }
+    });
   }
 
   /// Tells the notification and the lock screen what is going on.
