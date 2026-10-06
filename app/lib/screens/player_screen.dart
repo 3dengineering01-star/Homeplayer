@@ -45,8 +45,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
         final item = _pb.currentItem;
         if (item == null) {
           // Stopped from the notification while this screen was open: go back to the list.
+          // Not when this screen is already on its way out (back from a video stops it during
+          // the closing animation): then the pop would close the list under it too.
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) Navigator.of(context).maybePop();
+            if (mounted && (ModalRoute.of(context)?.isCurrent ?? false)) Navigator.of(context).maybePop();
           });
           return Scaffold(appBar: AppBar(), body: const Center(child: Text('Nothing is playing')));
         }
