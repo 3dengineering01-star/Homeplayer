@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../api/common.dart';
 import '../api/subsonic.dart';
 import '../services/playback.dart';
 import '../widgets/async_list.dart';
+import '../widgets/queue_sheet.dart';
 import 'player_screen.dart';
 
 class SubsonicArtists extends StatelessWidget {
@@ -70,7 +72,23 @@ class SubsonicSongs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(album.title)),
+      appBar: AppBar(title: Text(album.title), actions: [
+        IconButton(
+          tooltip: 'Play next or add to the queue',
+          icon: const Icon(Icons.playlist_add),
+          onPressed: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final List<SubsonicEntry> songs;
+            try {
+              songs = await client.songs(album.id);
+            } catch (e) {
+              messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
+              return;
+            }
+            if (context.mounted) await showQueueMenu(context, album.title, songs.map(client.toPlayItem).toList());
+          },
+        ),
+      ]),
       body: AsyncList<SubsonicEntry>(
         load: () => client.songs(album.id),
         itemBuilder: (context, items, i) {
@@ -84,6 +102,7 @@ class SubsonicSongs extends StatelessWidget {
               await Playback.instance.start(items.map(client.toPlayItem).toList(), i);
               nav.push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
             },
+            onLongPress: () => showQueueMenu(context, s.title, [client.toPlayItem(s)]),
           );
         },
       ),

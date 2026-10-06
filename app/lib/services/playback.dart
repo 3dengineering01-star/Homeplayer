@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
@@ -12,9 +13,11 @@ import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../api/subsonic.dart';
 import 'account_store.dart';
+import 'audio_effects.dart';
 import 'car_library.dart';
 import 'downloads.dart';
 import 'quality.dart';
+import 'queue_edit.dart';
 import 'track_choice.dart';
 import 'video_tuning.dart';
 
@@ -44,6 +47,9 @@ class Playback extends BaseAudioHandler with SeekHandler {
     await instance._initSession();
     final prefs = instance._prefs = await SharedPreferences.getInstance();
     instance.adjust.value = VideoAdjust.fromPrefs(prefs.get);
+    instance.sound.value = SoundSettings.fromPrefs(prefs.get);
+    instance.shuffle.value = prefs.getBool(_shuffleKey) ?? false;
+    instance.repeat.value = Repeat.values.firstWhere((r) => r.name == prefs.getString(_repeatKey), orElse: () => Repeat.off);
   }
 
   // libass keeps ASS styling (colour, position, fades); it needs a bundled font on Android.
@@ -137,14 +143,225 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
   }
 
+  // --- Music: shuffle, repeat, speed, sound, sleep timer ---
+
+  static const _shuffleKey = 'shuffle';
+  static const _repeatKey = 'repeat';
+  static const _musicRateKey = 'music_rate';
+
+  /// Music plays in random order. The queue itself is reordered, so it shows what comes next.
+  final ValueNotifier<bool> shuffle = ValueNotifier(false);
+
+  final ValueNotifier<Repeat> repeat = ValueNotifier(Repeat.off);
+
+  /// Equalizer and volume levelling for music.
+  final ValueNotifier<SoundSettings> sound = ValueNotifier(const SoundSettings());
+
+  /// False once mpv has refused the equalizer filter (a libmpv built without it).
+  final ValueNotifier<bool> equalizerWorks = ValueNotifier(true);
+
+  /// When the sleep timer pauses the music; null when it is off.
+  final ValueNotifier<DateTime?> sleepAt = ValueNotifier(null);
+
+  /// The sleep timer pauses at the end of the current track.
+  final ValueNotifier<bool> sleepAfterTrack = ValueNotifier(false);
+  Timer? _sleepTimer;
+
+  // The queue in the order it had before shuffling, to go back to it.
+  List<PlayItem> _unshuffledOrder = const [];
+  final _random = Random();
+
+  bool get _isMusic => !(currentItem?.isVideo ?? false);
+
+  Future<void> setShuffle(bool on) async {
+    if (shuffle.value == on) return;
+    shuffle.value = on;
+    await _prefs?.setBool(_shuffleKey, on);
+    _broadcast();
+    final list = items.value;
+    if (list.length < 2 || !_isMusic) return;
+    if (on) {
+      _unshuffledOrder = list;
+      final order = shuffledOrder(list.length, current.value, _random);
+      await _reorder([for (final i in order) list[i]]);
+    } else {
+      await _reorder(unshuffled(list, _unshuffledOrder));
+    }
+  }
+
+  Future<void> setRepeat(Repeat r) async {
+    repeat.value = r;
+    await _prefs?.setString(_repeatKey, r.name);
+    if (_isMusic) await player.setPlaylistMode(r.mode);
+    _broadcast();
+  }
+
+  /// Plays faster or slower; for music the speed is kept for the next queues too.
+  @override
+  Future<void> setSpeed(double rate) async {
+    await player.setRate(rate);
+    if (_isMusic) await _prefs?.setDouble(_musicRateKey, rate);
+    _broadcast();
+  }
+
+  /// Applies the equalizer and volume levelling, and keeps them for the next time.
+  Future<void> setSound(SoundSettings settings) async {
+    sound.value = settings;
+    final prefs = _prefs;
+    if (prefs != null) {
+      for (final e in settings.toPrefs().entries) {
+        switch (e.value) {
+          case final bool v:
+            await prefs.setBool(e.key, v);
+          case final String v:
+            await prefs.setString(e.key, v);
+        }
+      }
+    }
+    if (_isMusic && items.value.isNotEmpty) await _applySound();
+  }
+
+  /// Sets mpv's audio filters for music, none for video.
+  Future<void> _applySound() async {
+    final native = player.platform as NativePlayer;
+    final s = sound.value;
+    final filter = _isMusic ? s.filter : '';
+    await native.setProperty('replaygain', _isMusic ? s.replayGain.mpv : 'no');
+    await native.setProperty('af', filter);
+    if (filter.isEmpty) return;
+    // mpv keeps the old chain when it can't build the new one, without an error to the caller.
+    final now = await native.getProperty('af');
+    final works = now.isNotEmpty;
+    if (!works) debugPrint('homeplay equalizer refused by mpv');
+    equalizerWorks.value = works;
+  }
+
+  /// Pauses the music after [after], or at the end of the current track; null turns it off.
+  void setSleepTimer(Duration? after, {bool endOfTrack = false}) {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    sleepAfterTrack.value = endOfTrack;
+    sleepAt.value = after == null ? null : DateTime.now().add(after);
+    if (after != null) _sleepTimer = Timer(after, _sleepNow);
+  }
+
+  void _sleepNow() {
+    setSleepTimer(null);
+    pause();
+  }
+
+  // --- Queue editing ---
+
+  // While above zero, playlist events come from our own edits, not from a track change.
+  int _editing = 0;
+
+  /// Moves the queue entry at [from] to [to] (its final position). The playing one keeps playing.
+  /// The queue changes at once (lists follow it without a flicker); mpv follows.
+  Future<void> moveQueueItem(int from, int to) async {
+    if (from == to || from < 0 || to < 0 || from >= items.value.length || to >= items.value.length) return;
+    _editing++;
+    _remapIndexes((i) => indexAfterMove(i, from, to));
+    items.value = moved(items.value, from, to);
+    queue.add([for (final i in items.value) _mediaItem(i)]);
+    try {
+      await player.move(from, mpvMoveTarget(from, to));
+      await Future<void>.delayed(Duration.zero);
+    } finally {
+      _editing--;
+    }
+    _broadcast();
+  }
+
+  /// Takes the entry at [index] out of the queue; not the one playing.
+  Future<void> removeFromQueue(int index) async {
+    if (index == current.value || index < 0 || index >= items.value.length) return;
+    _editing++;
+    _remapIndexes((i) => indexAfterRemove(i, index));
+    items.value = [...items.value]..removeAt(index);
+    queue.add([for (final i in items.value) _mediaItem(i)]);
+    try {
+      await player.remove(index);
+      await Future<void>.delayed(Duration.zero);
+    } finally {
+      _editing--;
+    }
+    _broadcast();
+  }
+
+  /// Puts [more] right after the playing entry, or plays them when nothing is playing.
+  Future<void> playNext(List<PlayItem> more) => _insert(more, next: true);
+
+  /// Puts [more] at the end of the queue, or plays them when nothing is playing.
+  Future<void> addToQueue(List<PlayItem> more) => _insert(more, next: false);
+
+  Future<void> _insert(List<PlayItem> more, {required bool next}) async {
+    if (more.isEmpty) return;
+    if (items.value.isEmpty || !_isMusic || more.any((i) => i.isVideo)) {
+      await start(more, 0);
+      return;
+    }
+    _unshuffledOrder = [..._unshuffledOrder, ...more];
+    for (final item in more) {
+      _editing++;
+      try {
+        await player.add(Media(item.url.toString(), httpHeaders: item.headers));
+        await Future<void>.delayed(Duration.zero);
+      } finally {
+        _editing--;
+      }
+      items.value = [...items.value, item];
+    }
+    if (next) {
+      final at = current.value + 1;
+      final first = items.value.length - more.length;
+      for (var n = 0; n < more.length; n++) {
+        await moveQueueItem(first + n, at + n);
+      }
+    }
+    queue.add([for (final i in items.value) _mediaItem(i)]);
+    _broadcast();
+  }
+
+  /// Puts the queue in [target] order (the same entries) with mpv moves, without a pause.
+  Future<void> _reorder(List<PlayItem> target) async {
+    for (final (from, to) in movesBetween(items.value, target)) {
+      await moveQueueItem(from, to);
+    }
+  }
+
+  /// Keeps the per-entry bookkeeping on the same entries after an edit.
+  void _remapIndexes(int? Function(int) after) {
+    Set<int> remap(Set<int> s) => {for (final i in s) ?after(i)};
+    final reported = remap(_stopReported);
+    final applied = remap(_tracksApplied);
+    final added = remap(_subtitlesAdded);
+    _stopReported
+      ..clear()
+      ..addAll(reported);
+    _tracksApplied
+      ..clear()
+      ..addAll(applied);
+    _subtitlesAdded
+      ..clear()
+      ..addAll(added);
+    current.value = after(current.value) ?? current.value;
+  }
+
   /// Plays [queueItems] from [index], optionally from [startAt] (a resume point).
   Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt}) async {
     _endReport(current.value, player.state.position);
     _tracksApplied.clear();
     _subtitlesAdded.clear();
     _stopReported.clear();
+    final music = !queueItems.any((i) => i.isVideo);
+    _unshuffledOrder = queueItems;
+    if (music && shuffle.value && queueItems.length > 1) {
+      queueItems = [for (final i in shuffledOrder(queueItems.length, index, _random)) queueItems[i]];
+      index = 0;
+    }
     items.value = queueItems;
     current.value = index;
+    await _applySound();
     queue.add([for (final i in queueItems) _mediaItem(i)]);
     mediaItem.add(_mediaItem(queueItems[index]));
     await _session?.setActive(true);
@@ -160,7 +377,9 @@ class Playback extends BaseAudioHandler with SeekHandler {
       adjust.value = adjust.value.forNewFile();
       await _applyAdjust(adjust.value);
     }
-    if (player.state.rate != 1.0) await player.setRate(1.0);
+    final rate = music ? (_prefs?.getDouble(_musicRateKey) ?? 1.0) : 1.0;
+    if (player.state.rate != rate) await player.setRate(rate);
+    await player.setPlaylistMode(music ? repeat.value.mode : PlaylistMode.none);
     await player.open(Playlist(
       [
         for (var n = 0; n < queueItems.length; n++)
@@ -284,6 +503,20 @@ class Playback extends BaseAudioHandler with SeekHandler {
   }
 
   @override
+  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) =>
+      setShuffle(shuffleMode != AudioServiceShuffleMode.none);
+
+  @override
+  Future<void> setRepeatMode(AudioServiceRepeatMode repeatMode) => setRepeat(switch (repeatMode) {
+        AudioServiceRepeatMode.one => Repeat.one,
+        AudioServiceRepeatMode.all || AudioServiceRepeatMode.group => Repeat.all,
+        AudioServiceRepeatMode.none => Repeat.off,
+      });
+
+  @override
+  Future<void> removeQueueItemAt(int index) => removeFromQueue(index);
+
+  @override
   Future<void> play() async {
     await _session?.setActive(true);
     await player.play();
@@ -324,6 +557,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     _heartbeat = null;
     _cacheLog?.cancel();
     _cacheLog = null;
+    setSleepTimer(null);
     await player.stop();
     items.value = const [];
     current.value = 0;
@@ -381,7 +615,9 @@ class Playback extends BaseAudioHandler with SeekHandler {
   void _listen() {
     final s = player.stream;
     s.playlist.listen((p) {
+      if (_editing > 0) return;
       if (items.value.isEmpty || p.index < 0 || p.index >= items.value.length || p.index == current.value) return;
+      if (sleepAfterTrack.value) _sleepNow();
       // Not reported yet means the previous entry played to its end.
       _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
       current.value = p.index;
@@ -406,6 +642,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     s.completed.listen((done) {
       _broadcast();
       if (done) _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
+      if (done && sleepAfterTrack.value) setSleepTimer(null);
     });
     s.log.listen((l) => debugPrint('homeplay mpv [${l.level}] ${l.prefix}: ${l.text.trim()}'));
     // mpv reports recoverable problems here too (e.g. a hardware decoder it then falls back from),
@@ -440,6 +677,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
       updatePosition: st.position,
       bufferedPosition: st.buffer,
       speed: st.rate,
+      repeatMode: repeat.value.serviceMode,
+      shuffleMode: shuffle.value ? AudioServiceShuffleMode.all : AudioServiceShuffleMode.none,
       queueIndex: count == 0 ? null : current.value,
     ));
   }
@@ -499,4 +738,18 @@ class Playback extends BaseAudioHandler with SeekHandler {
     debugPrint('homeplay decoders: video=$codec hwdec=$hwdec audio=$audio; '
         'available: ${wanted.map((c) => '$c=${names.contains(c) ? 'yes' : 'NO'}').join(' ')}');
   }
+}
+
+/// What plays again: nothing, the whole queue, or the current track.
+enum Repeat {
+  off(PlaylistMode.none, AudioServiceRepeatMode.none),
+  all(PlaylistMode.loop, AudioServiceRepeatMode.all),
+  one(PlaylistMode.single, AudioServiceRepeatMode.one);
+
+  const Repeat(this.mode, this.serviceMode);
+
+  final PlaylistMode mode;
+  final AudioServiceRepeatMode serviceMode;
+
+  Repeat get next => values[(index + 1) % values.length];
 }

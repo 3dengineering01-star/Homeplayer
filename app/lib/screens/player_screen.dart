@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../api/common.dart';
 import '../services/playback.dart';
-import '../widgets/artwork.dart';
+import '../widgets/music_view.dart';
 import '../widgets/video_view.dart';
 
 /// Full-screen view of [Playback]. Leaving it stops a video; music keeps playing.
@@ -38,7 +37,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Widget build(BuildContext context) {
     // The queue too: a stop on the first track leaves the index at 0 but empties it.
     return ListenableBuilder(
-      listenable: Listenable.merge([_pb.items, _pb.current]),
+      listenable: Listenable.merge([_pb.items, _pb.current, _pb.repeat]),
       builder: (context, _) {
         final index = _pb.current.value;
         final item = _pb.currentItem;
@@ -55,110 +54,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         if (item.isVideo) {
           return VideoView(pb: _pb, item: item, hasPrev: index > 0, hasNext: index < count - 1);
         }
-        return Scaffold(
-          appBar: AppBar(title: Text('${index + 1} / $count')),
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(children: [
-                Expanded(
-                  child: Center(
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: artworkImage(item, fallback: _noArt(context)),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(item.title, style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center, maxLines: 2),
-                if (item.subtitle != null) Text(item.subtitle!, textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                _SeekBar(pb: _pb),
-                _Transport(pb: _pb, hasPrev: index > 0, hasNext: index < count - 1),
-              ]),
-            ),
-          ),
-        );
+        return MusicView(pb: _pb, item: item, index: index, count: count);
       },
     );
-  }
-
-  Widget _noArt(BuildContext context) => Container(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: const Icon(Icons.music_note, size: 96),
-      );
-}
-
-class _SeekBar extends StatefulWidget {
-  const _SeekBar({required this.pb});
-  final Playback pb;
-
-  @override
-  State<_SeekBar> createState() => _SeekBarState();
-}
-
-class _SeekBarState extends State<_SeekBar> {
-  double? _dragging;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = widget.pb.player;
-    return StreamBuilder<Duration>(
-      stream: p.stream.duration,
-      initialData: p.state.duration,
-      builder: (context, dur) => StreamBuilder<Duration>(
-        stream: p.stream.position,
-        initialData: p.state.position,
-        builder: (context, pos) {
-          final total = dur.data!.inMilliseconds.toDouble();
-          final current = (_dragging ?? pos.data!.inMilliseconds.toDouble()).clamp(0.0, total > 0 ? total : 0.0);
-          return Column(children: [
-            Slider(
-              value: current,
-              max: total > 0 ? total : 1,
-              onChanged: total > 0 ? (v) => setState(() => _dragging = v) : null,
-              onChangeEnd: (v) {
-                widget.pb.seek(Duration(milliseconds: v.round()));
-                setState(() => _dragging = null);
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(formatDuration(Duration(milliseconds: current.round()))),
-                Text(formatDuration(dur.data!)),
-              ]),
-            ),
-          ]);
-        },
-      ),
-    );
-  }
-}
-
-class _Transport extends StatelessWidget {
-  const _Transport({required this.pb, required this.hasPrev, required this.hasNext});
-  final Playback pb;
-  final bool hasPrev;
-  final bool hasNext;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      IconButton(iconSize: 40, onPressed: hasPrev ? pb.skipToPrevious : null, icon: const Icon(Icons.skip_previous)),
-      StreamBuilder<bool>(
-        stream: pb.player.stream.playing,
-        initialData: pb.player.state.playing,
-        builder: (context, s) => IconButton.filled(
-          iconSize: 56,
-          onPressed: s.data! ? pb.pause : pb.play,
-          icon: Icon(s.data! ? Icons.pause : Icons.play_arrow),
-        ),
-      ),
-      IconButton(iconSize: 40, onPressed: hasNext ? pb.skipToNext : null, icon: const Icon(Icons.skip_next)),
-    ]);
   }
 }
