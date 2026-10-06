@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
@@ -31,7 +32,11 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
         _ => item.isFolder ? Icons.folder : Icons.movie,
       };
 
-  Future<void> _tap(List<JellyfinItem> items, JellyfinItem item) async {
+  /// Resolution of the version the user asked to play from now on, e.g. "1080p".
+  static const _versionKey = 'version_resolution';
+
+  /// [pickVersion] shows the version list even when a remembered resolution would pick one.
+  Future<void> _tap(List<JellyfinItem> items, JellyfinItem item, {bool pickVersion = false}) async {
     final nav = Navigator.of(context);
     if (item.isFolder || !item.isPlayable) {
       await nav.push(MaterialPageRoute(
@@ -48,9 +53,32 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
         return <MediaVersion>[];
       }));
       if (versions.length > 1) {
-        final choice = await _askVersion(versions);
-        if (choice == null) return;
-        versionId = choice.id;
+        final prefs = await SharedPreferences.getInstance();
+        final remembered = pickVersion ? null : chooseVersion(versions, prefs.getString(_versionKey));
+        if (remembered != null) {
+          versionId = remembered.id;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Playing ${remembered.name.isNotEmpty ? remembered.name : remembered.resolution}. '
+                  'Long-press it in the list to choose another version.'),
+              duration: const Duration(seconds: 4),
+            ));
+          }
+        } else {
+          // Long press: the box shows whether a resolution is remembered, and clearing it forgets
+          // it. Otherwise it is ticked only when nothing is remembered yet, so a movie without
+          // the remembered resolution does not replace it unless asked to.
+          final saved = prefs.getString(_versionKey);
+          final choice = await _askVersion(versions, remember: pickVersion ? saved != null : saved == null);
+          if (choice == null) return;
+          versionId = choice.version.id;
+          final resolution = choice.version.resolution;
+          if (choice.remember && resolution != null) {
+            await prefs.setString(_versionKey, resolution);
+          } else if (!choice.remember && pickVersion) {
+            await prefs.remove(_versionKey);
+          }
+        }
       }
     }
 
@@ -99,26 +127,35 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
     }
   }
 
-  /// The chosen file, or null when dismissed.
-  Future<MediaVersion?> _askVersion(List<MediaVersion> versions) => showModalBottomSheet<MediaVersion>(
+  /// The chosen file and whether to pick its resolution from now on; null when dismissed.
+  Future<({MediaVersion version, bool remember})?> _askVersion(List<MediaVersion> versions, {required bool remember}) =>
+      showModalBottomSheet<({MediaVersion version, bool remember})>(
         context: context,
         isScrollControlled: true,
-        builder: (context) => SafeArea(
-          child: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text('Version',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
-              ),
-              for (final v in versions)
-                ListTile(
-                  leading: const Icon(Icons.movie_outlined),
-                  title: Text(v.name.isNotEmpty ? v.name : v.details),
-                  subtitle: v.name.isNotEmpty && v.details.isNotEmpty ? Text(v.details) : null,
-                  onTap: () => Navigator.pop(context, v),
+        builder: (context) => StatefulBuilder(
+          builder: (context, setSheetState) => SafeArea(
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text('Version',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                 ),
-            ]),
+                for (final v in versions)
+                  ListTile(
+                    leading: const Icon(Icons.movie_outlined),
+                    title: Text(v.name.isNotEmpty ? v.name : v.details),
+                    subtitle: v.name.isNotEmpty && v.details.isNotEmpty ? Text(v.details) : null,
+                    onTap: () => Navigator.pop(context, (version: v, remember: remember)),
+                  ),
+                CheckboxListTile(
+                  value: remember,
+                  onChanged: (on) => setSheetState(() => remember = on ?? false),
+                  title: const Text('Remember my choice'),
+                  subtitle: const Text('Next time play this resolution without asking'),
+                ),
+              ]),
+            ),
           ),
         ),
       );
@@ -181,6 +218,7 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
                     ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, semanticLabel: 'Watched')
                     : const Icon(Icons.play_arrow),
             onTap: () => _tap(items, item),
+            onLongPress: item.versionCount > 1 ? () => _tap(items, item, pickVersion: true) : null,
           );
         },
       ),

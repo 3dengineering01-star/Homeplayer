@@ -29,6 +29,20 @@ void main() {
     expect(MediaVersion({'Id': 'x'}).details, '');
   });
 
+  test('a remembered resolution picks the version without asking', () {
+    final versions = [
+      version('Remux', width: 3840, height: 2160, codec: 'hevc'),
+      version('Web', width: 1920, height: 1036, codec: 'h264'),
+      version('Web HEVC', width: 1920, height: 1080, codec: 'hevc'),
+    ];
+    expect(versions.map((v) => v.resolution), ['4K', '1080p', '1080p']);
+    expect(chooseVersion(versions, '1080p')?.id, 'Web'); // the first one, in the server's order
+    expect(chooseVersion(versions, '4K')?.id, 'Remux');
+    expect(chooseVersion(versions, '720p'), isNull); // nothing like it: ask
+    expect(chooseVersion(versions, null), isNull);
+    expect(version('Old rip').resolution, isNull);
+  });
+
   test('items without versions count as one', () {
     expect(JellyfinItem({'Id': 'a'}).versionCount, 1);
     expect(JellyfinItem({'Id': 'a', 'MediaSourceCount': 2}).versionCount, 2);

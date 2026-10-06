@@ -67,15 +67,23 @@ class MediaVersion {
   /// Jellyfin takes it from the file name, e.g. "2160p" for "Movie - 2160p.mkv".
   String get name => (_j['Name'] as String?) ?? '';
 
+  Map<String, dynamic>? get _video => ((_j['MediaStreams'] as List?) ?? const [])
+      .cast<Map<String, dynamic>>()
+      .where((s) => s['Type'] == 'Video')
+      .firstOrNull;
+
+  /// "4K", "1080p"...; what the app remembers to pick the same kind of file next time.
+  String? get resolution {
+    final video = _video;
+    return video == null ? null : _resolution((video['Width'] as num?)?.toInt(), (video['Height'] as num?)?.toInt());
+  }
+
   /// "4K · HEVC · Dolby Vision · 58.2 GB", without what [name] already says.
   String get details {
-    final video = ((_j['MediaStreams'] as List?) ?? const [])
-        .cast<Map<String, dynamic>>()
-        .where((s) => s['Type'] == 'Video')
-        .firstOrNull;
+    final video = _video;
     final parts = [
       if (video != null) ...[
-        _resolution((video['Width'] as num?)?.toInt(), (video['Height'] as num?)?.toInt()),
+        resolution,
         _videoCodec(video['Codec'] as String?),
         _range(video['VideoRangeType'] as String?),
       ],
@@ -116,6 +124,11 @@ class MediaVersion {
     return bytes >= gb ? '${(bytes / gb).toStringAsFixed(1)} GB' : '${(bytes / (1024 * 1024)).round()} MB';
   }
 }
+
+/// The version to play without asking: the first in the server's order with the remembered
+/// resolution, or null to let the user choose.
+MediaVersion? chooseVersion(List<MediaVersion> versions, String? resolution) =>
+    resolution == null ? null : versions.where((v) => v.resolution == resolution).firstOrNull;
 
 class JellyfinClient {
   JellyfinClient(this.account, this.deviceId);
