@@ -82,8 +82,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   'Above the chosen bitrate the server converts the video, so it plays smoothly on a slow '
-                  'connection. Auto measures the connection before each video. Converted videos have no '
-                  'subtitles yet. You can also switch quality while a video plays, with the subtitles '
+                  'connection. Auto measures the connection before each video. Converted videos keep text '
+                  'subtitles, but not picture ones (Blu-ray PGS). You can also switch quality while a video plays, with the subtitles '
                   'button in the player.',
                   style: theme.textTheme.bodySmall,
                 ),

@@ -8,6 +8,18 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
+/// A subtitle file the server sends apart from the video: an .srt or .ass next to the file
+/// on the server, or text subtitles it takes out of a video it converts.
+class ExternalSubtitle {
+  const ExternalSubtitle({required this.url, this.title, this.language});
+
+  final Uri url;
+  final String? title;
+
+  /// ISO 639 code as the server knows it, e.g. "rus".
+  final String? language;
+}
+
 /// Something the player can open, independent of which server it came from.
 class PlayItem {
   const PlayItem({
@@ -22,6 +34,7 @@ class PlayItem {
     this.reporter,
     this.convertedTo,
     this.withQuality,
+    this.subtitles = const [],
   });
 
   final String title;
@@ -42,6 +55,9 @@ class PlayItem {
   /// Tells the server what is playing; null when the server keeps no history.
   final PlaybackReporter? reporter;
 
+  /// Subtitles to add to the player next to those inside the file.
+  final List<ExternalSubtitle> subtitles;
+
   /// Bitrate the server converts the video to; null for the original file.
   final int? convertedTo;
 
@@ -56,6 +72,7 @@ class PlayItem {
     PlaybackReporter? reporter,
     int? convertedTo,
     Future<PlayItem> Function(VideoQuality quality)? withQuality,
+    List<ExternalSubtitle>? subtitles,
   }) =>
       PlayItem(
         title: title,
@@ -69,6 +86,7 @@ class PlayItem {
         reporter: reporter ?? this.reporter,
         convertedTo: convertedTo ?? this.convertedTo,
         withQuality: withQuality ?? this.withQuality,
+        subtitles: subtitles ?? this.subtitles,
       );
 }
 

@@ -276,11 +276,38 @@ class JellyfinClient {
       },
     ],
     // Every subtitle format is fine inside the file: without this the server may burn them in.
+    // Text subtitles can also come as separate files: .srt/.ass next to the video, and the
+    // text subtitles of a video the server converts (a converted stream carries none).
     'SubtitleProfiles': [
       for (final f in ['ass', 'ssa', 'srt', 'subrip', 'vtt', 'webvtt', 'pgssub', 'dvdsub', 'dvbsub', 'mov_text'])
         {'Format': f, 'Method': 'Embed'},
+      for (final f in ['ass', 'ssa', 'srt', 'subrip', 'vtt', 'webvtt']) {'Format': f, 'Method': 'External'},
     ],
   };
+
+  /// Subtitle files the server delivers apart from the video, from a PlaybackInfo media source.
+  List<ExternalSubtitle> deliveredSubtitles(Map<String, dynamic> source) => [
+        for (final s in _streams(source, 'Subtitle'))
+          if (s['DeliveryMethod'] == 'External' && s['DeliveryUrl'] is String)
+            ExternalSubtitle(
+              url: _withKey(Uri.parse('$_base${s['DeliveryUrl']}')),
+              title: (s['Title'] as String?) ?? (s['IsExternal'] == true ? 'External' : null),
+              language: s['Language'] as String?,
+            ),
+      ];
+
+  /// Subtitles of [source] the player gets neither inside the stream nor as a file: picture
+  /// subtitles of a converted video.
+  bool losesSubtitles(Map<String, dynamic> source) =>
+      _streams(source, 'Subtitle').any((s) => s['DeliveryMethod'] != 'External');
+
+  static Iterable<Map<String, dynamic>> _streams(Map<String, dynamic> source, String type) =>
+      ((source['MediaStreams'] as List?) ?? const []).cast<Map<String, dynamic>>().where((s) => s['Type'] == type);
+
+  /// mpv fetches subtitle files on its own, without our headers, so the token rides in the URL.
+  Uri _withKey(Uri url) => url.queryParameters.keys.any((k) => k.toLowerCase() == 'api_key' || k == 'ApiKey')
+      ? url
+      : url.replace(queryParameters: {...url.queryParameters, 'ApiKey': account.token!});
 
   /// The bitrate cap for [quality] on the connection right now; Auto measures it.
   Future<int?> capNow(VideoQuality quality) async =>
@@ -324,6 +351,7 @@ class JellyfinClient {
     final played = direct.copyWith(
       reporter: _reporter(item, source['Id'] as String?, info['PlaySessionId'] as String?, 'DirectPlay'),
       withQuality: again,
+      subtitles: deliveredSubtitles(source),
     );
 
     if (needsConversion((source['Bitrate'] as num?)?.toInt(), cap)) {
@@ -365,10 +393,12 @@ class JellyfinClient {
     if (url == null) return played.copyWith(notice: '$wanted isn\'t supported on this phone, and the server can\'t convert it');
     return direct.copyWith(
       url: Uri.parse('$_base$url'),
-      notice: '$wanted isn\'t supported on this phone, so the server converts the sound. Subtitles are off in this mode.',
+      notice: '$wanted isn\'t supported on this phone, so the server converts the sound.'
+          '${convertedSource != null && losesSubtitles(convertedSource) ? ' Picture subtitles are off in this mode.' : ''}',
       // Its stop report also ends the conversion on the server.
       reporter: _reporter(item, convertedSource?['Id'] as String?, converted['PlaySessionId'] as String?, 'Transcode'),
       withQuality: again,
+      subtitles: convertedSource == null ? const [] : deliveredSubtitles(convertedSource),
     );
   }
 
@@ -395,10 +425,12 @@ class JellyfinClient {
     }
     return direct.copyWith(
       url: Uri.parse('$_base$url'),
-      notice: 'Converted by the server to ${bitrateLabel(cap)} for this connection. Subtitles are off in this mode.',
-      reporter: _reporter(item, convertedSource?['Id'] as String?, converted['PlaySessionId'] as String?, 'Transcode'),
+      notice: 'Converted by the server to ${bitrateLabel(cap)} for this connection.'
+          '${losesSubtitles(convertedSource!) ? ' Picture subtitles are off in this mode.' : ''}',
+      reporter: _reporter(item, convertedSource['Id'] as String?, converted['PlaySessionId'] as String?, 'Transcode'),
       convertedTo: cap,
       withQuality: again,
+      subtitles: deliveredSubtitles(convertedSource),
     );
   }
 
