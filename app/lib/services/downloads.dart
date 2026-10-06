@@ -208,7 +208,8 @@ class Downloads {
     // What was played without a connection goes to the server once there is one.
     unawaited(sync());
     Connectivity().onConnectivityChanged.listen((net) {
-      if (!net.contains(ConnectivityResult.none)) unawaited(sync());
+      // Right after Wi-Fi comes back the server is often not reachable yet.
+      if (!net.contains(ConnectivityResult.none)) Timer(const Duration(seconds: 3), () => unawaited(sync()));
     });
   }
 
@@ -362,6 +363,14 @@ class Downloads {
   }
 
   bool _syncing = false;
+  Timer? _retry;
+  int _failures = 0;
+
+  /// Another try while the app runs, sooner after the first failure.
+  void _retryLater() {
+    if (_retry?.isActive ?? false) return;
+    _retry = Timer(retryDelay(_failures++), () => unawaited(sync()));
+  }
 
   /// Sends what was played of downloads to their servers; what fails stays for next time
   /// (app start, the connection coming back, the next stop).
@@ -382,10 +391,21 @@ class Downloads {
         if (e != null) _put(e.copyWith(unsynced: false));
       }
       if (sent.isNotEmpty) await _save();
+      if (sent.length < pending.length) {
+        _retryLater();
+      } else {
+        _failures = 0;
+      }
     } finally {
       _syncing = false;
     }
   }
+}
+
+/// Wait before sending failed play reports again: 15 s, then doubling, at most 5 minutes.
+Duration retryDelay(int failures) {
+  final wait = Duration(seconds: 15 << failures.clamp(0, 5));
+  return wait > const Duration(minutes: 5) ? const Duration(minutes: 5) : wait;
 }
 
 /// The server of a download: its own account, or for downloads from before that was kept,

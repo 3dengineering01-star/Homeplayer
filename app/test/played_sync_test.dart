@@ -62,6 +62,10 @@ void main() {
     expect(await sendPlayed(pending, (_) async => null), isEmpty); // no server for them
   });
 
+  test('failed reports are tried again, soon at first, then at most every 5 minutes', () {
+    expect([for (var n = 0; n < 7; n++) retryDelay(n).inSeconds], [15, 30, 60, 120, 240, 300, 300]);
+  });
+
   test('without a connection the report fails quietly', () async {
     final client = JellyfinClient(nas, 'dev', client: MockClient((_) async => throw http.ClientException('offline')));
     expect(await client.reportPlayed('a', Duration.zero), isFalse);
