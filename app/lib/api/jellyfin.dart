@@ -24,6 +24,10 @@ class JellyfinItem {
   bool get hasPrimaryImage => (_j['ImageTags'] as Map?)?.containsKey('Primary') ?? false;
   double get imageAspect => ((_j['PrimaryImageAspectRatio'] as num?)?.toDouble() ?? 1).clamp(0.6, 1.8);
 
+  /// Files of the same movie or episode (4K and 1080p, a director's cut...); Jellyfin only
+  /// sends the count when it is not 1.
+  int get versionCount => (_j['MediaSourceCount'] as num?)?.toInt() ?? 1;
+
   Map<String, dynamic> get _user => (_j['UserData'] as Map<String, dynamic>?) ?? const {};
   bool get played => (_user['Played'] as bool?) ?? false;
 
@@ -50,6 +54,66 @@ class JellyfinItem {
       default:
         return _j['ProductionYear']?.toString();
     }
+  }
+}
+
+/// One file of an item that has several, as Jellyfin's PlaybackInfo lists them.
+class MediaVersion {
+  MediaVersion(this._j);
+  final Map<String, dynamic> _j;
+
+  String get id => _j['Id'] as String;
+
+  /// Jellyfin takes it from the file name, e.g. "2160p" for "Movie - 2160p.mkv".
+  String get name => (_j['Name'] as String?) ?? '';
+
+  /// "4K · HEVC · Dolby Vision · 58.2 GB", without what [name] already says.
+  String get details {
+    final video = ((_j['MediaStreams'] as List?) ?? const [])
+        .cast<Map<String, dynamic>>()
+        .where((s) => s['Type'] == 'Video')
+        .firstOrNull;
+    final parts = [
+      if (video != null) ...[
+        _resolution((video['Width'] as num?)?.toInt(), (video['Height'] as num?)?.toInt()),
+        _videoCodec(video['Codec'] as String?),
+        _range(video['VideoRangeType'] as String?),
+      ],
+      _size((_j['Size'] as num?)?.toInt()),
+    ].whereType<String>().where((p) => !name.toLowerCase().contains(p.toLowerCase()));
+    return parts.join(' · ');
+  }
+
+  // By width: a 1920x800 scope movie is still 1080p.
+  static String? _resolution(int? width, int? height) => switch (width) {
+        null => null,
+        >= 3200 => '4K',
+        >= 1800 => '1080p',
+        >= 1200 => '720p',
+        _ => height == null ? null : '${height}p',
+      };
+
+  static String? _videoCodec(String? codec) => switch (codec?.toLowerCase()) {
+        null => null,
+        'h264' => 'H.264',
+        'hevc' => 'HEVC',
+        'mpeg4' => 'MPEG-4',
+        'mpeg2video' => 'MPEG-2',
+        final c => c.toUpperCase(),
+      };
+
+  static String? _range(String? type) => switch (type) {
+        null || 'SDR' || 'Unknown' => null,
+        final t when t.startsWith('DOVI') => 'Dolby Vision',
+        'HDR10Plus' => 'HDR10+',
+        final t => t,
+      };
+
+  // In 1024-based units, as Windows shows file sizes.
+  static String? _size(int? bytes) {
+    if (bytes == null || bytes <= 0) return null;
+    const gb = 1024 * 1024 * 1024;
+    return bytes >= gb ? '${(bytes / gb).toStringAsFixed(1)} GB' : '${(bytes / (1024 * 1024)).round()} MB';
   }
 }
 
@@ -126,7 +190,7 @@ class JellyfinClient {
         'parentId': parentId,
         'sortBy': 'ParentIndexNumber,IndexNumber,SortName',
         'sortOrder': 'Ascending',
-        'fields': 'PrimaryImageAspectRatio',
+        'fields': 'PrimaryImageAspectRatio,MediaSourceCount',
         'enableImageTypes': 'Primary',
         'enableUserData': 'true',
         // Episodes and seasons Jellyfin knows from online metadata but has no files for.
@@ -143,9 +207,20 @@ class JellyfinClient {
       : null;
 
   /// Direct play: the file goes to mpv untouched. Transcoding comes later,
-  /// for slow mobile connections.
-  Uri streamUrl(JellyfinItem item) => Uri.parse('$_base/${item.isVideo ? 'Videos' : 'Audio'}/${item.id}/stream')
-      .replace(queryParameters: {'static': 'true', 'ApiKey': account.token!});
+  /// for slow mobile connections. [versionId] picks one of several files; null is the default.
+  Uri streamUrl(JellyfinItem item, {String? versionId}) =>
+      Uri.parse('$_base/${item.isVideo ? 'Videos' : 'Audio'}/${item.id}/stream').replace(queryParameters: {
+        'static': 'true',
+        'ApiKey': account.token!,
+        'mediaSourceId': ?versionId,
+      });
+
+  /// The files of an item with [JellyfinItem.versionCount] above 1, in the server's order.
+  Future<List<MediaVersion>> versions(JellyfinItem item) async =>
+      ((await _playbackInfo(item.id, const {}))['MediaSources'] as List? ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(MediaVersion.new)
+          .toList();
 
   /// What this phone can play, so the server knows when it has to convert something.
   static final Map<String, dynamic> _deviceProfile = {
@@ -181,13 +256,16 @@ class JellyfinClient {
   };
 
   /// Direct play when the phone can decode the audio; otherwise another audio track in the
-  /// file, and only as a last resort audio converted by the server.
-  Future<PlayItem> resolve(JellyfinItem item) async {
-    final direct = toPlayItem(item);
+  /// file, and only as a last resort audio converted by the server. [versionId] picks one of
+  /// several files of the item; null is the server's default.
+  Future<PlayItem> resolve(JellyfinItem item, {String? versionId}) async {
+    final direct = toPlayItem(item, versionId: versionId);
     if (!item.isVideo) return direct;
 
-    final info = await _playbackInfo(item.id, const {});
-    final source = ((info['MediaSources'] as List?) ?? const []).cast<Map<String, dynamic>>().firstOrNull;
+    final version = {'MediaSourceId': ?versionId};
+    final info = await _playbackInfo(item.id, version);
+    final sources = ((info['MediaSources'] as List?) ?? const []).cast<Map<String, dynamic>>();
+    final source = sources.where((s) => s['Id'] == versionId).firstOrNull ?? sources.firstOrNull;
     if (source == null) return direct;
     final played = direct.copyWith(
       reporter: _reporter(item, source['Id'] as String?, info['PlaySessionId'] as String?, 'DirectPlay'),
@@ -216,6 +294,7 @@ class JellyfinClient {
     // Jellyfin 12 still offers direct play here despite the profile, so ask again with direct
     // play off; video copy stays allowed, so only the audio gets converted.
     final converted = await _playbackInfo(item.id, {
+      ...version,
       'AudioStreamIndex': current['Index'],
       'EnableDirectPlay': false,
       'EnableDirectStream': false,
@@ -269,14 +348,14 @@ class JellyfinClient {
     }
   }
 
-  PlayItem toPlayItem(JellyfinItem item) => PlayItem(
+  PlayItem toPlayItem(JellyfinItem item, {String? versionId}) => PlayItem(
         title: item.name,
         subtitle: item.subtitle,
-        url: streamUrl(item),
+        url: streamUrl(item, versionId: versionId),
         artwork: imageUrl(item, height: 600),
         isVideo: item.isVideo,
         headers: headers,
-        reporter: _reporter(item, null, null, 'DirectPlay'),
+        reporter: _reporter(item, versionId, null, 'DirectPlay'),
       );
 }
 
