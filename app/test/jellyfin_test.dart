@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/api/jellyfin.dart';
+import 'package:homeplay/models/account.dart';
 
 MediaVersion version(String name, {int? width, int? height, String? codec, String? range, int? size}) =>
     MediaVersion({
@@ -41,6 +42,20 @@ void main() {
     expect(chooseVersion(versions, '720p'), isNull); // nothing like it: ask
     expect(chooseVersion(versions, null), isNull);
     expect(version('Old rip').resolution, isNull);
+  });
+
+  test('photos are told apart from videos and folders, and come scaled to the screen', () {
+    expect(JellyfinItem({'Id': 'p', 'MediaType': 'Photo'}).isPhoto, isTrue);
+    expect(JellyfinItem({'Id': 'p', 'MediaType': 'Photo'}).isPlayable, isFalse);
+    expect(JellyfinItem({'Id': 'v', 'MediaType': 'Video'}).isPhoto, isFalse);
+    expect(JellyfinItem({'Id': 'f', 'MediaType': 'Photo', 'IsFolder': true}).isPhoto, isFalse);
+
+    final client = JellyfinClient(
+      const Account(id: 'a', kind: ServerKind.jellyfin, baseUrl: 'http://nas:8096', username: 'u', serverName: 'NAS', token: 't'),
+      'dev',
+    );
+    expect(client.photoUrl(JellyfinItem({'Id': 'p1'}), maxSide: 2400).toString(),
+        'http://nas:8096/Items/p1/Images/Primary?maxWidth=2400&maxHeight=2400&quality=90');
   });
 
   test('items without versions count as one', () {

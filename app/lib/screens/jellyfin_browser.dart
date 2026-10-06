@@ -5,6 +5,7 @@ import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../services/playback.dart';
 import '../widgets/async_list.dart';
+import 'photo_viewer.dart';
 import 'player_screen.dart';
 
 /// Libraries at the top level, then any folder: series, season, album...
@@ -38,6 +39,12 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
   /// [pickVersion] shows the version list even when a remembered resolution would pick one.
   Future<void> _tap(List<JellyfinItem> items, JellyfinItem item, {bool pickVersion = false}) async {
     final nav = Navigator.of(context);
+    if (item.isPhoto) {
+      final photos = items.where((i) => i.isPhoto).toList();
+      await nav.push(MaterialPageRoute(
+          builder: (_) => PhotoViewer(client: client, photos: photos, initial: photos.indexOf(item))));
+      return;
+    }
     if (item.isFolder || !item.isPlayable) {
       await nav.push(MaterialPageRoute(
           builder: (_) => JellyfinBrowser(client: client, title: item.name, parentId: item.id)));
@@ -179,6 +186,38 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
         ),
       );
 
+  /// A square in the photo grid: the picture, a play mark on videos, a name on folders.
+  Widget _tile(BuildContext context, List<JellyfinItem> items, JellyfinItem item) {
+    final theme = Theme.of(context);
+    final url = item.isPhoto ? client.photoUrl(item, maxSide: 300) : client.imageUrl(item, height: 300);
+    final fallback = Container(
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Icon(_icon(item), size: 32),
+    );
+    return InkWell(
+      onTap: () => _tap(items, item),
+      child: Stack(fit: StackFit.expand, children: [
+        url == null
+            ? fallback
+            : Image.network(url.toString(),
+                headers: client.headers, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
+        if (item.isVideo)
+          const Center(child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 36)),
+        if (item.isFolder)
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: Container(
+              width: double.infinity,
+              color: Colors.black54,
+              padding: const EdgeInsets.all(4),
+              child: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ),
+          ),
+      ]),
+    );
+  }
+
   Widget? _subtitle(JellyfinItem item) {
     final text = item.subtitle;
     final progress = item.played ? null : item.progress;
@@ -201,6 +240,9 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
       body: AsyncList<JellyfinItem>(
         key: ValueKey(_generation),
         load: () => id == null ? client.views() : client.children(id),
+        // Phone photo folders read better as a grid of thumbnails.
+        useGrid: (items) => items.any((i) => i.isPhoto),
+        gridItemBuilder: (context, items, i) => _tile(context, items, items[i]),
         itemBuilder: (context, items, i) {
           final item = items[i];
           return ListTile(
