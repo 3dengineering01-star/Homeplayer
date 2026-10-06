@@ -120,7 +120,12 @@ class Backup {
   /// Sends what the server does not have yet, oldest first. Stops after [budget] (the system
   /// gives background work about 10 minutes) or when [cancelled] says so; the next run goes on
   /// from there, inside a file too. Returns the number of files sent.
+  ///
+  /// [background]: photo_manager's permission check needs an Activity and throws without one,
+  /// so the background run skips it; reading photos works without, and fails with a
+  /// SecurityException if access was taken away.
   static Future<int> run({
+    bool background = false,
     Duration? budget,
     void Function(BackupProgress)? onProgress,
     bool Function()? cancelled,
@@ -137,7 +142,7 @@ class Backup {
         await disable();
         return 0;
       }
-      if (!(await PhotoManager.getPermissionState(requestOption: permission)).hasAccess) {
+      if (!background && !(await PhotoManager.getPermissionState(requestOption: permission)).hasAccess) {
         throw const _BackupStop('No access to photos. Open the backup settings in Homeplay to allow it.');
       }
       final api = BackupApi(JellyfinClient(account, await AccountStore.deviceId()));
@@ -223,7 +228,7 @@ class _BackupStop implements Exception {
 void backupDispatcher() {
   Workmanager().executeTask((task, _) async {
     WidgetsFlutterBinding.ensureInitialized();
-    await Backup.run(budget: const Duration(minutes: 9));
+    await Backup.run(background: true, budget: const Duration(minutes: 9));
     // Failures are saved for the backup screen; the periodic task stays scheduled anyway.
     return true;
   });
