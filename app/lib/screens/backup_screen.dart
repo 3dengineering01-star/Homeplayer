@@ -166,7 +166,7 @@ class _BackupScreenState extends State<BackupScreen> {
               SwitchListTile(
                 title: const Text('Back up photos and videos'),
                 subtitle: Text(_here
-                    ? 'To ${widget.account.serverName}, by Wi-Fi or mobile data, every 15 minutes'
+                    ? 'To ${widget.account.serverName}, by Wi-Fi or mobile data, soon after each new photo'
                     : settings.enabled
                         ? 'Now backing up to another server; turning this on moves it here'
                         : 'Copies go to ${widget.account.serverName}; nothing is deleted from the phone'),

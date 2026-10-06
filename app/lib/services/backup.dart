@@ -42,9 +42,14 @@ class BackupSettings {
 }
 
 /// Copies the phone's photos and videos to the Homeplay Backup plugin of a Jellyfin server:
-/// every 15 minutes in the background (WorkManager), and on demand from the backup screen.
+/// in the background (WorkManager) as soon as a new photo or video appears, every 15 minutes as
+/// a safety net, and on demand from the backup screen.
 class Backup {
   static const _task = 'homeplay-backup';
+
+  /// One-off work that Android starts when the media store changes, i.e. a new photo or video.
+  /// Content triggers only exist for one-off work, so each run queues the next one.
+  static const _newMediaTask = 'homeplay-backup-new-media';
   static const _accountKey = 'backup_account';
   static const _sinceKey = 'backup_since';
   static const _lastRunKey = 'backup_last_run';
@@ -55,7 +60,26 @@ class Backup {
     androidPermission: AndroidPermission(type: RequestType.common, mediaLocation: true),
   );
 
-  static Future<void> init() => Workmanager().initialize(backupDispatcher);
+  static Future<void> init() async {
+    await Workmanager().initialize(backupDispatcher);
+    // Installs from before the trigger existed, or a trigger lost to a crash.
+    if ((await settings()).enabled) await _watchNewMedia();
+  }
+
+  /// [afterRun]: called from inside the triggered run itself, where `keep` would keep the
+  /// running work and leave nothing queued; `append` queues the next one behind it.
+  static Future<void> _watchNewMedia({bool afterRun = false}) => Workmanager().registerOneOffTask(
+        _newMediaTask,
+        _newMediaTask,
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+          contentUriTriggers: [
+            for (final kind in ['images', 'video'])
+              ContentUriTrigger(uri: 'content://media/external/$kind/media', triggerForDescendants: true),
+          ],
+        ),
+        existingWorkPolicy: afterRun ? ExistingWorkPolicy.append : ExistingWorkPolicy.keep,
+      );
 
   static Future<SharedPreferences> _prefs() async {
     final prefs = await SharedPreferences.getInstance();
@@ -101,10 +125,12 @@ class Backup {
       constraints: Constraints(networkType: NetworkType.connected),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
     );
+    await _watchNewMedia();
   }
 
   static Future<void> disable() async {
     await Workmanager().cancelByUniqueName(_task);
+    await Workmanager().cancelByUniqueName(_newMediaTask);
     final p = await _prefs();
     await p.remove(_accountKey);
   }
@@ -229,6 +255,8 @@ void backupDispatcher() {
   Workmanager().executeTask((task, _) async {
     WidgetsFlutterBinding.ensureInitialized();
     await Backup.run(background: true, budget: const Duration(minutes: 9));
+    // Watch for the next photo; the periodic run also restores a lost trigger.
+    if ((await Backup.settings()).enabled) await Backup._watchNewMedia(afterRun: task == Backup._newMediaTask);
     // Failures are saved for the backup screen; the periodic task stays scheduled anyway.
     return true;
   });
