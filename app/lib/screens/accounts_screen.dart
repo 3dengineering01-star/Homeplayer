@@ -7,6 +7,7 @@ import '../services/account_store.dart';
 import 'add_account_screen.dart';
 import 'backup_screen.dart';
 import 'jellyfin_browser.dart';
+import 'settings_screen.dart';
 import 'subsonic_browser.dart';
 
 class AccountsScreen extends StatefulWidget {
@@ -69,7 +70,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
   Widget build(BuildContext context) {
     final accounts = _accounts;
     return Scaffold(
-      appBar: AppBar(title: const Text('Homeplay')),
+      appBar: AppBar(title: const Text('Homeplay'), actions: [
+        IconButton(
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+        ),
+      ]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _add,
         icon: const Icon(Icons.add),

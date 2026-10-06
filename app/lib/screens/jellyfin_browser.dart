@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../services/playback.dart';
+import '../services/quality.dart';
 import '../widgets/async_list.dart';
 import 'photo_viewer.dart';
 import 'player_screen.dart';
@@ -102,13 +103,17 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
         : [item];
 
     if (!mounted) return;
-    final queue = await _busy(Future.wait(playable.map((i) {
-      final version = i == item ? versionId : null;
-      return client.resolve(i, versionId: version).onError((e, _) {
-        debugPrint('homeplay PlaybackInfo failed for ${i.name}: $e');
-        return client.toPlayItem(i, versionId: version);
-      });
-    })));
+    final queue = await _busy(() async {
+      // One decision for the whole queue: the setting for this network, measured once for Auto.
+      final cap = playable.any((i) => i.isVideo) ? await client.capNow(await QualitySettings.current()) : null;
+      return Future.wait(playable.map((i) {
+        final version = i == item ? versionId : null;
+        return client.resolve(i, versionId: version, cap: cap).onError((e, _) {
+          debugPrint('homeplay PlaybackInfo failed for ${i.name}: $e');
+          return client.toPlayItem(i, versionId: version);
+        });
+      }));
+    }());
     await Playback.instance.start(queue, playable.indexOf(item), startAt: startAt);
     await nav.push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
     // The pop completes before the player screen is disposed, so end a video here and wait
