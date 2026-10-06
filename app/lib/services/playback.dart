@@ -46,6 +46,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
       ),
     );
     await instance._initSession();
+    await instance._keepControls();
     await instance._useMediaOutput();
     final prefs = instance._prefs = await SharedPreferences.getInstance();
     instance.adjust.value = VideoAdjust.fromPrefs(prefs.get);
@@ -431,6 +432,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     queue.add([for (final i in queueItems) _mediaItem(i)]);
     mediaItem.add(_mediaItem(queueItems[index]));
     await _session?.setActive(true);
+    await _keepControls();
     // media_kit keeps video off (vid=no) until a video output is attached; a file without
     // sound would otherwise end at once with "no audio or video streams selected".
     if (queueItems.any((i) => i.isVideo)) {
@@ -455,7 +457,11 @@ class Playback extends BaseAudioHandler with SeekHandler {
     ));
     _notice();
     _beginReport(startAt ?? Duration.zero);
-    _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) => _reportProgress());
+    // Also while paused: Android may recreate the service then, and the notification's Play must work.
+    _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) {
+      _reportProgress();
+      _keepControls();
+    });
     if (kDebugMode) _cacheLog ??= Timer.periodic(const Duration(seconds: 5), (_) => _logCache());
   }
 
@@ -585,6 +591,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> play() async {
     await _session?.setActive(true);
+    await _keepControls();
     await player.play();
   }
 
@@ -646,6 +653,17 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   static const _channel = MethodChannel('homeplay/playback');
 
+  /// Makes sure the notification's and the headset's buttons still reach this handler: Android may
+  /// have destroyed and recreated the playback service, and audio_service loses them then (see
+  /// MainActivity.keepControls). Called whenever playback starts.
+  Future<void> _keepControls() async {
+    try {
+      await _channel.invokeMethod('keepControls');
+    } catch (_) {
+      // Started without the activity (Android Auto): the channel is not there.
+    }
+  }
+
   void _beginReport(Duration position) {
     _stopReported.remove(current.value); // it may be played again after going back
     currentItem?.reporter?.started(position);
@@ -703,6 +721,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     // Switch away from an audio track this libmpv can't decode, once per queue entry.
     s.tracks.listen(_applyTrackChoice);
     s.playing.listen((playing) {
+      if (playing) _keepControls();
       final hold = _sleepHoldUntil;
       if (playing && hold != null) {
         _sleepHoldUntil = null;
