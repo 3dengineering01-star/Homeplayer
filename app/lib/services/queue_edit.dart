@@ -47,3 +47,9 @@ List<T> unshuffled<T>(List<T> items, List<T> original) {
   final known = items.where(rank.containsKey).toList()..sort((a, b) => rank[a]!.compareTo(rank[b]!));
   return [...known, ...items.where((e) => !rank.containsKey(e))];
 }
+
+/// Whether mpv is between two tracks: it has finished one and is about to start the next. It
+/// reports "not playing" then, which must not reach Android as a pause: Android takes a paused
+/// player out of the foreground and won't let it back from the background, then mutes it.
+bool betweenTracks({required bool completed, required int index, required int count, required bool repeats}) =>
+    completed && count > 0 && (repeats || index < count - 1);

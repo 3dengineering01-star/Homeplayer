@@ -699,9 +699,13 @@ class Playback extends BaseAudioHandler with SeekHandler {
     final count = items.value.length;
     final hasPrev = current.value > 0;
     final hasNext = current.value < count - 1;
+    // Moving on to the next track by itself (and not pausing for the sleep timer): still playing.
+    final moving = _sleepHoldUntil == null &&
+        betweenTracks(completed: st.completed, index: current.value, count: count, repeats: repeat.value != Repeat.off);
+    final playing = st.playing || moving;
     final controls = [
       if (hasPrev) MediaControl.skipToPrevious,
-      st.playing ? MediaControl.pause : MediaControl.play,
+      playing ? MediaControl.pause : MediaControl.play,
       if (hasNext) MediaControl.skipToNext,
       MediaControl.stop,
     ];
@@ -711,12 +715,14 @@ class Playback extends BaseAudioHandler with SeekHandler {
       androidCompactActionIndices: [for (var i = 0; i < controls.length - 1; i++) i],
       processingState: count == 0
           ? AudioProcessingState.idle
-          : st.completed
-              ? AudioProcessingState.completed
-              : st.buffering
-                  ? AudioProcessingState.buffering
-                  : AudioProcessingState.ready,
-      playing: st.playing,
+          : moving
+              ? AudioProcessingState.buffering
+              : st.completed
+                  ? AudioProcessingState.completed
+                  : st.buffering
+                      ? AudioProcessingState.buffering
+                      : AudioProcessingState.ready,
+      playing: playing,
       updatePosition: st.position,
       bufferedPosition: st.buffer,
       speed: st.rate,
