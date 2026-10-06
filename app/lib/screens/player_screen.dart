@@ -22,12 +22,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
-    _pb.screenOpened();
+    // Not in the middle of building and disposing: the mini player sits in the same tree, and a
+    // rebuild asked for while the tree is locked was lost in release builds (no mini player on
+    // the screen under the player after going back).
+    scheduleMicrotask(_pb.screenOpened);
   }
 
   @override
   void dispose() {
-    _pb.screenClosed();
+    scheduleMicrotask(_pb.screenClosed);
     if (_pb.currentItem?.isVideo ?? false) unawaited(_pb.stop());
     super.dispose();
   }
