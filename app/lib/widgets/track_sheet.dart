@@ -18,58 +18,44 @@ Future<void> _switchQuality(BuildContext context, Playback pb, VideoQuality q) a
   }
 }
 
-/// Video quality (when the server can convert), audio and subtitle tracks of the playing
-/// file. Track choices are remembered for the next files; quality is for this video only.
+/// Audio and subtitle tracks of the playing file, and its quality when the server can
+/// convert it. Track choices are remembered for the next files; quality is for this video only.
 void showTrackSheet(BuildContext context, Playback pb) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (context) => StreamBuilder<Track>(
-      stream: pb.player.stream.track,
-      initialData: pb.player.state.track,
-      builder: (context, selected) => FutureBuilder(
-        // Re-read on every track change; media_kit says 'auto' for tracks mpv picked itself.
-        key: ValueKey(selected.data),
-        future: pb.activeTrackIds(),
-        builder: (context, ids) {
-          final tracks = pb.player.state.tracks;
-          final audio = tracks.audio.where((t) => t.id != 'auto' && t.id != 'no').toList();
-          final subs = tracks.subtitle.where((t) => t.id != 'auto' && t.id != 'no').toList();
-          final audioLabels = distinctLabels([for (final t in audio) audioLabel(t)]);
-          final subtitleLabels = distinctLabels([for (final t in subs) subtitleLabel(t)]);
-          final current = selected.data!;
-          final audioId = current.audio.id == 'auto' ? ids.data?.audio : current.audio.id;
-          final subtitleId = current.subtitle.id == 'auto' ? ids.data?.subtitle : current.subtitle.id;
-          final theme = Theme.of(context);
-          Widget header(String text) => Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Text(text, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
-          );
-          Widget check(bool on) => on ? const Icon(Icons.check) : const SizedBox(width: 24);
-          return DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: 0.6,
-            maxChildSize: 0.9,
-            builder: (context, scroll) => ListView(
+    // The sheet stays put while its content follows track changes, so picking a track does
+    // not scroll the list back to the top.
+    builder: (context) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.75,
+      maxChildSize: 0.9,
+      builder: (context, scroll) => StreamBuilder<Track>(
+        stream: pb.player.stream.track,
+        initialData: pb.player.state.track,
+        builder: (context, selected) => FutureBuilder(
+          // Re-read on every track change; media_kit says 'auto' for tracks mpv picked itself.
+          future: pb.activeTrackIds(),
+          builder: (context, ids) {
+            final tracks = pb.player.state.tracks;
+            final audio = tracks.audio.where((t) => t.id != 'auto' && t.id != 'no').toList();
+            final subs = tracks.subtitle.where((t) => t.id != 'auto' && t.id != 'no').toList();
+            final audioLabels = distinctLabels([for (final t in audio) audioLabel(t)]);
+            final subtitleLabels = distinctLabels([for (final t in subs) subtitleLabel(t)]);
+            final current = selected.data!;
+            final audioId = current.audio.id == 'auto' ? ids.data?.audio : current.audio.id;
+            final subtitleId = current.subtitle.id == 'auto' ? ids.data?.subtitle : current.subtitle.id;
+            final item = pb.currentItem;
+            final theme = Theme.of(context);
+            Widget header(String text) => Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(text, style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+            );
+            Widget check(bool on) => on ? const Icon(Icons.check) : const SizedBox(width: 24);
+            return ListView(
               controller: scroll,
               children: [
-                if (pb.currentItem?.withQuality != null) ...[
-                  header('Quality'),
-                  ListTile(
-                    dense: true,
-                    title: Text(pb.currentItem!.convertedTo == null
-                        ? 'Now: the original file'
-                        : 'Now: converted to ${bitrateLabel(pb.currentItem!.convertedTo!)}'),
-                  ),
-                  for (final q in VideoQuality.choices)
-                    ListTile(
-                      leading: check(pb.currentItem!.convertedTo == null ? q.isOriginal : q.cap == pb.currentItem!.convertedTo),
-                      title: Text(q.label),
-                      subtitle: q.isAuto ? const Text('Measure the connection now') : null,
-                      onTap: () => _switchQuality(context, pb, q),
-                    ),
-                ],
                 header('Audio'),
                 if (audio.isEmpty) const ListTile(title: Text('No audio')),
                 for (final (i, t) in audio.indexed)
@@ -92,11 +78,28 @@ void showTrackSheet(BuildContext context, Playback pb) {
                     title: Text(subtitleLabels[i]),
                     onTap: () => pb.selectSubtitle(t),
                   ),
+                // Last: tracks are picked far more often than quality.
+                if (item?.withQuality != null) ...[
+                  header('Quality'),
+                  ListTile(
+                    dense: true,
+                    title: Text(item!.convertedTo == null
+                        ? 'Now: the original file'
+                        : 'Now: converted to ${bitrateLabel(item.convertedTo!)}'),
+                  ),
+                  for (final q in VideoQuality.choices)
+                    ListTile(
+                      leading: check(item.convertedTo == null ? q.isOriginal : q.cap == item.convertedTo),
+                      title: Text(q.label),
+                      subtitle: q.isAuto ? const Text('Measure the connection now') : null,
+                      onTap: () => _switchQuality(context, pb, q),
+                    ),
+                ],
                 const SizedBox(height: 16),
               ],
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     ),
   );
