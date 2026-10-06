@@ -55,4 +55,15 @@ void main() {
     expect(bandLabel(31), '31');
     expect(bandLabel(16000), '16k');
   });
+
+  test("Android's equalizer bands end between our band centres, the last at 20 kHz", () {
+    final c = eqCutoffs();
+    expect(c.length, eqBands.length);
+    for (var i = 0; i < eqBands.length; i++) {
+      expect(c[i], greaterThan(eqBands[i]));
+      if (i > 0) expect(c[i - 1], lessThan(eqBands[i]));
+    }
+    expect(c.first, closeTo(44, 0.5));
+    expect(c.last, 20000);
+  });
 }

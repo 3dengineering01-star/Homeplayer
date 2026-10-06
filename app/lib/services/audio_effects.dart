@@ -152,3 +152,10 @@ double _bandDb(double f0, double gain, double f) {
 }
 
 double _sinh(double x) => (exp(x) - exp(-x)) / 2;
+
+/// Upper edges of the equalizer bands for Android's equalizer, which takes bands by where they
+/// end: halfway (on the octave scale) to the next band, the last one at 20 kHz.
+List<double> eqCutoffs() => [
+      for (var i = 0; i < eqBands.length; i++)
+        i == eqBands.length - 1 ? 20000.0 : sqrt(eqBands[i] * eqBands[i + 1].toDouble()),
+    ];

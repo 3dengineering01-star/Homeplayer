@@ -16,6 +16,7 @@ import 'account_store.dart';
 import 'audio_effects.dart';
 import 'car_library.dart';
 import 'downloads.dart';
+import 'native_eq.dart';
 import 'quality.dart';
 import 'queue_edit.dart';
 import 'track_choice.dart';
@@ -58,12 +59,21 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// mpv's AudioTrack output is plain media playback, as other players use. OpenSL ES stays as
   /// the fallback for a libmpv built without it.
   Future<void> _useMediaOutput() async {
+    final native = player.platform as NativePlayer;
     try {
-      await (player.platform as NativePlayer).setProperty('ao', 'audiotrack,opensles');
+      await native.setProperty('ao', 'audiotrack,opensles');
+      // Its own audio session, so Android's equalizer can work on it.
+      _eqSession = await NativeEq.session();
+      if (_eqSession != null) await native.setProperty('audiotrack-session-id', '$_eqSession');
     } catch (e) {
       debugPrint('homeplay audio output not changed: $e');
     }
   }
+
+  int? _eqSession;
+
+  // Android's equalizer took the last settings; mpv's own filters are not used then.
+  bool _nativeEq = false;
 
   // libass keeps ASS styling (colour, position, fades); it needs a bundled font on Android.
   final Player player = Player(
@@ -238,8 +248,16 @@ class Playback extends BaseAudioHandler with SeekHandler {
   Future<void> _applySound() async {
     final native = player.platform as NativePlayer;
     final s = sound.value;
-    final filter = _isMusic ? s.filter : '';
     await native.setProperty('replaygain', _isMusic ? s.replayGain.mpv : 'no');
+    // Android's equalizer first: full volume, its limiter keeps raised bands from crackling.
+    _nativeEq = _eqSession != null && await NativeEq.apply(enabled: _isMusic && s.enabled, gains: s.gains);
+    if (_nativeEq) {
+      equalizerWorks.value = true;
+      await native.setProperty('af', '');
+      await _applyVolume();
+      return;
+    }
+    final filter = _isMusic ? s.filter : '';
     // A refused chain shows up as a player error (see _listen), which clears it again.
     if (filter.isNotEmpty) equalizerWorks.value = true;
     await native.setProperty('af', filter);
@@ -251,7 +269,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   /// The player's volume: room for the equalizer's raised bands, lower while ducked.
   Future<void> _applyVolume() async {
-    final base = _isMusic && equalizerWorks.value ? sound.value.volume : 100.0;
+    final base = !_nativeEq && _isMusic && equalizerWorks.value ? sound.value.volume : 100.0;
     await player.setVolume(base * (_ducked ? 0.3 : 1));
     await _logSound();
   }
@@ -263,7 +281,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
     try {
       debugPrint('homeplay sound: ao=${await native.getProperty('current-ao')} volume=${await native.getProperty('volume')} '
           'af=${await native.getProperty('af')} replaygain=${await native.getProperty('replaygain')} '
-          'speed=${await native.getProperty('speed')} eq=${s.enabled} ducked=$_ducked');
+          'speed=${await native.getProperty('speed')} eq=${s.enabled} androidEq=$_nativeEq session=$_eqSession/${await native.getProperty('audiotrack-session-id')} '
+          'ducked=$_ducked');
     } catch (_) {}
   }
 
@@ -712,7 +731,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     s.error.listen((e) {
       debugPrint('homeplay player error: $e');
       // The equalizer chain could not be built: drop it so the sound goes on without it.
-      if (e.contains('Audio filter') && sound.value.filter.isNotEmpty) {
+      if (!_nativeEq && e.contains('Audio filter') && sound.value.filter.isNotEmpty) {
         equalizerWorks.value = false;
         (player.platform as NativePlayer).setProperty('af', '');
         _applyVolume();
