@@ -64,6 +64,14 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// True while the full player screen is open; the mini player hides then.
   final ValueNotifier<bool> screenOpen = ValueNotifier(false);
 
+  // Player screens on the navigator: one may open over another (mini player, a list), so a
+  // single flag set and cleared by each would say "closed" while one is still showing.
+  int _openScreens = 0;
+
+  void screenOpened() => screenOpen.value = ++_openScreens > 0;
+
+  void screenClosed() => screenOpen.value = (_openScreens = (_openScreens - 1).clamp(0, 1 << 30)) > 0;
+
   final _notices = StreamController<String>.broadcast();
   Stream<String> get notices => _notices.stream;
 
