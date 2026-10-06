@@ -8,6 +8,7 @@ import '../services/playback.dart';
 import '../services/video_tuning.dart';
 import 'artwork.dart';
 import 'queue_sheet.dart';
+import 'vinyl_art.dart';
 
 /// The music player: big cover over its own blurred colours, the controls under it.
 /// Swipe the cover sideways for the next or previous track, double-tap it to pause, swipe the
@@ -23,9 +24,12 @@ class MusicView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final noArt = ColoredBox(
-      color: scheme.surfaceContainerHighest,
-      child: Icon(Icons.music_note, size: 96, color: scheme.onSurfaceVariant),
+    final hasArt = item.artwork != null || item.artworkPath != null;
+    // Without a cover, a record in the theme's colours; it turns while the music plays.
+    final noArt = StreamBuilder<bool>(
+      stream: pb.player.stream.playing,
+      initialData: pb.player.state.playing,
+      builder: (context, s) => VinylArt(playing: s.data!),
     );
     return Scaffold(
       body: GestureDetector(
@@ -36,13 +40,26 @@ class MusicView extends StatelessWidget {
           // The cover's colours, blurred, behind everything: a 12-pixel copy stretched over the
           // screen. A blur filter here was redrawn with every frame of the seek bar, and the
           // load made the sound crackle.
-          RepaintBoundary(
-            child: artworkImage(item, cacheWidth: 12, fallback: ColoredBox(color: scheme.surface)),
-          ),
-          ColoredBox(color: scheme.surface.withValues(alpha: 0.72)),
+          if (hasArt) ...[
+            RepaintBoundary(
+              child: artworkImage(item, cacheWidth: 12, fallback: ColoredBox(color: scheme.surface)),
+            ),
+            ColoredBox(color: scheme.surface.withValues(alpha: 0.62)),
+          ] else
+            // The theme's colours, from the top down into the page.
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomCenter,
+                  colors: [scheme.primaryContainer, scheme.tertiaryContainer.withValues(alpha: 0.6), scheme.surface],
+                  stops: const [0, 0.45, 0.9],
+                ),
+              ),
+            ),
           SafeArea(
             child: LayoutBuilder(builder: (context, box) {
-              final cover = _Cover(pb: pb, item: item, fallback: noArt);
+              final cover = _Cover(pb: pb, item: item, fallback: noArt, framed: hasArt);
               final controls = _Controls(pb: pb, item: item, hasPrev: index > 0 || pb.repeat.value == Repeat.all, hasNext: index < count - 1 || pb.repeat.value == Repeat.all);
               final top = _TopBar(pb: pb, index: index, count: count);
               if (box.maxWidth > box.maxHeight) {
@@ -99,10 +116,13 @@ class _TopBar extends StatelessWidget {
 }
 
 class _Cover extends StatelessWidget {
-  const _Cover({required this.pb, required this.item, required this.fallback});
+  const _Cover({required this.pb, required this.item, required this.fallback, required this.framed});
   final Playback pb;
   final PlayItem item;
   final Widget fallback;
+
+  /// A cover goes in a card with a shadow; the record stands on its own.
+  final bool framed;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -119,13 +139,15 @@ class _Cover extends StatelessWidget {
             aspectRatio: 1,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 250),
-              child: Material(
-                key: ObjectKey(item),
-                elevation: 12,
-                borderRadius: BorderRadius.circular(16),
-                clipBehavior: Clip.antiAlias,
-                child: artworkImage(item, fallback: fallback),
-              ),
+              child: framed
+                  ? Material(
+                      key: ObjectKey(item),
+                      elevation: 16,
+                      borderRadius: BorderRadius.circular(24),
+                      clipBehavior: Clip.antiAlias,
+                      child: artworkImage(item, fallback: fallback),
+                    )
+                  : KeyedSubtree(key: ObjectKey(item), child: fallback),
             ),
           ),
         ),
@@ -150,10 +172,13 @@ class _Controls extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(children: [
             Text(item.title,
-                style: theme.textTheme.titleLarge, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
             if (item.subtitle != null)
               Text(item.subtitle!,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.primary),
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis),

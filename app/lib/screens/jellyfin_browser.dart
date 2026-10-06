@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../api/jellyfin.dart';
+import '../services/playback.dart';
 import '../widgets/async_list.dart';
+import '../widgets/media_cards.dart';
+import '../widgets/vinyl_art.dart';
 import 'jellyfin_actions.dart';
 
 /// Libraries at the top level, then any folder: series, season, album...
@@ -86,6 +89,14 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> with JellyfinActions 
         gridItemBuilder: (context, items, i) => _tile(context, items, items[i]),
         itemBuilder: (context, items, i) {
           final item = items[i];
+          if (item.type == 'Audio') {
+            return _TrackRow(
+              client: client,
+              item: item,
+              onTap: () => openItem(items, item),
+              onLongPress: () => itemActions(items, item),
+            );
+          }
           return ListTile(
             leading: ArtThumb(
               url: client.imageUrl(item, height: 168),
@@ -107,4 +118,50 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> with JellyfinActions 
       ),
     );
   }
+}
+
+/// A track: its cover (or the theme's note), name and artist, length; the one playing is marked.
+class _TrackRow extends StatelessWidget {
+  const _TrackRow({required this.client, required this.item, required this.onTap, required this.onLongPress});
+
+  final JellyfinClient client;
+  final JellyfinItem item;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    final pb = Playback.instance;
+    final scheme = Theme.of(context).colorScheme;
+    return ListenableBuilder(
+      listenable: Listenable.merge([pb.items, pb.current]),
+      builder: (context, _) {
+        // The stream URL carries the item's id.
+        final now = pb.currentItem?.url.path.contains(item.id) ?? false;
+        final url = client.imageUrl(item, height: 112);
+        return ListTile(
+          selected: now,
+          onTap: onTap,
+          onLongPress: onLongPress,
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox.square(
+              dimension: 48,
+              child: url == null ? const NoteTile() : NetImage(url: url, headers: client.headers, icon: Icons.music_note),
+            ),
+          ),
+          title: Text(item.name,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: now ? const TextStyle(fontWeight: FontWeight.w700) : null),
+          subtitle: item.subtitle == null ? null : Text(item.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis),
+          trailing: now
+              ? Icon(Icons.graphic_eq, color: scheme.primary, semanticLabel: 'Playing')
+              : item.runTime == null
+                  ? null
+                  : Text(_clock(item.runTime!), style: Theme.of(context).textTheme.bodySmall),
+        );
+      },
+    );
+  }
+
+  static String _clock(Duration d) => '${d.inMinutes}:${d.inSeconds.remainder(60).toString().padLeft(2, '0')}';
 }
