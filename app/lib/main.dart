@@ -4,6 +4,7 @@ import 'package:media_kit/media_kit.dart';
 import 'screens/accounts_screen.dart';
 import 'screens/player_screen.dart';
 import 'services/backup.dart';
+import 'services/downloads.dart';
 import 'services/playback.dart';
 import 'widgets/mini_player.dart';
 
@@ -15,6 +16,8 @@ Future<void> main() async {
   MediaKit.ensureInitialized();
   await Playback.init();
   await Backup.init();
+  // Picks up downloads that went on while the app was closed.
+  await Downloads.instance.init();
   // Why another audio track or a server conversion was used.
   Playback.instance.notices.listen((text) => messengerKey.currentState
     ?..hideCurrentSnackBar()

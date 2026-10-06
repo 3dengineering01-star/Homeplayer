@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
+import '../services/downloads.dart';
 import '../services/playback.dart';
 import '../services/quality.dart';
 import '../widgets/async_list.dart';
@@ -124,6 +125,88 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
     if (mounted) setState(() => _generation++);
   }
 
+  /// Long press: download (a single item, or everything playable in a folder), or pick a version.
+  Future<void> _actions(List<JellyfinItem> items, JellyfinItem item) async {
+    final downloads = Downloads.instance;
+    await downloads.init();
+    if (!mounted) return;
+    final saved = downloads.find(item.id);
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          if (item.isPlayable && saved == null)
+            ListTile(
+              leading: const Icon(Icons.download_outlined),
+              title: const Text('Download'),
+              subtitle: const Text('To watch or listen without a connection'),
+              onTap: () => Navigator.pop(context, 'download'),
+            ),
+          if (saved != null)
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: Text(saved.state == DownloadState.done ? 'Delete download' : 'Cancel download'),
+              subtitle: saved.size > 0 ? Text(sizeLabel(saved.size)) : null,
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+          if (item.isFolder)
+            ListTile(
+              leading: const Icon(Icons.download_for_offline_outlined),
+              title: const Text('Download all'),
+              subtitle: const Text('Every episode, track or video inside'),
+              onTap: () => Navigator.pop(context, 'all'),
+            ),
+          if (item.versionCount > 1)
+            ListTile(
+              leading: const Icon(Icons.movie_filter_outlined),
+              title: const Text('Choose version'),
+              onTap: () => Navigator.pop(context, 'version'),
+            ),
+        ]),
+      ),
+    );
+    if (!mounted || action == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    switch (action) {
+      case 'version':
+        await _tap(items, item, pickVersion: true);
+      case 'delete':
+        await downloads.remove(item.id);
+      case 'download':
+        await downloads.add(client, [item], group: widget.title);
+        messenger.showSnackBar(const SnackBar(content: Text('Downloading. See Downloads on the server list.')));
+      case 'all':
+        final List<JellyfinItem> all;
+        try {
+          all = await _busy(client.playableDescendants(item.id));
+        } catch (e) {
+          messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
+          return;
+        }
+        final fresh = all.where((i) => downloads.find(i.id) == null).toList();
+        if (!mounted) return;
+        if (fresh.isEmpty) {
+          messenger.showSnackBar(const SnackBar(content: Text('Everything here is already downloaded')));
+          return;
+        }
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: Text('Download ${fresh.length} ${fresh.length == 1 ? 'item' : 'items'}?'),
+            content: Text('From "${item.name}". They download in the background, also with the app closed.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+              FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Download')),
+            ],
+          ),
+        );
+        if (ok != true) return;
+        await downloads.add(client, fresh, group: item.name);
+        messenger.showSnackBar(SnackBar(content: Text('Downloading ${fresh.length}. See Downloads on the server list.')));
+    }
+  }
+
   /// A spinner over the screen while the server answers.
   Future<T> _busy<T>(Future<T> work) async {
     final nav = Navigator.of(context);
@@ -201,6 +284,7 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
     );
     return InkWell(
       onTap: () => _tap(items, item),
+      onLongPress: item.isPlayable || item.isFolder ? () => _actions(items, item) : null,
       child: Stack(fit: StackFit.expand, children: [
         url == null
             ? fallback
@@ -265,7 +349,7 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
                     ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, semanticLabel: 'Watched')
                     : const Icon(Icons.play_arrow),
             onTap: () => _tap(items, item),
-            onLongPress: item.versionCount > 1 ? () => _tap(items, item, pickVersion: true) : null,
+            onLongPress: item.isPlayable || item.isFolder ? () => _actions(items, item) : null,
           );
         },
       ),

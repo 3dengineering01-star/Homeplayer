@@ -3,6 +3,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <!-- Downloads: a user-started transfer on Android 14+ has no time limit, so a movie
+         downloads in one go; without it background_downloader resumes every 9 minutes. -->
+    <uses-permission android:name="android.permission.RUN_USER_INITIATED_JOBS"/>
     <!-- Photo backup: read photos and videos, with the place they were taken. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>

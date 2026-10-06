@@ -217,6 +217,22 @@ class JellyfinClient {
           .where((i) => !i.isVirtual)
           .toList();
 
+  /// Everything playable under a folder (a series, a season, an album), in play order, for
+  /// downloading it whole.
+  Future<List<JellyfinItem>> playableDescendants(String parentId) async => _items(await _get('/Items', {
+        'userId': account.userId!,
+        'parentId': parentId,
+        'recursive': 'true',
+        'mediaTypes': 'Video,Audio',
+        'sortBy': 'ParentIndexNumber,IndexNumber,SortName',
+        'sortOrder': 'Ascending',
+        'enableImageTypes': 'Primary',
+        'excludeLocationTypes': 'Virtual',
+        'isMissing': 'false',
+      }))
+          .where((i) => i.isPlayable && !i.isVirtual)
+          .toList();
+
   Uri? imageUrl(JellyfinItem item, {int height = 300}) => item.hasPrimaryImage
       ? Uri.parse('$_base/Items/${item.id}/Images/Primary')
           .replace(queryParameters: {'fillHeight': '$height', 'quality': '90'})

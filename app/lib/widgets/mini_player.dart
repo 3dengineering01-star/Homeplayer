@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/playback.dart';
+import 'artwork.dart';
 
 /// Bar at the bottom of every screen while music plays and the full player is closed.
 /// It sits outside the navigator, where there is no Overlay, so no tooltips here.
@@ -31,12 +32,7 @@ class MiniPlayer extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                     child: SizedBox.square(
                       dimension: 44,
-                      child: item.artwork == null
-                          ? Icon(Icons.music_note, color: scheme.onSurfaceVariant)
-                          : Image.network(item.artwork.toString(),
-                              headers: item.headers,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) => Icon(Icons.music_note, color: scheme.onSurfaceVariant)),
+                      child: artworkImage(item, fallback: Icon(Icons.music_note, color: scheme.onSurfaceVariant)),
                     ),
                   ),
                   const SizedBox(width: 12),

@@ -98,6 +98,11 @@ abstract class PlaybackReporter {
   Future<void> stopped(Duration position);
 }
 
+/// Local file for downloads, otherwise fetched from the server with [PlayItem.headers].
+extension PlayItemArtwork on PlayItem {
+  String? get artworkPath => artwork?.scheme == 'file' ? artwork!.toFilePath() : null;
+}
+
 /// Audio codecs the bundled libmpv decodes, as Jellyfin names them. The media_kit build has
 /// no TrueHD/MLP decoder (checked with mpv's decoder-list on a Pixel 10a).
 const supportedAudioCodecs = [
