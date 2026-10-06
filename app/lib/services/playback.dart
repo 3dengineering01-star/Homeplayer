@@ -256,13 +256,20 @@ class Playback extends BaseAudioHandler with SeekHandler {
     pause();
   }
 
-  // At the end of a track mpv is already loading the next one, and a pause asked for then did not
-  // hold: the next track started anyway. Until this time, starting to play pauses again.
+  // Set at the end of a track: the next one pauses as soon as it starts, if it starts before this.
   DateTime? _sleepHoldUntil;
 
+  /// The sleep timer's "end of track". Between two tracks media_kit still counts the queue as
+  /// finished; a pause then keeps it so, and its next play() restarts the queue from the first
+  /// track. So the pause waits for the next track to start.
   void _sleepAtTrackEnd() {
-    _sleepHoldUntil = DateTime.now().add(const Duration(seconds: 5));
-    _sleepNow();
+    setSleepTimer(null);
+    final st = player.state;
+    if (st.completed || !st.playing) {
+      _sleepHoldUntil = DateTime.now().add(const Duration(seconds: 5));
+    } else {
+      pause();
+    }
   }
 
   // --- Queue editing ---
@@ -665,8 +672,12 @@ class Playback extends BaseAudioHandler with SeekHandler {
     s.completed.listen((done) {
       _broadcast();
       if (done) _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
-      // mpv reports the end of each track here, before moving to the next one.
-      if (done && sleepAfterTrack.value) _sleepAtTrackEnd();
+      // mpv reports the end of each track here, before moving to the next one. After the last
+      // one nothing follows: the music stops by itself.
+      if (done && sleepAfterTrack.value) {
+        final last = current.value >= items.value.length - 1 && repeat.value == Repeat.off;
+        last ? setSleepTimer(null) : _sleepAtTrackEnd();
+      }
     });
     s.log.listen((l) => debugPrint('homeplay mpv [${l.level}] ${l.prefix}: ${l.text.trim()}'));
     // mpv reports recoverable problems here too (e.g. a hardware decoder it then falls back from),
