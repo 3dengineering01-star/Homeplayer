@@ -1,8 +1,10 @@
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'screens/accounts_screen.dart';
 import 'screens/player_screen.dart';
+import 'services/appearance.dart';
 import 'services/backup.dart';
 import 'services/downloads.dart';
 import 'services/pip.dart';
@@ -15,6 +17,7 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  await AppearanceStore.load();
   await Playback.init();
   await Backup.init();
   // Picks up downloads that went on while the app was closed.
@@ -35,18 +38,28 @@ class HomeplayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xFF7CC4FF);
-    return MaterialApp(
-      title: 'Homeplay',
-      navigatorKey: navigatorKey,
-      scaffoldMessengerKey: messengerKey,
-      theme: ThemeData(colorSchemeSeed: seed, brightness: Brightness.light),
-      darkTheme: ThemeData(colorSchemeSeed: seed, brightness: Brightness.dark),
-      builder: (context, child) => Column(children: [
-        Expanded(child: child!),
-        MiniPlayer(onOpen: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const PlayerScreen()))),
-      ]),
-      home: const AccountsScreen(),
+    // The phone's wallpaper colours (Android 12+), for the Wallpaper palette.
+    return DynamicColorBuilder(
+      builder: (lightDynamic, darkDynamic) => ValueListenableBuilder<Appearance>(
+        valueListenable: AppearanceStore.current,
+        builder: (context, look, _) {
+          final wallpaper = lightDynamic?.primary;
+          return MaterialApp(
+            title: 'Homeplay',
+            navigatorKey: navigatorKey,
+            scaffoldMessengerKey: messengerKey,
+            theme: look.theme(dark: false, wallpaper: wallpaper),
+            darkTheme: look.theme(dark: true, wallpaper: wallpaper),
+            themeMode: look.brightness.mode,
+            builder: (context, child) => Column(children: [
+              Expanded(child: child!),
+              MiniPlayer(
+                  onOpen: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const PlayerScreen()))),
+            ]),
+            home: const AccountsScreen(),
+          );
+        },
+      ),
     );
   }
 }

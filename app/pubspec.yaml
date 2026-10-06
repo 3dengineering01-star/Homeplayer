@@ -13,6 +13,7 @@ dependencies:
   connectivity_plus: ^7.3.2
   crypto: ^3.0.7
   device_info_plus: ^13.3.0
+  dynamic_color: ^2.1.0
   flutter:
     sdk: flutter
   flutter_secure_storage: ^11.2.0
