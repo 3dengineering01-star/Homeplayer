@@ -4,7 +4,7 @@
     {
       "name": "landing",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "D:/APP/homeplayer/landing"],
+      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "landing"],
       "port": 8765
     }
   ]
