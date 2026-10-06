@@ -45,11 +45,24 @@ class Playback extends BaseAudioHandler with SeekHandler {
       ),
     );
     await instance._initSession();
+    await instance._useMediaOutput();
     final prefs = instance._prefs = await SharedPreferences.getInstance();
     instance.adjust.value = VideoAdjust.fromPrefs(prefs.get);
     instance.sound.value = SoundSettings.fromPrefs(prefs.get);
     instance.shuffle.value = prefs.getBool(_shuffleKey) ?? false;
     instance.repeat.value = Repeat.values.firstWhere((r) => r.name == prefs.getString(_repeatKey), orElse: () => Repeat.off);
+  }
+
+  /// media_kit plays through OpenSL ES, which Android treats as low-latency game sound: a fast
+  /// output with 5 ms buffers (clicks when the mixer is late) and a quieter game volume curve.
+  /// mpv's AudioTrack output is plain media playback, as other players use. OpenSL ES stays as
+  /// the fallback for a libmpv built without it.
+  Future<void> _useMediaOutput() async {
+    try {
+      await (player.platform as NativePlayer).setProperty('ao', 'audiotrack,opensles');
+    } catch (e) {
+      debugPrint('homeplay audio output not changed: $e');
+    }
   }
 
   // libass keeps ASS styling (colour, position, fades); it needs a bundled font on Android.
@@ -248,7 +261,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     final native = player.platform as NativePlayer;
     final s = sound.value;
     try {
-      debugPrint('homeplay sound: volume=${await native.getProperty('volume')} '
+      debugPrint('homeplay sound: ao=${await native.getProperty('current-ao')} volume=${await native.getProperty('volume')} '
           'af=${await native.getProperty('af')} replaygain=${await native.getProperty('replaygain')} '
           'speed=${await native.getProperty('speed')} eq=${s.enabled} ducked=$_ducked');
     } catch (_) {}
@@ -665,6 +678,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
       final m = mediaItem.value;
       if (m != null && d > Duration.zero) mediaItem.add(m.copyWith(duration: d));
       if (kDebugMode && d > Duration.zero) _logDecoders();
+      // Once per file, when its audio output is open.
+      if (d > Duration.zero) _logSound();
     });
     // Switch away from an audio track this libmpv can't decode, once per queue entry.
     s.tracks.listen(_applyTrackChoice);
