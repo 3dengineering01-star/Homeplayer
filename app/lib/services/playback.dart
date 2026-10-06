@@ -25,9 +25,7 @@ import 'video_tuning.dart';
 /// The one player of the app. It outlives the player screen, so music keeps going in the
 /// background, and it drives the media notification, lock screen and headset buttons.
 class Playback extends BaseAudioHandler with SeekHandler {
-  Playback._() {
-    _listen();
-  }
+  Playback._();
 
   static late final Playback instance;
 
@@ -46,7 +44,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
       ),
     );
     await instance._initSession();
-    await instance._useMediaOutput();
+    await instance._keepControls();
     final prefs = instance._prefs = await SharedPreferences.getInstance();
     instance.adjust.value = VideoAdjust.fromPrefs(prefs.get);
     instance.sound.value = SoundSettings.fromPrefs(prefs.get);
@@ -75,15 +73,28 @@ class Playback extends BaseAudioHandler with SeekHandler {
   // Android's equalizer took the last settings; mpv's own filters are not used then.
   bool _nativeEq = false;
 
-  // libass keeps ASS styling (colour, position, fades); it needs a bundled font on Android.
-  final Player player = Player(
-    configuration: const PlayerConfiguration(
-      libass: true,
-      libassAndroidFont: 'assets/fonts/roboto-regular.ttf',
-      libassAndroidFontName: 'Roboto',
-      logLevel: MPVLogLevel.warn,
-    ),
-  );
+  Player? _player;
+  Future<void> _outputReady = Future.value();
+
+  /// mpv, created when something is first played. Android also starts this engine just to look
+  /// at the media service (to offer resuming after a restart, for Android Auto) and destroys it
+  /// soon after; an mpv made then outlived its engine and crashed the app when it called back.
+  Player get player => _player ?? _createPlayer();
+
+  Player _createPlayer() {
+    // libass keeps ASS styling (colour, position, fades); it needs a bundled font on Android.
+    final p = _player = Player(
+      configuration: const PlayerConfiguration(
+        libass: true,
+        libassAndroidFont: 'assets/fonts/roboto-regular.ttf',
+        libassAndroidFontName: 'Roboto',
+        logLevel: MPVLogLevel.warn,
+      ),
+    );
+    _listen();
+    _outputReady = _useMediaOutput();
+    return p;
+  }
 
   VideoController? _video;
   VideoController get video => _video ??= VideoController(player);
@@ -215,7 +226,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   Future<void> setRepeat(Repeat r) async {
     repeat.value = r;
     await _prefs?.setString(_repeatKey, r.name);
-    if (_isMusic) await player.setPlaylistMode(r.mode);
+    if (_player != null && _isMusic) await player.setPlaylistMode(r.mode);
     _broadcast();
   }
 
@@ -269,6 +280,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   /// The player's volume: room for the equalizer's raised bands, lower while ducked.
   Future<void> _applyVolume() async {
+    if (_player == null) return;
     final base = !_nativeEq && _isMusic && equalizerWorks.value ? sound.value.volume : 100.0;
     await player.setVolume(base * (_ducked ? 0.3 : 1));
     await _logSound();
@@ -427,10 +439,13 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
     items.value = queueItems;
     current.value = index;
+    // The audio output and its equalizer session come with the player, made on first use.
+    await _outputReady;
     await _applySound();
     queue.add([for (final i in queueItems) _mediaItem(i)]);
     mediaItem.add(_mediaItem(queueItems[index]));
     await _session?.setActive(true);
+    await _keepControls();
     // media_kit keeps video off (vid=no) until a video output is attached; a file without
     // sound would otherwise end at once with "no audio or video streams selected".
     if (queueItems.any((i) => i.isVideo)) {
@@ -446,6 +461,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     final rate = music ? (_prefs?.getDouble(_musicRateKey) ?? 1.0) : 1.0;
     if (player.state.rate != rate) await player.setRate(rate);
     await player.setPlaylistMode(music ? repeat.value.mode : PlaylistMode.none);
+    await _outputReady;
     await player.open(Playlist(
       [
         for (var n = 0; n < queueItems.length; n++)
@@ -455,7 +471,11 @@ class Playback extends BaseAudioHandler with SeekHandler {
     ));
     _notice();
     _beginReport(startAt ?? Duration.zero);
-    _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) => _reportProgress());
+    // Also while paused: Android may recreate the service then, and the notification's Play must work.
+    _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) {
+      _reportProgress();
+      _keepControls();
+    });
     if (kDebugMode) _cacheLog ??= Timer.periodic(const Duration(seconds: 5), (_) => _logCache());
   }
 
@@ -585,11 +605,12 @@ class Playback extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> play() async {
     await _session?.setActive(true);
+    await _keepControls();
     await player.play();
   }
 
   @override
-  Future<void> pause() => player.pause();
+  Future<void> pause() async => _player?.pause();
 
   @override
   Future<void> seek(Duration position) async {
@@ -618,13 +639,13 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> stop() async {
-    _endReport(current.value, player.state.position);
+    _endReport(current.value, _player?.state.position ?? Duration.zero);
     _heartbeat?.cancel();
     _heartbeat = null;
     _cacheLog?.cancel();
     _cacheLog = null;
     setSleepTimer(null);
-    await player.stop();
+    await _player?.stop();
     items.value = const [];
     current.value = 0;
     queue.add(const []);
@@ -645,6 +666,17 @@ class Playback extends BaseAudioHandler with SeekHandler {
   }
 
   static const _channel = MethodChannel('homeplay/playback');
+
+  /// Makes sure the notification's and the headset's buttons still reach this handler: Android may
+  /// have destroyed and recreated the playback service, and audio_service loses them then (see
+  /// MainActivity.keepControls). Called whenever playback starts.
+  Future<void> _keepControls() async {
+    try {
+      await _channel.invokeMethod('keepControls');
+    } catch (_) {
+      // Started without the activity (Android Auto): the channel is not there.
+    }
+  }
 
   void _beginReport(Duration position) {
     _stopReported.remove(current.value); // it may be played again after going back
@@ -703,6 +735,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     // Switch away from an audio track this libmpv can't decode, once per queue entry.
     s.tracks.listen(_applyTrackChoice);
     s.playing.listen((playing) {
+      if (playing) _keepControls();
       final hold = _sleepHoldUntil;
       if (playing && hold != null) {
         _sleepHoldUntil = null;
@@ -741,7 +774,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   /// Tells the notification and the lock screen what is going on.
   void _broadcast() {
-    final st = player.state;
+    final st = _player?.state ?? const PlayerState();
     final count = items.value.length;
     final hasPrev = current.value > 0;
     final hasNext = current.value < count - 1;
@@ -789,7 +822,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
           _ducked = true;
           _applyVolume();
         } else {
-          _resumeAfterInterruption = player.state.playing;
+          _resumeAfterInterruption = _player?.state.playing ?? false;
           pause();
         }
       } else {

@@ -10,6 +10,7 @@ import android.media.audiofx.DynamicsProcessing
 import android.os.Build
 import android.util.Rational
 import androidx.lifecycle.Lifecycle
+import com.ryanheise.audioservice.AudioService
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -34,6 +35,7 @@ class MainActivity : AudioServiceActivity() {
                     notifications.cancel(AUDIO_SERVICE_NOTIFICATION_ID)
                     result.success(null)
                 }
+                "keepControls" -> result.success(keepControls())
                 else -> result.notImplemented()
             }
         }
@@ -170,9 +172,38 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
+    /**
+     * audio_service forgets where to send the notification's and the headset's buttons when Android
+     * destroys its service (AudioService.onDestroy clears its static listener), and only sets it
+     * again for a new Flutter engine: after the service came back, Pause, Next and Stop in the
+     * notification did nothing. Remembers the listener while it is set and puts it back when it
+     * is gone. True when it had to be put back.
+     */
+    private fun keepControls(): Boolean = try {
+        val field = AudioService::class.java.getDeclaredField("listener").apply { isAccessible = true }
+        val current = field.get(null)
+        when {
+            current != null -> {
+                controlsListener = current
+                false
+            }
+            controlsListener != null -> {
+                field.set(null, controlsListener)
+                android.util.Log.i("homeplay", "media controls reconnected")
+                true
+            }
+            else -> false
+        }
+    } catch (e: Exception) {
+        android.util.Log.w("homeplay", "media controls check failed: ${e.javaClass.simpleName}")
+        false
+    }
+
     companion object {
         // NOTIFICATION_ID in audio_service's AudioService.java (0.18).
         const val AUDIO_SERVICE_NOTIFICATION_ID = 1124
+
+        private var controlsListener: Any? = null
 
         // Outlive the activity: the music plays on in the service when it is closed.
         private var session = 0
