@@ -256,6 +256,15 @@ class Playback extends BaseAudioHandler with SeekHandler {
     pause();
   }
 
+  // At the end of a track mpv is already loading the next one, and a pause asked for then did not
+  // hold: the next track started anyway. Until this time, starting to play pauses again.
+  DateTime? _sleepHoldUntil;
+
+  void _sleepAtTrackEnd() {
+    _sleepHoldUntil = DateTime.now().add(const Duration(seconds: 5));
+    _sleepNow();
+  }
+
   // --- Queue editing ---
 
   // While above zero, playlist events come from our own edits, not from a track change.
@@ -623,7 +632,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     s.playlist.listen((p) {
       if (_editing > 0) return;
       if (items.value.isEmpty || p.index < 0 || p.index >= items.value.length || p.index == current.value) return;
-      if (sleepAfterTrack.value) _sleepNow();
+      if (sleepAfterTrack.value) _sleepAtTrackEnd();
       // Not reported yet means the previous entry played to its end.
       _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
       current.value = p.index;
@@ -640,7 +649,15 @@ class Playback extends BaseAudioHandler with SeekHandler {
     });
     // Switch away from an audio track this libmpv can't decode, once per queue entry.
     s.tracks.listen(_applyTrackChoice);
-    s.playing.listen((_) {
+    s.playing.listen((playing) {
+      final hold = _sleepHoldUntil;
+      if (playing && hold != null) {
+        _sleepHoldUntil = null;
+        if (DateTime.now().isBefore(hold)) {
+          pause();
+          return;
+        }
+      }
       _broadcast();
       _reportProgress();
     });

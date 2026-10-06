@@ -99,6 +99,8 @@ class _QueueListState extends State<_QueueList> {
           Expanded(
             child: ReorderableListView.builder(
               scrollController: widget.scroll,
+              // The last track stays above the system navigation bar.
+              padding: EdgeInsets.only(bottom: MediaQuery.paddingOf(context).bottom + 16),
               buildDefaultDragHandles: false,
               itemCount: list.length,
               onReorderItem: pb.moveQueueItem,
