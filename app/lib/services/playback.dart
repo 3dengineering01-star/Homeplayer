@@ -439,6 +439,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
     items.value = queueItems;
     current.value = index;
+    // The audio output and its equalizer session come with the player, made on first use.
+    await _outputReady;
     await _applySound();
     queue.add([for (final i in queueItems) _mediaItem(i)]);
     mediaItem.add(_mediaItem(queueItems[index]));
