@@ -68,6 +68,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
     try {
       await native.setProperty('ao', 'audiotrack,opensles');
+      // mpv's default 0.2 s ran dry now and then on the phone ("Audio device underrun"), a click.
+      await native.setProperty('audio-buffer', '0.5');
       // Its own audio session, so Android's equalizer can work on it.
       _eqSession = await NativeEq.session();
       if (_eqSession != null) await native.setProperty('audiotrack-session-id', '$_eqSession');
