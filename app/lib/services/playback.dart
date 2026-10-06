@@ -66,6 +66,9 @@ class Playback extends BaseAudioHandler with SeekHandler {
   static const _subtitleLanguageKey = 'subtitle_language';
   final Set<int> _tracksApplied = {};
 
+  // Queue entries whose subtitle files were added to mpv.
+  final Set<int> _subtitlesAdded = {};
+
   // Server reports: which queue entries got their stop report, and a heartbeat for progress.
   final Set<int> _stopReported = {};
   Duration _lastPosition = Duration.zero;
@@ -84,6 +87,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt}) async {
     _endReport(current.value, player.state.position);
     _tracksApplied.clear();
+    _subtitlesAdded.clear();
     _stopReported.clear();
     items.value = queueItems;
     current.value = index;
@@ -155,6 +159,12 @@ class Playback extends BaseAudioHandler with SeekHandler {
     if (!t.audio.any((a) => a.id != 'auto' && a.id != 'no') && !t.video.any((v) => v.id != 'auto' && v.id != 'no')) {
       return;
     }
+    // Subtitle files first, so a remembered language can pick one of them too. Their tracks
+    // arrive as another event, which comes back here.
+    if (item.subtitles.isNotEmpty && _subtitlesAdded.add(current.value)) {
+      _addSubtitles(item);
+      return;
+    }
     _tracksApplied.add(current.value);
     final selected = player.state.track;
     final audio = chooseAudio(t.audio,
@@ -165,6 +175,22 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
     final sub = chooseSubtitle(t.subtitle, _prefs?.getString(_subtitleLanguageKey));
     if (sub != null && sub.id != selected.subtitle.id) player.setSubtitleTrack(sub);
+  }
+
+  /// Adds [item]'s subtitle files to mpv without selecting them. If no track event follows
+  /// (every file failed), the choice is applied anyway after a second.
+  Future<void> _addSubtitles(PlayItem item) async {
+    final native = player.platform as NativePlayer;
+    for (final s in item.subtitles) {
+      try {
+        await native.command(['sub-add', s.url.toString(), 'auto', s.title ?? 'External', ?s.language]);
+      } catch (e) {
+        // The URL carries the access token, so only the title goes to the log.
+        debugPrint('homeplay subtitle file ${s.title} failed: $e');
+      }
+    }
+    await Future<void>.delayed(const Duration(seconds: 1));
+    if (identical(currentItem, item)) _applyTrackChoice(player.state.tracks);
   }
 
   @override
