@@ -1,3 +1,5 @@
+import '../services/quality.dart';
+
 class ApiException implements Exception {
   ApiException(this.message);
   final String message;
@@ -18,6 +20,8 @@ class PlayItem {
     this.audioTrackId,
     this.notice,
     this.reporter,
+    this.convertedTo,
+    this.withQuality,
   });
 
   final String title;
@@ -38,7 +42,22 @@ class PlayItem {
   /// Tells the server what is playing; null when the server keeps no history.
   final PlaybackReporter? reporter;
 
-  PlayItem copyWith({Uri? url, String? audioTrackId, String? notice, PlaybackReporter? reporter}) => PlayItem(
+  /// Bitrate the server converts the video to; null for the original file.
+  final int? convertedTo;
+
+  /// The same item again in another quality, for switching while it plays; null when the
+  /// server cannot convert (music, Subsonic).
+  final Future<PlayItem> Function(VideoQuality quality)? withQuality;
+
+  PlayItem copyWith({
+    Uri? url,
+    String? audioTrackId,
+    String? notice,
+    PlaybackReporter? reporter,
+    int? convertedTo,
+    Future<PlayItem> Function(VideoQuality quality)? withQuality,
+  }) =>
+      PlayItem(
         title: title,
         subtitle: subtitle,
         url: url ?? this.url,
@@ -48,6 +67,8 @@ class PlayItem {
         audioTrackId: audioTrackId ?? this.audioTrackId,
         notice: notice ?? this.notice,
         reporter: reporter ?? this.reporter,
+        convertedTo: convertedTo ?? this.convertedTo,
+        withQuality: withQuality ?? this.withQuality,
       );
 }
 

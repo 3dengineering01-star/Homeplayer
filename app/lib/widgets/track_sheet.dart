@@ -3,9 +3,23 @@ import 'package:media_kit/media_kit.dart';
 
 import '../api/common.dart';
 import '../services/playback.dart';
+import '../services/quality.dart';
 import '../services/track_choice.dart';
 
-/// Audio and subtitle tracks of the playing file. The choice is remembered for the next files.
+/// Plays the current video again in [q] from where it is, closing the sheet first.
+Future<void> _switchQuality(BuildContext context, Playback pb, VideoQuality q) async {
+  final messenger = ScaffoldMessenger.of(context);
+  Navigator.pop(context);
+  messenger.showSnackBar(SnackBar(content: Text(q.isAuto ? 'Measuring the connection...' : 'Switching to ${q.label}...')));
+  try {
+    await pb.changeQuality(q);
+  } catch (e) {
+    messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
+  }
+}
+
+/// Video quality (when the server can convert), audio and subtitle tracks of the playing
+/// file. Track choices are remembered for the next files; quality is for this video only.
 void showTrackSheet(BuildContext context, Playback pb) {
   showModalBottomSheet(
     context: context,
@@ -40,6 +54,22 @@ void showTrackSheet(BuildContext context, Playback pb) {
             builder: (context, scroll) => ListView(
               controller: scroll,
               children: [
+                if (pb.currentItem?.withQuality != null) ...[
+                  header('Quality'),
+                  ListTile(
+                    dense: true,
+                    title: Text(pb.currentItem!.convertedTo == null
+                        ? 'Now: the original file'
+                        : 'Now: converted to ${bitrateLabel(pb.currentItem!.convertedTo!)}'),
+                  ),
+                  for (final q in VideoQuality.choices)
+                    ListTile(
+                      leading: check(pb.currentItem!.convertedTo == null ? q.isOriginal : q.cap == pb.currentItem!.convertedTo),
+                      title: Text(q.label),
+                      subtitle: q.isAuto ? const Text('Measure the connection now') : null,
+                      onTap: () => _switchQuality(context, pb, q),
+                    ),
+                ],
                 header('Audio'),
                 if (audio.isEmpty) const ListTile(title: Text('No audio')),
                 for (final (i, t) in audio.indexed)

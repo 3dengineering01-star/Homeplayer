@@ -8,6 +8,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
+import 'quality.dart';
 import 'track_choice.dart';
 
 /// The one player of the app. It outlives the player screen, so music keeps going in the
@@ -116,6 +117,21 @@ class Playback extends BaseAudioHandler with SeekHandler {
   Future<({String audio, String subtitle})> activeTrackIds() async {
     final native = player.platform as NativePlayer;
     return (audio: await native.getProperty('aid'), subtitle: await native.getProperty('sid'));
+  }
+
+  /// Plays the current video again in [quality], from where it is now. False when the
+  /// item cannot change quality.
+  Future<bool> changeQuality(VideoQuality quality) async {
+    final item = currentItem;
+    final again = item?.withQuality;
+    if (item == null || again == null) return false;
+    final at = player.state.position;
+    final index = current.value;
+    final replaced = await again(quality);
+    // The user may have moved on while the server answered.
+    if (!identical(currentItem, item)) return false;
+    await start([...items.value]..[index] = replaced, index, startAt: at);
+    return true;
   }
 
   /// Switches audio and remembers the language for the next files.

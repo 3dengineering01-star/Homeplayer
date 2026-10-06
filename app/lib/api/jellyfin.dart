@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
+import '../services/quality.dart';
 import 'common.dart';
 
 const _appVersion = '0.1.0';
@@ -132,10 +133,11 @@ MediaVersion? chooseVersion(List<MediaVersion> versions, String? resolution) =>
     resolution == null ? null : versions.where((v) => v.resolution == resolution).firstOrNull;
 
 class JellyfinClient {
-  JellyfinClient(this.account, this.deviceId);
+  JellyfinClient(this.account, this.deviceId, {http.Client? client}) : _http = client ?? http.Client();
 
   final Account account;
   final String deviceId;
+  final http.Client _http;
 
   String get _base => account.baseUrl;
 
@@ -185,7 +187,7 @@ class JellyfinClient {
 
   Future<Map<String, dynamic>> _get(String path, [Map<String, String>? query]) async {
     final uri = Uri.parse('$_base$path').replace(queryParameters: query);
-    final res = await http.get(uri, headers: headers).timeout(_timeout);
+    final res = await _http.get(uri, headers: headers).timeout(_timeout);
     if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
     if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for $path');
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -264,7 +266,9 @@ class JellyfinClient {
         'Container': 'mp4',
         'Protocol': 'hls',
         'Context': 'Streaming',
-        'VideoCodec': 'hevc,h264,av1,vp9',
+        // The first codec is what a bitrate cap converts to: H.264 every server encodes fast.
+        // The rest only allow copying the video when just the audio is converted.
+        'VideoCodec': 'h264,hevc,av1,vp9',
         'AudioCodec': 'aac,eac3,ac3',
         'MaxAudioChannels': '6',
         'MinSegments': 1,
@@ -278,12 +282,39 @@ class JellyfinClient {
     ],
   };
 
+  /// The bitrate cap for [quality] on the connection right now; Auto measures it.
+  Future<int?> capNow(VideoQuality quality) async =>
+      capFor(quality, measured: quality.isAuto ? await measureBitrate() : null);
+
+  /// Speed to the server in bit/s, from timing a download of test bytes; null if it fails.
+  /// A second, larger download on fast links, where the first is too short to time.
+  Future<double?> measureBitrate() async {
+    Future<double> time(int size) async {
+      final watch = Stopwatch()..start();
+      final res = await _http
+          .get(Uri.parse('$_base/Playback/BitrateTest').replace(queryParameters: {'size': '$size'}), headers: headers)
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for BitrateTest');
+      return res.bodyBytes.length * 8 / (watch.elapsedMicroseconds / 1e6);
+    }
+
+    try {
+      final first = await time(500 * 1000);
+      return first > 20e6 ? await time(4 * 1000 * 1000) : first;
+    } catch (e) {
+      debugPrint('homeplay bitrate test failed: $e');
+      return null;
+    }
+  }
+
   /// Direct play when the phone can decode the audio; otherwise another audio track in the
   /// file, and only as a last resort audio converted by the server. [versionId] picks one of
-  /// several files of the item; null is the server's default.
-  Future<PlayItem> resolve(JellyfinItem item, {String? versionId}) async {
+  /// several files of the item; null is the server's default. A file above [cap] (bit/s) is
+  /// converted by the server to fit it.
+  Future<PlayItem> resolve(JellyfinItem item, {String? versionId, int? cap}) async {
     final direct = toPlayItem(item, versionId: versionId);
     if (!item.isVideo) return direct;
+    Future<PlayItem> again(VideoQuality q) async => resolve(item, versionId: versionId, cap: await capNow(q));
 
     final version = {'MediaSourceId': ?versionId};
     final info = await _playbackInfo(item.id, version);
@@ -292,7 +323,12 @@ class JellyfinClient {
     if (source == null) return direct;
     final played = direct.copyWith(
       reporter: _reporter(item, source['Id'] as String?, info['PlaySessionId'] as String?, 'DirectPlay'),
+      withQuality: again,
     );
+
+    if (needsConversion((source['Bitrate'] as num?)?.toInt(), cap)) {
+      return _convert(item, direct, version, cap!, source, again);
+    }
 
     final audio = ((source['MediaStreams'] as List?) ?? const [])
         .cast<Map<String, dynamic>>()
@@ -332,11 +368,42 @@ class JellyfinClient {
       notice: '$wanted isn\'t supported on this phone, so the server converts the sound. Subtitles are off in this mode.',
       // Its stop report also ends the conversion on the server.
       reporter: _reporter(item, convertedSource?['Id'] as String?, converted['PlaySessionId'] as String?, 'Transcode'),
+      withQuality: again,
+    );
+  }
+
+  /// The whole file converted by the server under [cap]: video re-encoded at a lower bitrate
+  /// (and size), audio to AAC; the default audio track is kept.
+  Future<PlayItem> _convert(JellyfinItem item, PlayItem direct, Map<String, dynamic> version, int cap,
+      Map<String, dynamic> source, Future<PlayItem> Function(VideoQuality) again) async {
+    final converted = await _playbackInfo(item.id, {
+      ...version,
+      'MaxStreamingBitrate': cap,
+      'AudioStreamIndex': ?source['DefaultAudioStreamIndex'],
+      'EnableDirectPlay': false,
+      'EnableDirectStream': false,
+      'AllowVideoStreamCopy': false,
+    });
+    final convertedSource = ((converted['MediaSources'] as List?) ?? const []).cast<Map<String, dynamic>>().firstOrNull;
+    final url = convertedSource?['TranscodingUrl'] as String?;
+    debugPrint('homeplay conversion to ${bitrateLabel(cap)} for ${item.name}: ${url == null ? 'refused' : 'ok'}');
+    if (url == null) {
+      return direct.copyWith(
+        notice: 'The server can\'t convert this video, so it plays as it is and may stutter',
+        withQuality: again,
+      );
+    }
+    return direct.copyWith(
+      url: Uri.parse('$_base$url'),
+      notice: 'Converted by the server to ${bitrateLabel(cap)} for this connection. Subtitles are off in this mode.',
+      reporter: _reporter(item, convertedSource?['Id'] as String?, converted['PlaySessionId'] as String?, 'Transcode'),
+      convertedTo: cap,
+      withQuality: again,
     );
   }
 
   Future<Map<String, dynamic>> _playbackInfo(String itemId, Map<String, dynamic> overrides) async {
-    final res = await http
+    final res = await _http
         .post(
           Uri.parse('$_base/Items/$itemId/PlaybackInfo').replace(queryParameters: {'userId': account.userId!}),
           headers: {...headers, 'Content-Type': 'application/json'},
@@ -362,7 +429,7 @@ class JellyfinClient {
 
   Future<void> _report(String path, Map<String, dynamic> body) async {
     try {
-      await http
+      await _http
           .post(Uri.parse('$_base$path'),
               headers: {...headers, 'Content-Type': 'application/json'}, body: jsonEncode(body))
           .timeout(_timeout);

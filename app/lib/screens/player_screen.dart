@@ -47,7 +47,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
               actions: [
                 IconButton(
-                  tooltip: 'Audio and subtitles',
+                  tooltip: 'Quality, audio and subtitles',
                   icon: const Icon(Icons.subtitles_outlined),
                   onPressed: () => showTrackSheet(context, _pb),
                 ),
