@@ -104,6 +104,12 @@ void main() {
     expect((known['2']!.done, known['2']!.offset), (false, 512));
   });
 
+  test('errors read like advice', () {
+    expect(describeBackupError(const SocketException('x')), 'No connection to the server');
+    expect(describeBackupError(Exception('PlatformException(error, java.lang.SecurityException: no READ_MEDIA_IMAGES)')),
+        startsWith('No access to photos'));
+  });
+
   test('the ledger remembers sent photos across runs', () async {
     final f = File('${tmp.path}/sent.txt');
     final ledger = await BackupLedger.open(f);
