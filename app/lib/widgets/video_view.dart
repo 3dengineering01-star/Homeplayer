@@ -292,12 +292,7 @@ class _VideoViewState extends State<VideoView> {
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop) _show();
           },
-          // TEMP: where taps land on the phone (buttons near the edges did not respond).
-          child: Listener(
-            onPointerDown: (e) => debugPrint('homeplay tap down ${e.position} controls=$_controls locked=$_locked'),
-            onPointerUp: (e) => debugPrint('homeplay tap up ${e.position}'),
-            onPointerCancel: (e) => debugPrint('homeplay tap cancel ${e.position}'),
-            child: Scaffold(
+          child: Scaffold(
             backgroundColor: Colors.black,
             body: LayoutBuilder(builder: (context, box) {
               final size = box.biggest;
@@ -310,10 +305,7 @@ class _VideoViewState extends State<VideoView> {
                 video,
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    debugPrint('homeplay tap: background');
-                    _locked ? _show() : _toggleControls();
-                  },
+                  onTap: _locked ? () => _show() : _toggleControls,
                   onDoubleTapDown: (d) => _onDoubleTap(d, size),
                   onDoubleTap: () {},
                   onScaleStart: _onScaleStart,
@@ -347,17 +339,13 @@ class _VideoViewState extends State<VideoView> {
                     duration: fade,
                     child: Listener(
                       behavior: HitTestBehavior.translucent,
-                      onPointerDown: (_) {
-                        debugPrint('homeplay tap: controls layer');
-                        _show(hideLater: _pb.player.state.playing);
-                      },
+                      onPointerDown: (_) => _show(hideLater: _pb.player.state.playing),
                       child: _locked ? _lockedControls() : _fullControls(context),
                     ),
                   ),
                 ),
               ]);
             }),
-          ),
           ),
         );
       },
@@ -401,10 +389,7 @@ class _VideoViewState extends State<VideoView> {
         IconButton(
           tooltip: 'Back',
           color: Colors.white,
-          onPressed: () {
-            debugPrint('homeplay tap: button Back');
-            Navigator.of(context).maybePop();
-          },
+          onPressed: () => Navigator.of(context).maybePop(),
           icon: const Icon(Icons.arrow_back),
         ),
         Expanded(
@@ -420,7 +405,6 @@ class _VideoViewState extends State<VideoView> {
           tooltip: 'Audio, subtitles and quality',
           color: Colors.white,
           onPressed: () {
-            debugPrint('homeplay tap: button Tracks');
             _hideTimer?.cancel();
             showTrackSheet(context, _pb);
           },
@@ -485,10 +469,7 @@ class _VideoViewState extends State<VideoView> {
 
   Widget _bottomBar(BuildContext context) {
     Widget button(String tooltip, IconData icon, VoidCallback onPressed) =>
-        IconButton(tooltip: tooltip, color: Colors.white, onPressed: () {
-          debugPrint('homeplay tap: button $tooltip');
-          onPressed();
-        }, icon: Icon(icon));
+        IconButton(tooltip: tooltip, color: Colors.white, onPressed: onPressed, icon: Icon(icon));
     return Row(children: [
       button('Lock the screen', Icons.lock_open, () {
         setState(() => _locked = true);
