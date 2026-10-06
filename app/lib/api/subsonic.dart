@@ -21,8 +21,9 @@ class SubsonicEntry {
 
 /// Subsonic API with token auth (Navidrome, Gonic, Airsonic and others).
 class SubsonicClient {
-  SubsonicClient(this.account);
+  SubsonicClient(this.account, {http.Client? client}) : _http = client ?? http.Client();
   final Account account;
+  final http.Client _http;
 
   static Future<Account> login({
     required String baseUrl,
@@ -66,7 +67,7 @@ class SubsonicClient {
       });
 
   Future<Map<String, dynamic>> _call(String method, [Map<String, String>? query]) async {
-    final res = await http.get(_uri(method, query)).timeout(_timeout);
+    final res = await _http.get(_uri(method, query)).timeout(_timeout);
     if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode}. Is this a Subsonic server?');
     final Map<String, dynamic> r;
     try {
@@ -113,6 +114,22 @@ class SubsonicClient {
   Future<List<SubsonicEntry>> songs(String albumId) async {
     final r = await _call('getAlbum', {'id': albumId});
     final list = ((r['album'] as Map?)?['song'] as List?) ?? const [];
+    return [
+      for (final s in list)
+        SubsonicEntry(
+          id: '${s['id']}',
+          title: '${s['title']}',
+          subtitle: s['artist'] as String?,
+          coverArt: s['coverArt'] as String?,
+          duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
+        ),
+    ];
+  }
+
+  /// Songs matching [query] (title, artist, album), for voice search in the car.
+  Future<List<SubsonicEntry>> searchSongs(String query) async {
+    final r = await _call('search3', {'query': query, 'songCount': '50', 'albumCount': '0', 'artistCount': '0'});
+    final list = ((r['searchResult3'] as Map?)?['song'] as List?) ?? const [];
     return [
       for (final s in list)
         SubsonicEntry(

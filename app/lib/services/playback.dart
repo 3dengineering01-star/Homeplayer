@@ -8,6 +8,11 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
+import '../api/jellyfin.dart';
+import '../api/subsonic.dart';
+import 'account_store.dart';
+import 'car_library.dart';
+import 'downloads.dart';
 import 'quality.dart';
 import 'track_choice.dart';
 
@@ -121,6 +126,38 @@ class Playback extends BaseAudioHandler with SeekHandler {
   Future<({String audio, String subtitle})> activeTrackIds() async {
     final native = player.platform as NativePlayer;
     return (audio: await native.getProperty('aid'), subtitle: await native.getProperty('sid'));
+  }
+
+  /// Android Auto and other media browsers: music from the downloads and the servers.
+  late final CarLibrary car = CarLibrary(
+    accounts: AccountStore.load,
+    jellyfin: (a) async => JellyfinClient(a, await AccountStore.deviceId()),
+    subsonic: SubsonicClient.new,
+    downloads: () async {
+      await Downloads.instance.init();
+      return Downloads.instance.entries.value.where((e) => !e.isVideo && e.state == DownloadState.done).toList();
+    },
+    downloadedItem: Downloads.instance.toPlayItem,
+  );
+
+  @override
+  Future<List<MediaItem>> getChildren(String parentMediaId, [Map<String, dynamic>? options]) =>
+      car.children(parentMediaId);
+
+  @override
+  Future<void> playFromMediaId(String mediaId, [Map<String, dynamic>? extras]) async {
+    final q = car.queueFor(mediaId);
+    if (q != null) await start(q.items, q.index);
+  }
+
+  @override
+  Future<List<MediaItem>> search(String query, [Map<String, dynamic>? extras]) => car.search(query);
+
+  /// "Play ... on Homeplay" by voice.
+  @override
+  Future<void> playFromSearch(String query, [Map<String, dynamic>? extras]) async {
+    final q = await car.queueForSearch(query);
+    if (q != null) await start(q.items, q.index);
   }
 
   /// Plays the current video again in [quality], from where it is now. False when the
