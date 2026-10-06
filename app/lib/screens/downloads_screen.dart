@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../api/common.dart';
 import '../services/downloads.dart';
 import '../services/playback.dart';
 import 'player_screen.dart';
@@ -26,11 +27,33 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
     });
   }
 
-  /// Plays [entry] and the finished downloads of its group after it.
+  /// Plays [entry] and the finished downloads of its group after it; a video started earlier
+  /// can go on from where it stopped.
   Future<void> _play(List<DownloadEntry> group, DownloadEntry entry) async {
     final done = group.where((e) => e.state == DownloadState.done && e.isVideo == entry.isVideo).toList();
     final nav = Navigator.of(context);
-    await Playback.instance.start([for (final e in done) _downloads.toPlayItem(e)], done.indexOf(entry));
+    Duration? startAt;
+    if (entry.isVideo && !entry.watched && entry.position > const Duration(seconds: 30)) {
+      startAt = await showModalBottomSheet<Duration>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(
+              leading: const Icon(Icons.play_circle_outline),
+              title: Text('Resume from ${formatDuration(entry.position)}'),
+              onTap: () => Navigator.pop(context, entry.position),
+            ),
+            ListTile(
+              leading: const Icon(Icons.replay),
+              title: const Text('Start over'),
+              onTap: () => Navigator.pop(context, Duration.zero),
+            ),
+          ]),
+        ),
+      );
+      if (startAt == null) return;
+    }
+    await Playback.instance.start([for (final e in done) _downloads.toPlayItem(e)], done.indexOf(entry), startAt: startAt);
     await nav.push(MaterialPageRoute(builder: (_) => const PlayerScreen()));
     final pb = Playback.instance;
     if (pb.currentItem?.isVideo ?? false) await pb.stop();
@@ -52,7 +75,22 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   }
 
   Widget? _status(BuildContext context, DownloadEntry e) => switch (e.state) {
-        DownloadState.done => Text([if (e.subtitle != null) e.subtitle!, sizeLabel(e.size)].join(' · ')),
+        DownloadState.done => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text([
+              if (e.subtitle != null) e.subtitle!,
+              sizeLabel(e.size),
+              if (e.watched) 'Watched',
+              if (e.unsynced) 'Not on the server yet',
+            ].join(' · ')),
+            if (e.isVideo && !e.watched && e.position > Duration.zero && e.duration > Duration.zero)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: LinearProgressIndicator(
+                    value: (e.position.inMilliseconds / e.duration.inMilliseconds).clamp(0.0, 1.0),
+                    minHeight: 3,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+          ]),
         DownloadState.queued => const Text('Waiting...'),
         DownloadState.paused => const Text('Paused, continues when the connection is back'),
         DownloadState.failed => Text('Failed. Delete it and download again.',

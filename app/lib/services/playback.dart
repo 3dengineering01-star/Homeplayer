@@ -294,7 +294,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// Once per queue entry: when it is left, skipped or finished.
   void _endReport(int index, Duration position) {
     if (index >= items.value.length || !_stopReported.add(index)) return;
-    _lastStopReport = items.value[index].reporter?.stopped(position) ?? Future.value();
+    _lastStopReport =
+        items.value[index].reporter?.stopped(position, duration: mediaItem.value?.duration) ?? Future.value();
   }
 
   MediaItem _mediaItem(PlayItem i) => MediaItem(
