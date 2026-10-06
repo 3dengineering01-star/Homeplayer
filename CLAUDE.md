@@ -14,6 +14,9 @@ Flutter + media_kit (libmpv), direct play без транскодировани�
   - `lib/services/account_store.dart` — аккаунты; токены в flutter_secure_storage, пароль не хранится.
   - `lib/screens/`, `lib/widgets/` — UI.
   - `test/common_test.dart` — юнит-тесты.
+- `server/` — плагин Jellyfin «Homeplay Backup» (C#, .NET 10, Jellyfin 12.1): принимает фото и видео
+  с телефона. Логика хранения в `BackupStore.cs` (покрыта тестами), HTTP API в `Api/BackupController.cs`.
+  Подробности в `server/README.md`.
 - `landing/index.html` — лендинг с листом ожидания (Formspree).
 - `docs/validation.md` — план проверки спроса.
 - `tools/phone.sh` — управление телефоном через adb (только локально).
@@ -26,6 +29,13 @@ Flutter + media_kit (libmpv), direct play без транскодировани�
 cd app
 flutter analyze   # линтер, должен быть "No issues found!"
 flutter test      # юнит-тесты
+```
+
+Плагин (в облаке .NET SDK ставит тот же хук):
+
+```bash
+dotnet test server/Jellyfin.Plugin.HomeplayBackup.Tests
+dotnet build server/Jellyfin.Plugin.HomeplayBackup -c Release
 ```
 
 Локально (Windows, тулчейн в `D:\APP\tools`) то же через `./app/build.sh test`, `./app/build.sh` и т. д.
