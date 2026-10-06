@@ -1,6 +1,6 @@
 #!/bin/bash
 # Облачная сессия Claude Code: ставит Flutter (та же версия, что локально) и зависимости app/,
-# чтобы работали flutter analyze и flutter test. Локально ничего не делает.
+# чтобы работали flutter analyze и flutter test, и .NET SDK для плагина в server/. Локально ничего не делает.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -29,3 +29,10 @@ flutter --disable-analytics >/dev/null 2>&1 || true
 
 cd "$CLAUDE_PROJECT_DIR/app"
 flutter pub get
+
+# Server plugin (server/): .NET SDK from Ubuntu's own packages.
+if ! dotnet --list-sdks 2>/dev/null | grep -q '^10\.'; then
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq dotnet-sdk-10.0
+fi
+dotnet restore "$CLAUDE_PROJECT_DIR/server/Jellyfin.Plugin.HomeplayBackup.Tests" >/dev/null
