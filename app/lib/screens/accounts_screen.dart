@@ -6,6 +6,7 @@ import '../models/account.dart';
 import '../services/account_store.dart';
 import 'add_account_screen.dart';
 import 'backup_screen.dart';
+import 'downloads_screen.dart';
 import 'jellyfin_browser.dart';
 import 'settings_screen.dart';
 import 'subsonic_browser.dart';
@@ -71,6 +72,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final accounts = _accounts;
     return Scaffold(
       appBar: AppBar(title: const Text('Homeplay'), actions: [
+        IconButton(
+          icon: const Icon(Icons.download_for_offline_outlined),
+          tooltip: 'Downloads',
+          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen())),
+        ),
         IconButton(
           icon: const Icon(Icons.settings_outlined),
           tooltip: 'Settings',

@@ -5,6 +5,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../api/common.dart';
 import '../services/playback.dart';
+import '../widgets/artwork.dart';
 import '../widgets/track_sheet.dart';
 
 /// Full-screen view of [Playback]. Leaving it stops a video; music keeps playing.
@@ -70,10 +71,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       aspectRatio: 1,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: item.artwork == null
-                            ? _noArt(context)
-                            : Image.network(item.artwork.toString(),
-                                headers: item.headers, fit: BoxFit.cover, errorBuilder: (_, _, _) => _noArt(context)),
+                        child: artworkImage(item, fallback: _noArt(context)),
                       ),
                     ),
                   ),
