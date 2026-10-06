@@ -27,11 +27,13 @@ void main() {
   test('a download plays from local files only', () {
     final item = downloadedPlayItem(entry, '/data/downloads');
     expect(item.url.toString(), 'file:///data/downloads/media_abc123');
-    expect(item.artworkPath, '/data/downloads/art_abc123');
+    // Addresses, not file paths: those use the separator of the machine running the test.
+    expect(item.artwork.toString(), 'file:///data/downloads/art_abc123');
+    expect(item.artworkPath, isNotNull);
     expect(item.headers, isEmpty);
     expect(item.reporter, isNull);
     expect(item.withQuality, isNull);
-    expect(item.subtitles.single.url.toFilePath(), '/data/downloads/sub_abc123_0');
+    expect(item.subtitles.single.url.toString(), 'file:///data/downloads/sub_abc123_0');
     expect(item.subtitles.single.language, 'rus');
   });
 
