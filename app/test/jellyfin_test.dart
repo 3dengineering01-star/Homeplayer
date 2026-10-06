@@ -58,6 +58,12 @@ void main() {
         'http://nas:8096/Items/p1/Images/Primary?maxWidth=2400&maxHeight=2400&quality=90');
   });
 
+  test('names and artists padded in the tags read clean', () {
+    final track = JellyfinItem({'Id': 't', 'Name': 'Cluster One  ', 'Type': 'Audio', 'Artists': ['Pink Floyd      ']});
+    expect((track.name, track.subtitle), ('Cluster One', 'Pink Floyd'));
+    expect(JellyfinItem({'Id': 'a', 'Type': 'MusicAlbum', 'AlbumArtist': ' Danheim '}).subtitle, 'Danheim');
+  });
+
   test('items without versions count as one', () {
     expect(JellyfinItem({'Id': 'a'}).versionCount, 1);
     expect(JellyfinItem({'Id': 'a', 'MediaSourceCount': 2}).versionCount, 2);
