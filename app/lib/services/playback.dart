@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -282,7 +283,19 @@ class Playback extends BaseAudioHandler with SeekHandler {
     await _session?.setActive(false);
     _broadcast();
     await super.stop();
+    // Android may drop audio_service's own cancel of the notification (see MainActivity);
+    // ask again once it has settled, unless something else started playing meanwhile.
+    Timer(const Duration(milliseconds: 600), () async {
+      if (items.value.isNotEmpty) return;
+      try {
+        await _channel.invokeMethod('cancelNotification');
+      } catch (_) {
+        // Started without the activity (Android Auto): the channel is not there.
+      }
+    });
   }
+
+  static const _channel = MethodChannel('homeplay/playback');
 
   void _beginReport(Duration position) {
     _stopReported.remove(current.value); // it may be played again after going back
