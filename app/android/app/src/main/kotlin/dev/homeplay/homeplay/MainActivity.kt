@@ -1,13 +1,25 @@
 package dev.homeplay.homeplay
 
 import android.app.NotificationManager
+import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.os.Build
+import android.util.Rational
+import androidx.lifecycle.Lifecycle
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 // audio_service keeps the Flutter engine alive for background playback.
 class MainActivity : AudioServiceActivity() {
+    private var pip: MethodChannel? = null
+
+    // Picture-in-picture when the user leaves the app: on while a video plays.
+    private var autoPip = false
+    private var pipRatio = Rational(16, 9)
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/playback").setMethodCallHandler { call, result ->
@@ -22,6 +34,82 @@ class MainActivity : AudioServiceActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+        pip = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/pip").apply {
+            setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "available" -> result.success(pipAvailable())
+                    "enter" -> {
+                        ratio(call.argument<Int>("width"), call.argument<Int>("height"))
+                        result.success(enterPip())
+                    }
+                    "setAuto" -> {
+                        autoPip = call.argument<Boolean>("enabled") == true
+                        ratio(call.argument<Int>("width"), call.argument<Int>("height"))
+                        updateParams()
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        }
+    }
+
+    private fun pipAvailable() =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+    // Android refuses shapes outside 1:2.39 .. 2.39:1.
+    private fun ratio(width: Int?, height: Int?) {
+        if (width == null || height == null || width <= 0 || height <= 0) return
+        val r = width.toDouble() / height
+        pipRatio = when {
+            r > 2.39 -> Rational(239, 100)
+            r < 1 / 2.39 -> Rational(100, 239)
+            else -> Rational(width, height)
+        }
+    }
+
+    private fun params(): PictureInPictureParams? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+        val b = PictureInPictureParams.Builder().setAspectRatio(pipRatio)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            b.setAutoEnterEnabled(autoPip).setSeamlessResizeEnabled(false)
+        }
+        return b.build()
+    }
+
+    private fun updateParams() {
+        if (!pipAvailable()) return
+        try {
+            setPictureInPictureParams(params()!!)
+        } catch (e: IllegalStateException) {
+            // Not allowed in the current state; the next update tries again.
+        }
+    }
+
+    private fun enterPip(): Boolean {
+        if (!pipAvailable()) return false
+        return try {
+            enterPictureInPictureMode(params()!!)
+        } catch (e: IllegalStateException) {
+            false
+        }
+    }
+
+    // Android 12+ enters by itself (setAutoEnterEnabled); older versions are asked here.
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (autoPip && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) enterPip()
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        pip?.invokeMethod("changed", isInPictureInPictureMode)
+        // Leaving the small window with the activity stopped means it was closed, not
+        // expanded back to full screen.
+        if (!isInPictureInPictureMode && lifecycle.currentState == Lifecycle.State.CREATED) {
+            pip?.invokeMethod("closed", null)
         }
     }
 

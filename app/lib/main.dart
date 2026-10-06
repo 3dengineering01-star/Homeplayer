@@ -5,6 +5,7 @@ import 'screens/accounts_screen.dart';
 import 'screens/player_screen.dart';
 import 'services/backup.dart';
 import 'services/downloads.dart';
+import 'services/pip.dart';
 import 'services/playback.dart';
 import 'widgets/mini_player.dart';
 
@@ -18,6 +19,10 @@ Future<void> main() async {
   await Backup.init();
   // Picks up downloads that went on while the app was closed.
   await Downloads.instance.init();
+  // Closing the small video window ends the video, as leaving the player screen does.
+  Pip.instance
+    ..init()
+    ..onClosed = Playback.instance.stop;
   // Why another audio track or a server conversion was used.
   Playback.instance.notices.listen((text) => messengerKey.currentState
     ?..hideCurrentSnackBar()

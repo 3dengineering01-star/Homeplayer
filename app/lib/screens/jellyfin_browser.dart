@@ -136,6 +136,18 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
       builder: (context) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          if (item.type == 'Audio' || item.type == 'MusicAlbum') ...[
+            ListTile(
+              leading: const Icon(Icons.playlist_play),
+              title: const Text('Play next'),
+              onTap: () => Navigator.pop(context, 'next'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.playlist_add),
+              title: const Text('Add to queue'),
+              onTap: () => Navigator.pop(context, 'queue'),
+            ),
+          ],
           if (item.isPlayable && saved == null)
             ListTile(
               leading: const Icon(Icons.download_outlined),
@@ -169,6 +181,27 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> {
     if (!mounted || action == null) return;
     final messenger = ScaffoldMessenger.of(context);
     switch (action) {
+      case 'next' || 'queue':
+        final List<PlayItem> tracks;
+        try {
+          tracks = await _busy(() async {
+            final all = item.isFolder ? await client.playableDescendants(item.id) : [item];
+            final audio = all.where((i) => i.type == 'Audio');
+            return Future.wait(audio.map((i) => client.resolve(i).onError((e, _) => client.toPlayItem(i))));
+          }());
+        } catch (e) {
+          messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
+          return;
+        }
+        final pb = Playback.instance;
+        final wasPlaying = pb.currentItem != null && !pb.currentItem!.isVideo;
+        action == 'next' ? await pb.playNext(tracks) : await pb.addToQueue(tracks);
+        messenger.showSnackBar(SnackBar(
+            content: Text(!wasPlaying
+                ? 'Playing'
+                : action == 'next'
+                    ? 'Plays next'
+                    : 'Added to the queue')));
       case 'version':
         await _tap(items, item, pickVersion: true);
       case 'delete':
