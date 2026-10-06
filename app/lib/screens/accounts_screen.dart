@@ -7,7 +7,7 @@ import '../services/account_store.dart';
 import 'add_account_screen.dart';
 import 'backup_screen.dart';
 import 'downloads_screen.dart';
-import 'jellyfin_browser.dart';
+import 'jellyfin_home.dart';
 import 'settings_screen.dart';
 import 'subsonic_browser.dart';
 
@@ -41,7 +41,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
     final Widget screen;
     switch (a.kind) {
       case ServerKind.jellyfin:
-        screen = JellyfinBrowser(client: JellyfinClient(a, await AccountStore.deviceId()), title: a.serverName);
+        screen = JellyfinHome(client: JellyfinClient(a, await AccountStore.deviceId()), title: a.serverName);
       case ServerKind.subsonic:
         screen = SubsonicArtists(client: SubsonicClient(a), title: a.serverName);
     }
@@ -97,27 +97,52 @@ class _AccountsScreenState extends State<AccountsScreen> {
                     child: Text('Add your Jellyfin or Navidrome server to start.', textAlign: TextAlign.center),
                   ),
                 )
-              : ListView(children: [
+              : ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 96), children: [
                   for (final a in accounts)
-                    ListTile(
-                      leading: Icon(a.kind == ServerKind.jellyfin ? Icons.video_library : Icons.library_music),
-                      title: Text(a.serverName),
-                      subtitle: Text('${a.username} · ${a.baseUrl}'),
-                      onTap: () => _open(a),
-                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        if (a.kind == ServerKind.jellyfin)
-                          IconButton(
-                            icon: const Icon(Icons.backup_outlined),
-                            tooltip: 'Photo backup',
-                            onPressed: () => Navigator.push(
-                                context, MaterialPageRoute(builder: (_) => BackupScreen(account: a))),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Card(
+                        child: InkWell(
+                          onTap: () => _open(a),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+                            child: Row(children: [
+                              CircleAvatar(
+                                radius: 26,
+                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                                child: Icon(a.kind == ServerKind.jellyfin ? Icons.video_library : Icons.library_music),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text(a.serverName,
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${a.kind == ServerKind.jellyfin ? 'Jellyfin' : 'Navidrome'} · ${a.username}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ]),
+                              ),
+                              if (a.kind == ServerKind.jellyfin)
+                                IconButton(
+                                  icon: const Icon(Icons.backup_outlined),
+                                  tooltip: 'Photo backup',
+                                  onPressed: () => Navigator.push(
+                                      context, MaterialPageRoute(builder: (_) => BackupScreen(account: a))),
+                                ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Remove',
+                                onPressed: () => _remove(a),
+                              ),
+                            ]),
                           ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          tooltip: 'Remove',
-                          onPressed: () => _remove(a),
                         ),
-                      ]),
+                      ),
                     ),
                 ]),
     );

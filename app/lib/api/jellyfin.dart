@@ -42,6 +42,42 @@ class JellyfinItem {
     return p == null || p <= 0 ? null : (p / 100).clamp(0.0, 1.0);
   }
 
+  // --- For the home screen and the details page ---
+
+  String? get overview => (_j['Overview'] as String?)?.trim();
+  int? get year => (_j['ProductionYear'] as num?)?.toInt();
+  String? get seriesId => _j['SeriesId'] as String?;
+  String? get seriesName => (_j['SeriesName'] as String?)?.trim();
+  String? get album => (_j['Album'] as String?)?.trim();
+  String? get seasonId => _j['SeasonId'] as String?;
+  int? get indexNumber => (_j['IndexNumber'] as num?)?.toInt();
+  int? get seasonNumber => (_j['ParentIndexNumber'] as num?)?.toInt();
+
+  /// Length of a movie or episode.
+  Duration? get runTime {
+    final ticks = _j['RunTimeTicks'] as num?;
+    return ticks == null || ticks <= 0 ? null : Duration(microseconds: ticks.toInt() ~/ 10);
+  }
+
+  /// Audience rating out of 10 (from TMDb and the like).
+  double? get rating => (_j['CommunityRating'] as num?)?.toDouble();
+
+  /// Age rating: "PG-13", "16+"...
+  String? get ageRating => (_j['OfficialRating'] as String?)?.trim();
+
+  List<String> get genres => [for (final g in (_j['Genres'] as List?) ?? const []) '$g'];
+
+  /// Episodes of a series or season not watched yet.
+  int? get unwatched => (_user['UnplayedItemCount'] as num?)?.toInt();
+
+  /// The item whose wide picture to show: its own, or for an episode or season its series'.
+  String? get backdropOwner => ((_j['BackdropImageTags'] as List?)?.isNotEmpty ?? false)
+      ? id
+      : _j['ParentBackdropItemId'] as String?;
+
+  /// A wide picture of the item itself (an episode's still), as Jellyfin calls it Thumb or Primary.
+  bool get hasThumb => (_j['ImageTags'] as Map?)?.containsKey('Thumb') ?? false;
+
   String? get subtitle {
     switch (type) {
       case 'Episode':
@@ -217,6 +253,109 @@ class JellyfinClient {
       }))
           .where((i) => !i.isVirtual)
           .toList();
+
+  /// Fields the home screen and the details page show.
+  static const _richFields =
+      'PrimaryImageAspectRatio,MediaSourceCount,Overview,Genres,ProductionYear,ParentBackdropItemId,'
+      'BackdropImageTags';
+
+  Future<List<JellyfinItem>> _list(String path, Map<String, String> query) async {
+    final uri = Uri.parse('$_base$path').replace(queryParameters: query);
+    final res = await _http.get(uri, headers: headers).timeout(_timeout);
+    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for $path');
+    final body = jsonDecode(res.body);
+    // /Items/Latest answers with a bare list, the others with {Items: [...]}.
+    final raw = body is List ? body : ((body as Map<String, dynamic>)['Items'] as List?) ?? const [];
+    return [for (final e in raw) JellyfinItem(e as Map<String, dynamic>)];
+  }
+
+  /// Movies and episodes started and not finished, latest first.
+  Future<List<JellyfinItem>> resume({int limit = 16}) => _list('/UserItems/Resume', {
+        'userId': account.userId!,
+        'limit': '$limit',
+        'mediaTypes': 'Video',
+        'fields': _richFields,
+        'enableUserData': 'true',
+      });
+
+  /// The next episode of each series being watched.
+  Future<List<JellyfinItem>> nextUp({int limit = 16}) => _list('/Shows/NextUp', {
+        'userId': account.userId!,
+        'limit': '$limit',
+        'fields': _richFields,
+        'enableUserData': 'true',
+      });
+
+  /// Newest in a library: movies, series (not single episodes), albums.
+  Future<List<JellyfinItem>> latest(String libraryId, {int limit = 16}) => _list('/Items/Latest', {
+        'userId': account.userId!,
+        'parentId': libraryId,
+        'limit': '$limit',
+        'fields': _richFields,
+        'enableUserData': 'true',
+        'groupItems': 'true',
+      });
+
+  /// One item with everything the details page shows.
+  Future<JellyfinItem> item(String id) async => JellyfinItem(await _get('/Items/$id', {
+        'userId': account.userId!,
+        'fields': '$_richFields,People,Studios,Taglines',
+      }));
+
+  Future<List<JellyfinItem>> seasons(String seriesId) async => (await _list('/Shows/$seriesId/Seasons', {
+        'userId': account.userId!,
+        'fields': _richFields,
+        'enableUserData': 'true',
+      }))
+          .where((i) => !i.isVirtual)
+          .toList();
+
+  Future<List<JellyfinItem>> episodes(String seriesId, String seasonId) async => (await _list('/Shows/$seriesId/Episodes', {
+        'userId': account.userId!,
+        'seasonId': seasonId,
+        'fields': _richFields,
+        'enableUserData': 'true',
+      }))
+          .where((i) => !i.isVirtual)
+          .toList();
+
+  /// A page of a library as posters: [types] like 'Movie' or 'Series', sorted by [sort].
+  Future<({List<JellyfinItem> items, int total})> libraryPage(String libraryId,
+      {required String types, required LibrarySort sort, int start = 0, int limit = 60}) async {
+    final j = await _get('/Items', {
+      'userId': account.userId!,
+      'parentId': libraryId,
+      'recursive': 'true',
+      'includeItemTypes': types,
+      'sortBy': sort.sortBy,
+      'sortOrder': sort.descending ? 'Descending' : 'Ascending',
+      'startIndex': '$start',
+      'limit': '$limit',
+      'fields': 'PrimaryImageAspectRatio,MediaSourceCount,ProductionYear',
+      'enableUserData': 'true',
+      'excludeLocationTypes': 'Virtual',
+    });
+    return (items: _items(j).where((i) => !i.isVirtual).toList(), total: (j['TotalRecordCount'] as num?)?.toInt() ?? 0);
+  }
+
+  /// A wide picture for [item]: its own backdrop, its series', or for an episode its still.
+  Uri? backdropUrl(JellyfinItem item, {int width = 1280}) {
+    final owner = item.backdropOwner;
+    if (owner == null) return null;
+    return Uri.parse('$_base/Items/$owner/Images/Backdrop').replace(queryParameters: {'maxWidth': '$width', 'quality': '85'});
+  }
+
+  /// A 16:9 picture for a card: an episode's still, else the backdrop, else nothing.
+  Uri? wideUrl(JellyfinItem item, {int width = 640}) {
+    if (item.type == 'Episode' && item.hasPrimaryImage) {
+      return Uri.parse('$_base/Items/${item.id}/Images/Primary').replace(queryParameters: {'maxWidth': '$width', 'quality': '85'});
+    }
+    if (item.hasThumb) {
+      return Uri.parse('$_base/Items/${item.id}/Images/Thumb').replace(queryParameters: {'maxWidth': '$width', 'quality': '85'});
+    }
+    return backdropUrl(item, width: width);
+  }
 
   /// Tracks matching [query], for voice search in the car.
   Future<List<JellyfinItem>> searchAudio(String query) async => _items(await _get('/Items', {
@@ -560,4 +699,34 @@ class _JellyfinReporter implements PlaybackReporter {
   @override
   Future<void> stopped(Duration position, {Duration? duration}) =>
       _client._report('/Sessions/Playing/Stopped', _body(position));
+}
+
+/// How a library grid is sorted.
+enum LibrarySort {
+  name('Name', 'SortName', false),
+  added('Date added', 'DateCreated,SortName', true),
+  year('Year', 'ProductionYear,PremiereDate,SortName', true),
+  rating('Rating', 'CommunityRating,SortName', true);
+
+  const LibrarySort(this.label, this.sortBy, this.descending);
+  final String label;
+  final String sortBy;
+  final bool descending;
+}
+
+/// What a library grid shows for a library of [collectionType]; null for libraries better
+/// browsed as folders (home videos, photos, mixed).
+String? posterTypes(String? collectionType) => switch (collectionType) {
+      'movies' => 'Movie',
+      'tvshows' => 'Series',
+      'music' => 'MusicAlbum',
+      'musicvideos' => 'MusicVideo',
+      'boxsets' => 'BoxSet',
+      _ => null,
+    };
+
+/// "2 h 15 min", "48 min".
+String runTimeLabel(Duration d) {
+  final h = d.inHours, m = d.inMinutes.remainder(60);
+  return h > 0 ? (m > 0 ? '$h h $m min' : '$h h') : '${d.inMinutes} min';
 }
