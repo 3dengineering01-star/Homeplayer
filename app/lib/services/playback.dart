@@ -230,6 +230,16 @@ class Playback extends BaseAudioHandler with SeekHandler {
     // A refused chain shows up as a player error (see _listen), which clears it again.
     if (filter.isNotEmpty) equalizerWorks.value = true;
     await native.setProperty('af', filter);
+    await _applyVolume();
+  }
+
+  // Ducked for another app's short sound (navigation, a message).
+  bool _ducked = false;
+
+  /// The player's volume: room for the equalizer's raised bands, lower while ducked.
+  Future<void> _applyVolume() {
+    final base = _isMusic && equalizerWorks.value ? sound.value.volume : 100.0;
+    return player.setVolume(base * (_ducked ? 0.3 : 1));
   }
 
   /// Pauses the music after [after], or at the end of the current track; null turns it off.
@@ -649,6 +659,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
       if (e.contains('Audio filter') && sound.value.filter.isNotEmpty) {
         equalizerWorks.value = false;
         (player.platform as NativePlayer).setProperty('af', '');
+        _applyVolume();
       }
     });
   }
@@ -694,14 +705,16 @@ class Playback extends BaseAudioHandler with SeekHandler {
     session.interruptionEventStream.listen((e) {
       if (e.begin) {
         if (e.type == AudioInterruptionType.duck) {
-          player.setVolume(30);
+          _ducked = true;
+          _applyVolume();
         } else {
           _resumeAfterInterruption = player.state.playing;
           pause();
         }
       } else {
         if (e.type == AudioInterruptionType.duck) {
-          player.setVolume(100);
+          _ducked = false;
+          _applyVolume();
         } else if (e.type == AudioInterruptionType.pause && _resumeAfterInterruption) {
           play();
         }

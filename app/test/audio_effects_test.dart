@@ -14,11 +14,15 @@ void main() {
     expect(SoundSettings(gains: eqPresets['Rock']!).filter, '');
   });
 
-  test('raised bands become mpv equalizer filters with headroom', () {
-    final f = equalizerFilter([6, 0, 0, 0, 0, -3, 0, 0, 0, 0]);
-    expect(f, 'lavfi=[equalizer=f=31:t=o:w=1:g=6.0,equalizer=f=1000:t=o:w=1:g=-3.0,volume=volume=-3.0dB]');
-    // Only cuts: nothing clips, no volume change.
-    expect(equalizerFilter([0, 0, -4, 0, 0, 0, 0, 0, 0, 0]), 'lavfi=[equalizer=f=125:t=o:w=1:g=-4.0]');
+  test('bands become mpv equalizer filters, raised ones leave headroom in the volume', () {
+    final gains = <double>[6, 0, 0, 0, 0, -3, 0, 0, 0, 0];
+    expect(equalizerFilter(gains), 'lavfi=[equalizer=f=31:t=o:w=1:g=6.0,equalizer=f=1000:t=o:w=1:g=-3.0]');
+    // +6 dB at most: 3 dB down.
+    expect(equalizerVolume(gains), closeTo(70.8, 0.1));
+    // Only cuts: nothing clips, full volume.
+    expect(equalizerVolume([0, 0, -4, 0, 0, 0, 0, 0, 0, 0]), 100);
+    expect(SoundSettings(gains: gains).volume, 100, reason: 'switched off');
+    expect(SoundSettings(enabled: true, gains: gains).volume, closeTo(70.8, 0.1));
   });
 
   test('settings survive a restart and name their preset', () {

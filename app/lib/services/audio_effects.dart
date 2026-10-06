@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// Equalizer bands in Hz, an octave apart.
 const eqBands = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
 
@@ -61,6 +63,11 @@ class SoundSettings {
   /// mpv's audio filter chain: empty when the equalizer is off or flat.
   String get filter => enabled ? equalizerFilter(gains) : '';
 
+  /// mpv's volume (0..100) under this equalizer: raised bands would clip at full volume, so
+  /// the whole sound goes down by half the highest raise. The libmpv build has no volume filter,
+  /// so this is the player's own volume.
+  double get volume => enabled ? equalizerVolume(gains) : 100;
+
   Map<String, Object> toPrefs() => {
         'eq_enabled': enabled,
         'eq_gains': gains.map((g) => g.toString()).join(','),
@@ -93,21 +100,19 @@ bool _same(List<double> a, List<double> b) {
   return true;
 }
 
-/// An mpv audio filter (libavfilter graph) with one peaking band per non-zero gain. Raised bands
-/// would clip at full volume, so the whole sound goes down by half the highest raise.
+/// An mpv audio filter (libavfilter graph) with one peaking band per non-zero gain.
 String equalizerFilter(List<double> gains) {
   final bands = <String>[];
-  var highest = 0.0;
   for (var i = 0; i < gains.length && i < eqBands.length; i++) {
     final g = gains[i].clamp(-eqMaxGain, eqMaxGain);
     if (g.abs() < 0.05) continue;
-    if (g > highest) highest = g;
-    bands.add('equalizer=f=${eqBands[i]}:t=o:w=1:g=${_db(g)}');
+    bands.add('equalizer=f=${eqBands[i]}:t=o:w=1:g=${g.toStringAsFixed(1)}');
   }
-  if (bands.isEmpty) return '';
-  // Named: a bare value starting with '-' reads as an option name to libavfilter.
-  if (highest > 0) bands.add('volume=volume=${_db(-highest / 2)}dB');
-  return 'lavfi=[${bands.join(',')}]';
+  return bands.isEmpty ? '' : 'lavfi=[${bands.join(',')}]';
 }
 
-String _db(double v) => v.toStringAsFixed(1);
+/// Player volume (0..100) leaving room for the highest raised band: half of it in dB.
+double equalizerVolume(List<double> gains) {
+  final highest = gains.fold(0.0, (m, g) => g > m ? g : m).clamp(0.0, eqMaxGain);
+  return 100 * pow(10, -highest / 2 / 20).toDouble();
+}
