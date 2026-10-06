@@ -118,8 +118,8 @@ class SubsonicClient {
       for (final s in list)
         SubsonicEntry(
           id: '${s['id']}',
-          title: '${s['title']}',
-          subtitle: s['artist'] as String?,
+          title: '${s['title']}'.trim(),
+          subtitle: (s['artist'] as String?)?.trim(),
           coverArt: s['coverArt'] as String?,
           duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
         ),
@@ -134,8 +134,8 @@ class SubsonicClient {
       for (final s in list)
         SubsonicEntry(
           id: '${s['id']}',
-          title: '${s['title']}',
-          subtitle: s['artist'] as String?,
+          title: '${s['title']}'.trim(),
+          subtitle: (s['artist'] as String?)?.trim(),
           coverArt: s['coverArt'] as String?,
           duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
         ),

@@ -15,7 +15,7 @@ class JellyfinItem {
   final Map<String, dynamic> _j;
 
   String get id => _j['Id'] as String;
-  String get name => (_j['Name'] as String?) ?? '';
+  String get name => (_j['Name'] as String?)?.trim() ?? '';
   String get type => (_j['Type'] as String?) ?? '';
   bool get isFolder => (_j['IsFolder'] as bool?) ?? false;
   String? get collectionType => _j['CollectionType'] as String?;
@@ -49,10 +49,11 @@ class JellyfinItem {
         final code = (s != null && e != null) ? 'S${s}E$e' : null;
         return [_j['SeriesName'], code].whereType<String>().join(' · ');
       case 'Audio':
-        final artists = (_j['Artists'] as List?)?.cast<String>() ?? const [];
-        return artists.isNotEmpty ? artists.join(', ') : _j['AlbumArtist'] as String?;
+        // Tags sometimes come padded with spaces.
+        final artists = [for (final a in (_j['Artists'] as List?)?.cast<String>() ?? const <String>[]) a.trim()];
+        return artists.isNotEmpty ? artists.join(', ') : (_j['AlbumArtist'] as String?)?.trim();
       case 'MusicAlbum':
-        return _j['AlbumArtist'] as String?;
+        return (_j['AlbumArtist'] as String?)?.trim();
       default:
         return _j['ProductionYear']?.toString();
     }
@@ -67,7 +68,7 @@ class MediaVersion {
   String get id => _j['Id'] as String;
 
   /// Jellyfin takes it from the file name, e.g. "2160p" for "Movie - 2160p.mkv".
-  String get name => (_j['Name'] as String?) ?? '';
+  String get name => (_j['Name'] as String?)?.trim() ?? '';
 
   Map<String, dynamic>? get _video => ((_j['MediaStreams'] as List?) ?? const [])
       .cast<Map<String, dynamic>>()
