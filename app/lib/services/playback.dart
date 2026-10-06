@@ -665,7 +665,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
     s.completed.listen((done) {
       _broadcast();
       if (done) _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
-      if (done && sleepAfterTrack.value) setSleepTimer(null);
+      // mpv reports the end of each track here, before moving to the next one.
+      if (done && sleepAfterTrack.value) _sleepAtTrackEnd();
     });
     s.log.listen((l) => debugPrint('homeplay mpv [${l.level}] ${l.prefix}: ${l.text.trim()}'));
     // mpv reports recoverable problems here too (e.g. a hardware decoder it then falls back from),
