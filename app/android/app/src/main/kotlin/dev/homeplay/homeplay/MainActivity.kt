@@ -44,20 +44,18 @@ class MainActivity : AudioServiceActivity() {
         applyWallpaper(showsWallpaper())
     }
 
-    // With the home screen wallpaper as the background, Flutter draws on a clear window and
-    // Android puts the wallpaper under it. Only then: a clear window costs a little more to draw.
-    // Fixed for this window's life: Flutter asks more than once and must get the same answer.
-    private val clearWindow by lazy { showsWallpaper() }
+    // Flutter always draws on a clear window, so the home screen wallpaper can show under it.
+    // A window made clear only when the wallpaper was chosen stayed opaque if the app had
+    // started without it: the Flutter engine lives on from window to window and kept drawing
+    // the opaque way.
+    override fun getBackgroundMode(): BackgroundMode = BackgroundMode.transparent
 
-    override fun getBackgroundMode(): BackgroundMode =
-        if (clearWindow) BackgroundMode.transparent else BackgroundMode.opaque
-
-    // On a clear window the wallpaper shows or not by a window flag alone; when it is off,
-    // the app paints its own background over the whole window.
+    // The wallpaper shows or not by a window flag alone; when it is off, the app paints its
+    // own background over the whole window.
     private fun applyWallpaper(show: Boolean) {
         val flag = WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER
-        if (show && clearWindow) window.addFlags(flag) else window.clearFlags(flag)
-        Log.i("homeplay", "window: wallpaper=$show clear=$clearWindow")
+        if (show) window.addFlags(flag) else window.clearFlags(flag)
+        Log.i("homeplay", "window: wallpaper=$show")
     }
 
     private fun windowPrefs() = getSharedPreferences("homeplay_window", Context.MODE_PRIVATE)
@@ -82,15 +80,11 @@ class MainActivity : AudioServiceActivity() {
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/window").setMethodCallHandler { call, result ->
             when (call.method) {
-                // The drawing mode is fixed when the window is made, so only a window that is not
-                // clear yet is made anew, to show the wallpaper. The Flutter engine lives on with
-                // audio_service: the app and playback go on. Turning the wallpaper off keeps the
-                // clear window until the next start.
                 "showWallpaper" -> {
                     val show = call.arguments == true
-                    windowPrefs().edit().putBoolean("wallpaper", show).commit()
+                    windowPrefs().edit().putBoolean("wallpaper", show).apply()
+                    applyWallpaper(show)
                     result.success(null)
-                    if (show && !clearWindow) recreate() else applyWallpaper(show)
                 }
                 else -> result.notImplemented()
             }

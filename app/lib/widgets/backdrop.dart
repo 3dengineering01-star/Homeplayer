@@ -18,6 +18,9 @@ class AppBackdrop extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     if (!look.seeThrough) return ColoredBox(color: scheme.surface, child: child);
     return Stack(fit: StackFit.expand, children: [
+      // The window is always clear: without the wallpaper, something solid under a picture
+      // that is still loading.
+      if (look.backdrop != Backdrop.wallpaper) ColoredBox(color: scheme.surface),
       // Drawn once and kept: nothing in it moves, so playback never waits on it.
       RepaintBoundary(child: BackdropLayer(look: look)),
       ColoredBox(color: scheme.surface.withValues(alpha: look.veil)),

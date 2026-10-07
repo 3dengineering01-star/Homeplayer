@@ -271,8 +271,7 @@ class AppearanceStore {
     if (wallpaperChanged) await _showWallpaper(a.backdrop == Backdrop.wallpaper);
   }
 
-  /// Lets the home screen wallpaper show through the window, or not. Android needs the
-  /// window made anew for that, which takes a blink; playback goes on.
+  /// Lets the home screen wallpaper show through the window, or not.
   static Future<void> _showWallpaper(bool show) async {
     try {
       await _window.invokeMethod('showWallpaper', show);
