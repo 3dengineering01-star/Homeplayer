@@ -14,7 +14,7 @@ int _byName(String a, String b) => a.toLowerCase().compareTo(b.toLowerCase());
 int albumOrder(JellyfinItem a, JellyfinItem b) {
   final disc = (a.seasonNumber ?? 0).compareTo(b.seasonNumber ?? 0);
   if (disc != 0) return disc;
-  final track = (a.indexNumber ?? 1 << 20).compareTo(b.indexNumber ?? 1 << 20);
+  final track = (a.trackNumber ?? 1 << 20).compareTo(b.trackNumber ?? 1 << 20);
   return track != 0 ? track : _byName(a.name, b.name);
 }
 
@@ -192,3 +192,17 @@ int _newer(DateTime? a, DateTime? b) => a == null
     : b == null
     ? -1
     : b.compareTo(a);
+
+/// Albums (not loose tracks) whose name or artist has every word of [text], or all of them
+/// for no words, newest first when years narrow them to [from]..[to].
+List<AlbumGroup> findAlbums(List<AlbumGroup> albums, String text, {int? from, int? to}) {
+  final words = text.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  return [
+    for (final a in albums)
+      if (!a.loose &&
+          words.every('${a.name} ${a.artist}'.toLowerCase().contains) &&
+          (from == null || (a.year ?? -1) >= from) &&
+          (to == null || (a.year ?? 1 << 20) <= to))
+        a,
+  ];
+}

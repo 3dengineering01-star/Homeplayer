@@ -135,4 +135,13 @@ void main() {
     expect(const SearchFilters(text: 'x', kind: SearchKind.albums).itemsQuery('me')['isMissing'], 'false');
     expect(const SearchFilters(text: 'x', kind: SearchKind.movies).byArtist, isFalse);
   });
+
+  test('albums come from the tracks: on their own tab always, with All only for words', () {
+    expect(const SearchFilters(kind: SearchKind.albums).wantsAlbums, isTrue);
+    expect(const SearchFilters(kind: SearchKind.albums).isReady, isTrue);
+    expect(const SearchFilters(text: 'bell').wantsAlbums, isTrue);
+    expect(const SearchFilters().wantsAlbums, isFalse);
+    expect(const SearchFilters(kind: SearchKind.tracks, text: 'bell').wantsAlbums, isFalse);
+    expect(SearchKind.all.types, isNot(contains('MusicAlbum')));
+  });
 }

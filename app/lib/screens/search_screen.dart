@@ -5,12 +5,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
+import '../services/music_index.dart';
 import '../services/search_filters.dart';
 import '../services/search_results.dart';
 import '../widgets/async_list.dart';
 import 'jellyfin_actions.dart';
+import 'playlist_picker.dart';
+import 'track_list_screen.dart';
 
 const _recentKey = 'recent_searches';
+
+typedef _Found = ({List<JellyfinItem> items, List<AlbumGroup> albums});
 
 /// Search across the whole server: words, a kind of item, years, genres, watched or not, and
 /// the order. Results come in sections by kind.
@@ -28,8 +33,12 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
   JellyfinClient get client => widget.client;
 
   final _field = TextEditingController();
+  final _focus = FocusNode();
+
+  /// The server's albums as the music screen makes them, loaded once when first needed.
+  Future<List<AlbumGroup>>? _albums;
   SearchFilters _filters = const SearchFilters();
-  Future<List<JellyfinItem>>? _results;
+  Future<_Found>? _results;
   Timer? _typing;
   List<String> _recent = const [];
   Future<List<String>>? _genres;
@@ -46,6 +55,7 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
   void dispose() {
     _typing?.cancel();
     _field.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -64,7 +74,29 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
     }
   }
 
-  void _run() => setState(() => _results = _filters.isReady ? client.search(_filters) : null);
+  void _run() => setState(() => _results = _filters.isReady ? _search(_filters) : null);
+
+  Future<_Found> _search(SearchFilters f) async {
+    final albums = f.wantsAlbums ? (_albums ??= client.allMusicTracks().then(groupByAlbum)) : null;
+    final items = client.search(f);
+    return (
+      items: await items,
+      albums: albums == null ? const <AlbumGroup>[] : findAlbums(await albums, f.text, from: f.fromYear, to: f.toYear),
+    );
+  }
+
+  void _openAlbum(AlbumGroup a) {
+    unawaited(_remember());
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => TrackListScreen(
+        client: client,
+        title: a.name,
+        subtitle: [a.artist, a.year?.toString()].whereType<String>().join(' · '),
+        load: () async => a.tracks,
+        cover: a.cover,
+      ),
+    ));
+  }
 
   Future<void> _remember() async {
     final text = _filters.text.trim();
@@ -99,6 +131,7 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
         titleSpacing: 0,
         title: TextField(
           controller: _field,
+          focusNode: _focus,
           autofocus: true,
           textInputAction: TextInputAction.search,
           decoration: const InputDecoration(hintText: 'Search the server', border: InputBorder.none),
@@ -193,7 +226,7 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
     ],
   );
 
-  Widget _resultList() => FutureBuilder<List<JellyfinItem>>(
+  Widget _resultList() => FutureBuilder<_Found>(
     future: _results,
     builder: (context, snap) {
       if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
@@ -202,8 +235,9 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
           child: Padding(padding: const EdgeInsets.all(24), child: Text(describeError(snap.error!))),
         );
       }
-      final sections = groupResults(snap.data!);
-      if (sections.isEmpty) {
+      final sections = groupResults(snap.data!.items);
+      final albums = snap.data!.albums;
+      if (sections.isEmpty && albums.isEmpty) {
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -220,14 +254,34 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
       return ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          for (final (title, items) in sections) ...[
+          // Albums go after the artists, before the tracks.
+          for (final (title, items) in [
+            ...sections.where((s) => s.$1 == 'Movies' || s.$1 == 'Shows' || s.$1 == 'Episodes' || s.$1 == 'Artists'),
+            if (albums.isNotEmpty) ('Albums', const <JellyfinItem>[]),
+            ...sections.where((s) => !{'Movies', 'Shows', 'Episodes', 'Artists'}.contains(s.$1)),
+          ]) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
               child: Text(
-                '$title · ${items.length}',
+                '$title · ${title == 'Albums' ? albums.length : items.length}',
                 style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary),
               ),
             ),
+            if (title == 'Albums')
+              for (final a in albums)
+                ListTile(
+                  leading: ArtThumb(url: client.imageUrl(a.cover, height: 168), headers: client.headers, icon: Icons.album),
+                  title: Text(a.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(
+                    [a.artist, a.year?.toString(), '${a.tracks.length} ${a.tracks.length == 1 ? 'track' : 'tracks'}']
+                        .whereType<String>()
+                        .join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onTap: () => _openAlbum(a),
+                  onLongPress: () => addToPlaylist(context, client, items: a.tracks),
+                ),
             for (final item in items)
               ListTile(
                 leading: ArtThumb(
@@ -253,7 +307,7 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
   Future<void> _showFilters() async {
     _genres ??= client.genres().onError((e, _) => const <String>[]);
     // Without this the keyboard came back over the results when the sheet closed.
-    FocusScope.of(context).unfocus();
+    _focus.unfocus();
     final result = await showModalBottomSheet<SearchFilters>(
       context: context,
       isScrollControlled: true,
@@ -261,6 +315,11 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
       builder: (context) => _FiltersSheet(initial: _filters, genres: _genres!),
     );
     if (result != null) _set(result);
+    // Closing the sheet gives the focus back to the field it was taken from: take it again.
+    if (mounted) _focus.unfocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus.unfocus();
+    });
   }
 }
 

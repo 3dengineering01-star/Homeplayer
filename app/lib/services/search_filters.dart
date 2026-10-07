@@ -4,12 +4,12 @@ library;
 
 /// The kinds of items the search can be narrowed to.
 enum SearchKind {
-  all('All', 'Movie,Series,Episode,MusicAlbum,Audio,MusicVideo,Video,Photo,Playlist,BoxSet'),
+  all('All', 'Movie,Series,Episode,Audio,MusicVideo,Video,Photo,Playlist,BoxSet'),
   movies('Movies', 'Movie'),
   shows('Shows', 'Series'),
   episodes('Episodes', 'Episode'),
   artists('Artists', null),
-  albums('Albums', 'MusicAlbum'),
+  albums('Albums', null),
   tracks('Tracks', 'Audio'),
   videos('Videos', 'Video,MusicVideo'),
   photos('Photos', 'Photo'),
@@ -18,7 +18,9 @@ enum SearchKind {
   const SearchKind(this.label, this.types);
   final String label;
 
-  /// Jellyfin item types for /Items; null for artists, which have a list of their own.
+  /// Jellyfin item types for /Items; null for artists, which have a list of their own, and for
+  /// albums, which the app makes from the tracks as the music screen does: the server may have
+  /// no albums for music folders it links to.
   final String? types;
 }
 
@@ -74,7 +76,11 @@ class SearchFilters {
 
   /// Tracks and albums are also found by their artist's name, which the server's own word
   /// search does not look at.
-  bool get byArtist => text.trim().isNotEmpty && extraFilters == 0 && (kind == SearchKind.all || kind == SearchKind.tracks || kind == SearchKind.albums);
+  bool get byArtist => text.trim().isNotEmpty && extraFilters == 0 && (kind == SearchKind.all || kind == SearchKind.tracks);
+
+  /// Albums, found among the tracks: all of them on their own tab, by name or artist with All.
+  bool get wantsAlbums =>
+      kind == SearchKind.albums || (kind == SearchKind.all && text.trim().isNotEmpty && extraFilters == 0);
 
   /// Artists are looked for by name only: years, genres and watched marks belong to items.
   bool get wantsArtists =>
@@ -138,14 +144,10 @@ class SearchFilters {
         'userId': userId,
         'recursive': 'true',
         'artistIds': artistIds.join(','),
-        'includeItemTypes': switch (kind) {
-          SearchKind.tracks => 'Audio',
-          SearchKind.albums => 'MusicAlbum',
-          _ => 'MusicAlbum,Audio',
-        },
+        'includeItemTypes': 'Audio',
         'limit': '$limit',
         'sortBy': 'Album,ParentIndexNumber,IndexNumber,SortName',
-        'fields': 'PrimaryImageAspectRatio,MediaSourceCount,ProductionYear',
+        'fields': 'PrimaryImageAspectRatio,MediaSourceCount,ProductionYear,Path',
         'enableUserData': 'true',
       };
 

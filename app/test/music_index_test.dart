@@ -90,4 +90,24 @@ void main() {
     expect(trackMatches(_library.first, 'floyd'), isFalse);
     expect(trackMatches(_library[4], 'pink money'), isTrue);
   });
+
+  test('without a track tag the number at the start of the file name orders the album', () {
+    expect(trackNumberFromPath(r'D:\Music\The Division Bell\01-Cluster One.mp3'), 1);
+    expect(trackNumberFromPath('/music/3. Time.flac'), 3);
+    expect(trackNumberFromPath('/music/11 High Hopes.mp3'), 11);
+    expect(trackNumberFromPath('/music/1994 Live.mp3'), isNull, reason: 'a year, not a track number');
+    expect(trackNumberFromPath('/music/Money.mp3'), isNull);
+    expect(trackNumberFromPath(null), isNull);
+    JellyfinItem file(String name) => JellyfinItem({'Id': name, 'Name': name.substring(3), 'Type': 'Audio', 'Path': 'D:\\x\\$name.mp3'});
+    final ordered = [file('07-A Great Day'), file('01-Cluster One'), file('11-High Hopes')]..sort(albumOrder);
+    expect([for (final t in ordered) t.name], ['Cluster One', 'A Great Day', 'High Hopes']);
+  });
+
+  test('albums are found by name or artist, all of them for no words, loose tracks never', () {
+    final albums = groupByAlbum(_library);
+    expect([for (final a in findAlbums(albums, 'danheim')) a.name], ['Mannavegr', 'Skapanir']);
+    expect([for (final a in findAlbums(albums, 'bell pink')) a.name], ['The Division Bell']);
+    expect(findAlbums(albums, '').length, 3);
+    expect([for (final a in findAlbums(albums, '', from: 2018)) a.name], ['Mannavegr']);
+  });
 }

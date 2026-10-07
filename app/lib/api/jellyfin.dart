@@ -61,6 +61,10 @@ class JellyfinItem {
         for (final a in (_j['Artists'] as List?) ?? const []) ?_text(a),
       ];
 
+  /// A track's number on its album: the tag, else the number the file name starts with
+  /// ("01-Cluster One.mp3"), which the server does not always take.
+  int? get trackNumber => indexNumber ?? trackNumberFromPath(_j['Path'] as String?);
+
   /// When the server first saw the file.
   DateTime? get dateCreated => DateTime.tryParse((_j['DateCreated'] as String?) ?? '');
 
@@ -266,7 +270,7 @@ class JellyfinClient {
         'parentId': parentId,
         'sortBy': 'ParentIndexNumber,IndexNumber,SortName',
         'sortOrder': 'Ascending',
-        'fields': 'PrimaryImageAspectRatio,MediaSourceCount',
+        'fields': 'PrimaryImageAspectRatio,MediaSourceCount,Path',
         'enableImageTypes': 'Primary',
         'enableUserData': 'true',
         // Episodes and seasons Jellyfin knows from online metadata but has no files for.
@@ -367,6 +371,13 @@ class JellyfinClient {
   Future<List<JellyfinItem>> musicTracks(String libraryId) =>
       _allPages({'parentId': libraryId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
 
+  /// Every track of every music library: the search finds albums among them, as the server
+  /// may have none for loose folders.
+  Future<List<JellyfinItem>> allMusicTracks() async {
+    final music = (await views()).where((v) => v.collectionType == 'music');
+    return [for (final tracks in await Future.wait(music.map((l) => musicTracks(l.id)))) ...tracks];
+  }
+
   /// A music artist's tracks, by the server's artist id (from the search).
   Future<List<JellyfinItem>> artistTracks(String artistId) =>
       _allPages({'artistIds': artistId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
@@ -384,7 +395,7 @@ class JellyfinClient {
     while (true) {
       final j = await _get('/Items', {
         'userId': account.userId!,
-        'fields': 'DateCreated,Genres,MediaSourceCount',
+        'fields': 'DateCreated,Genres,MediaSourceCount,Path',
         'enableUserData': 'true',
         'excludeLocationTypes': 'Virtual',
         'startIndex': '${all.length}',
@@ -411,7 +422,7 @@ class JellyfinClient {
 
   /// A playlist's entries in their order; each carries its [JellyfinItem.playlistEntryId].
   Future<List<JellyfinItem>> playlistItems(String playlistId) async =>
-      _items(await _get('/Playlists/$playlistId/Items', {'userId': account.userId!, 'fields': 'MediaSourceCount'}));
+      _items(await _get('/Playlists/$playlistId/Items', {'userId': account.userId!, 'fields': 'MediaSourceCount,Path'}));
 
   /// A new playlist with [ids] in it; its id.
   Future<String> createPlaylist(String name, List<String> ids, {String mediaType = 'Audio'}) async {
@@ -883,4 +894,13 @@ String runTimeLabel(Duration d) {
   if (d < const Duration(minutes: 1)) return '${d.inSeconds} s';
   final h = d.inHours, m = d.inMinutes.remainder(60);
   return h > 0 ? (m > 0 ? '$h h $m min' : '$h h') : '${d.inMinutes} min';
+}
+
+/// The number a file name starts with, as in "01-Cluster One.mp3" or "3. Time.flac"; null when
+/// it does not start with one, or the number looks like a year.
+int? trackNumberFromPath(String? path) {
+  if (path == null) return null;
+  final name = path.split(RegExp(r'[/\\]')).last;
+  final m = RegExp(r'^(\d{1,3})(?:[\s._\-)]|$)').firstMatch(name);
+  return m == null ? null : int.parse(m.group(1)!);
 }
