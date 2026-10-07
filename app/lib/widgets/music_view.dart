@@ -6,6 +6,7 @@ import '../api/common.dart';
 import '../screens/equalizer_screen.dart';
 import '../services/playback.dart';
 import '../services/video_tuning.dart';
+import 'appearance_picker.dart';
 import 'artwork.dart';
 import 'queue_sheet.dart';
 import 'vinyl_art.dart';
@@ -106,6 +107,11 @@ class _TopBar extends StatelessWidget {
             Text('Now playing', style: Theme.of(context).textTheme.labelMedium),
             Text('${index + 1} of $count', style: Theme.of(context).textTheme.bodySmall),
           ]),
+        ),
+        IconButton(
+          tooltip: 'Appearance',
+          onPressed: () => showAppearanceSheet(context),
+          icon: const Icon(Icons.palette_outlined),
         ),
         IconButton(
           tooltip: 'Queue',

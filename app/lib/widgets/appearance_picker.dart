@@ -112,3 +112,23 @@ class _Swatch extends StatelessWidget {
     );
   }
 }
+
+/// The theme and colours in a sheet, for the players: the change shows at once behind it.
+void showAppearanceSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
+          ),
+          const AppearancePicker(),
+        ]),
+      ),
+    ),
+  );
+}
