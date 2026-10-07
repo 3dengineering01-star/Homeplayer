@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../services/quality.dart';
+import '../widgets/appearance_picker.dart';
 
-/// App settings: video quality for Wi-Fi and for mobile data.
+/// App settings: how the app looks, and video quality for Wi-Fi and for mobile data.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -52,7 +53,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Text('Appearance',
+                    style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+              ),
+              const AppearancePicker(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
                 child: Text('Video quality',
                     style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
               ),

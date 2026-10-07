@@ -10,6 +10,7 @@ import '../api/common.dart';
 import '../services/pip.dart';
 import '../services/playback.dart';
 import '../services/video_tuning.dart';
+import 'appearance_picker.dart';
 import 'track_sheet.dart';
 import 'video_tune_sheet.dart';
 
@@ -418,6 +419,15 @@ class _VideoViewState extends State<VideoView> {
             showVideoTuneSheet(context, _pb);
           },
           icon: const Icon(Icons.tune),
+        ),
+        IconButton(
+          tooltip: 'Appearance',
+          color: Colors.white,
+          onPressed: () {
+            _hideTimer?.cancel();
+            showAppearanceSheet(context);
+          },
+          icon: const Icon(Icons.palette_outlined),
         ),
       ]);
 

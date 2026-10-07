@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
@@ -58,8 +59,17 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// the fallback for a libmpv built without it.
   Future<void> _useMediaOutput() async {
     final native = player.platform as NativePlayer;
+    // media_kit caches streams on disk but names no folder, and on Android mpv found none
+    // ("Failed to create file cache"): everything stayed in memory, which the phone is short of.
+    try {
+      await native.setProperty('demuxer-cache-dir', (await getTemporaryDirectory()).path);
+    } catch (e) {
+      debugPrint('homeplay stream cache folder not set: $e');
+    }
     try {
       await native.setProperty('ao', 'audiotrack,opensles');
+      // mpv's default 0.2 s ran dry now and then on the phone ("Audio device underrun"), a click.
+      await native.setProperty('audio-buffer', '0.5');
       // Its own audio session, so Android's equalizer can work on it.
       _eqSession = await NativeEq.session();
       if (_eqSession != null) await native.setProperty('audiotrack-session-id', '$_eqSession');
@@ -748,6 +758,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
       _reportProgress();
     });
     s.buffering.listen((_) => _broadcast());
+    // The notification and the lock screen move their position bar at this speed.
+    s.rate.listen((_) => _broadcast());
     s.completed.listen((done) {
       _broadcast();
       if (done) _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);

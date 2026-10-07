@@ -8,6 +8,8 @@ import android.content.res.Configuration
 import android.media.AudioManager
 import android.media.audiofx.DynamicsProcessing
 import android.os.Build
+import android.os.Bundle
+import android.view.WindowManager
 import android.util.Rational
 import androidx.lifecycle.Lifecycle
 import com.ryanheise.audioservice.AudioService
@@ -22,6 +24,17 @@ class MainActivity : AudioServiceActivity() {
     // Picture-in-picture when the user leaves the app: on while a video plays.
     private var autoPip = false
     private var pipRatio = Rational(16, 9)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Full screen in landscape the picture goes under the camera cutout too. By default Android
+        // kept that strip black and the video sat beside it, its far edge cut off.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
