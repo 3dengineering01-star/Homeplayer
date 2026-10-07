@@ -203,10 +203,40 @@ ThemeData buildTheme(ColorScheme scheme, {bool seeThrough = false}) {
       backgroundColor: scheme.primaryContainer,
       foregroundColor: scheme.onPrimaryContainer,
     ),
-    pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+    pageTransitionsTheme: PageTransitionsTheme(builders: {
+      TargetPlatform.android:
+          seeThrough ? const _SeeThroughTransitions() : const PredictiveBackPageTransitionsBuilder(),
     }),
   );
+}
+
+/// Android's page transitions for clear pages. By default the page underneath sits on a block
+/// of the theme's colour while another page comes in, which hid the background for a moment;
+/// and two clear pages at once showed through each other. Here the page underneath fades away
+/// as the new one comes, and back in as the back gesture uncovers it.
+class _SeeThroughTransitions extends PageTransitionsBuilder {
+  const _SeeThroughTransitions();
+
+  static const _inner = PredictiveBackPageTransitionsBuilder(fallbackColor: Colors.transparent);
+
+  @override
+  Duration get transitionDuration => _inner.transitionDuration;
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) =>
+      _inner.buildTransitions(
+        route,
+        context,
+        animation,
+        secondaryAnimation,
+        FadeTransition(opacity: ReverseAnimation(secondaryAnimation), child: child),
+      );
 }
 
 /// The chosen appearance, kept between runs; the app rebuilds when it changes.

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -40,20 +41,18 @@ class BackdropLayer extends StatelessWidget {
       Backdrop.theme => _Blend(colors: [scheme.primaryContainer, scheme.tertiaryContainer, scheme.secondaryContainer]),
       Backdrop.picture => look.picture == null
           ? ColoredBox(color: scheme.surface)
-          : LayoutBuilder(builder: (context, box) {
-              final dpr = MediaQuery.devicePixelRatioOf(context);
-              // Softened by decoding it tiny and stretching it back: a blur filter would be
-              // worked out again with every frame drawn over it.
-              final width = look.blur ? 48 : (box.maxWidth * dpr).round().clamp(1, 2400);
-              return Image.file(
-                File(look.picture!),
-                fit: BoxFit.cover,
-                cacheWidth: width,
-                filterQuality: look.blur ? FilterQuality.medium : FilterQuality.low,
-                gaplessPlayback: true,
-                errorBuilder: (_, _, _) => ColoredBox(color: scheme.surface),
-              );
-            }),
+          : look.blur
+              ? _SoftPicture(path: look.picture!)
+              : LayoutBuilder(builder: (context, box) {
+                  final dpr = MediaQuery.devicePixelRatioOf(context);
+                  return Image.file(
+                    File(look.picture!),
+                    fit: BoxFit.cover,
+                    cacheWidth: (box.maxWidth * dpr).round().clamp(1, 2400),
+                    gaplessPlayback: true,
+                    errorBuilder: (_, _, _) => ColoredBox(color: scheme.surface),
+                  );
+                }),
       _ => _Blend(colors: look.backdrop.colors),
     };
   }
@@ -81,4 +80,72 @@ class _Blend extends StatelessWidget {
           child: const SizedBox.expand(),
         ),
       );
+}
+
+/// The picture blurred once into a small image, then stretched over the screen. A blur filter
+/// on the screen would be worked out again with every frame drawn over it; stretching a tiny
+/// copy without blurring it first showed as a mosaic.
+class _SoftPicture extends StatefulWidget {
+  const _SoftPicture({required this.path});
+
+  final String path;
+
+  @override
+  State<_SoftPicture> createState() => _SoftPictureState();
+}
+
+class _SoftPictureState extends State<_SoftPicture> {
+  ui.Image? _image;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_SoftPicture old) {
+    super.didUpdateWidget(old);
+    if (old.path != widget.path) _load();
+  }
+
+  Future<void> _load() async {
+    final path = widget.path;
+    try {
+      final codec = await ui.instantiateImageCodec(await File(path).readAsBytes(), targetWidth: 160);
+      final small = (await codec.getNextFrame()).image;
+      codec.dispose();
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawImage(
+        small,
+        Offset.zero,
+        Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4, tileMode: TileMode.mirror),
+      );
+      final picture = recorder.endRecording();
+      final soft = await picture.toImage(small.width, small.height);
+      picture.dispose();
+      small.dispose();
+      if (!mounted || path != widget.path) {
+        soft.dispose();
+        return;
+      }
+      setState(() {
+        _image?.dispose();
+        _image = soft;
+      });
+    } catch (e) {
+      debugPrint('homeplay soft background failed: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => _image == null
+      ? ColoredBox(color: Theme.of(context).colorScheme.surface)
+      : RawImage(image: _image, fit: BoxFit.cover, filterQuality: FilterQuality.medium);
 }
