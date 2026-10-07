@@ -437,11 +437,21 @@ class JellyfinClient {
   /// Items matching [filters]; artists come from their own list on the server.
   Future<List<JellyfinItem>> search(SearchFilters filters) async {
     final userId = account.userId!;
-    final results = await Future.wait([
-      if (filters.kind.types != null) _get('/Items', filters.itemsQuery(userId)).then(_items),
-      if (filters.wantsArtists) _get('/Artists', filters.artistsQuery(userId)).then(_items),
-    ]);
-    return [for (final r in results) ...r];
+    final artists = filters.wantsArtists || filters.byArtist
+        ? _get('/Artists', filters.artistsQuery(userId)).then(_items)
+        : Future.value(const <JellyfinItem>[]);
+    final byName = filters.kind.types != null ? _get('/Items', filters.itemsQuery(userId)).then(_items) : null;
+    final found = await artists;
+    // "danheim" with Tracks: the server's word search looks at track names only.
+    final byArtist = filters.byArtist && found.isNotEmpty
+        ? _get('/Items', filters.byArtistQuery(userId, [for (final a in found.take(10)) a.id])).then(_items)
+        : null;
+    final seen = <String>{};
+    return [
+      if (filters.wantsArtists) ...found,
+      if (byName != null) ...await byName,
+      if (byArtist != null) ...await byArtist,
+    ].where((i) => seen.add(i.id)).toList();
   }
 
   /// Genres to pick from in the search filters.
@@ -473,7 +483,7 @@ class JellyfinClient {
       'includeItemTypes': types,
       'limit': '0',
       'enableTotalRecordCount': 'true',
-      'excludeLocationTypes': 'Virtual',
+      'isMissing': 'false',
     });
     return (j['TotalRecordCount'] as num?)?.toInt() ?? 0;
   }

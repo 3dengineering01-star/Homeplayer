@@ -97,10 +97,42 @@ void main() {
       }),
     );
     final found = await c.search(const SearchFilters(text: 'x'));
-    expect(seen..sort(), ['/Artists', '/Items']);
+    // By name, the artists, and the found artists' tracks and albums (the same item here).
+    expect(seen..sort(), ['/Artists', '/Items', '/Items']);
     expect(found.length, 2);
     seen.clear();
     await c.search(const SearchFilters(text: 'x', kind: SearchKind.movies));
     expect(seen, ['/Items']);
+  });
+
+  test('tracks and albums are also found by their artist', () async {
+    final seen = <Uri>[];
+    final c = JellyfinClient(
+      _account,
+      'dev',
+      client: MockClient((r) async {
+        seen.add(r.url);
+        final items = switch (r.url.path) {
+          '/Artists' => [
+              {'Id': 'dan', 'Name': 'Danheim', 'Type': 'MusicArtist'},
+            ],
+          _ when r.url.queryParameters.containsKey('artistIds') => [
+              {'Id': 'vali', 'Name': 'Vali', 'Type': 'Audio'},
+              {'Id': 'same', 'Name': 'Danheim live', 'Type': 'Audio'},
+            ],
+          _ => [
+              {'Id': 'same', 'Name': 'Danheim live', 'Type': 'Audio'},
+            ],
+        };
+        return http.Response(jsonEncode({'Items': items}), 200);
+      }),
+    );
+    final found = await c.search(const SearchFilters(text: 'danheim', kind: SearchKind.tracks));
+    expect([for (final i in found) i.id], ['same', 'vali'], reason: 'no artist row for Tracks, no doubles');
+    final byArtist = seen.firstWhere((u) => u.queryParameters.containsKey('artistIds'));
+    expect(byArtist.queryParameters['artistIds'], 'dan');
+    expect(byArtist.queryParameters['includeItemTypes'], 'Audio');
+    expect(const SearchFilters(text: 'x', kind: SearchKind.albums).itemsQuery('me')['isMissing'], 'false');
+    expect(const SearchFilters(text: 'x', kind: SearchKind.movies).byArtist, isFalse);
   });
 }

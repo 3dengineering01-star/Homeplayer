@@ -34,7 +34,12 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   @override
   JellyfinClient get client => widget.client;
 
-  late final TabController _tabs = TabController(length: 4, vsync: this)..addListener(() => setState(() {}));
+  late final TabController _tabs = TabController(length: 4, vsync: this)
+    ..addListener(() {
+      // Playlists may have changed from another tab's long press.
+      if (_tabs.index == 3 && !_tabs.indexIsChanging) _playlists = client.playlists();
+      setState(() {});
+    });
   late Future<_Music> _music = _load();
   late Future<List<JellyfinItem>> _playlists = client.playlists();
   final _query = TextEditingController();
@@ -119,6 +124,9 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
         ],
         bottom: TabBar(
           controller: _tabs,
+          // With big letters the four names do not fit side by side: they scroll instead.
+          isScrollable: MediaQuery.textScalerOf(context).scale(1) > 1.2,
+          tabAlignment: MediaQuery.textScalerOf(context).scale(1) > 1.2 ? TabAlignment.start : null,
           tabs: const [
             Tab(text: 'Artists'),
             Tab(text: 'Albums'),

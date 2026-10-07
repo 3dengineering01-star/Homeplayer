@@ -30,6 +30,7 @@ String resultSubtitle(JellyfinItem i) {
     'Episode' => [i.subtitle],
     'MusicAlbum' => [i.albumArtist, i.year?.toString()],
     'Audio' => [i.subtitle, i.album],
+    'MusicArtist' => const <String?>[],
     'Playlist' => [i.childCount == null ? null : '${i.childCount} ${i.childCount == 1 ? 'item' : 'items'}'],
     _ => [i.year?.toString()],
   };

@@ -72,6 +72,10 @@ class SearchFilters {
   /// Worth asking the server: some words, or a narrowing that is not the whole server.
   bool get isReady => text.trim().isNotEmpty || extraFilters > 0 || kind != SearchKind.all;
 
+  /// Tracks and albums are also found by their artist's name, which the server's own word
+  /// search does not look at.
+  bool get byArtist => text.trim().isNotEmpty && extraFilters == 0 && (kind == SearchKind.all || kind == SearchKind.tracks || kind == SearchKind.albums);
+
   /// Artists are looked for by name only: years, genres and watched marks belong to items.
   bool get wantsArtists =>
       (kind == SearchKind.artists || (kind == SearchKind.all && extraFilters == 0)) && text.trim().isNotEmpty;
@@ -117,7 +121,9 @@ class SearchFilters {
       'limit': '$limit',
       'fields': 'PrimaryImageAspectRatio,MediaSourceCount,ProductionYear,ChildCount',
       'enableUserData': 'true',
-      'excludeLocationTypes': 'Virtual',
+      // Not excludeLocationTypes=Virtual: albums of loose files can be virtual, and the search
+      // found no albums at all with it. Missing episodes are what should stay out.
+      'isMissing': 'false',
       if (words.isNotEmpty) 'searchTerm': words,
       if (y.isNotEmpty) 'years': y.join(','),
       if (genres.isNotEmpty) 'genres': genres.join('|'),
@@ -126,6 +132,22 @@ class SearchFilters {
       if (sortBy != null) 'sortOrder': sort.descending ? 'Descending' : 'Ascending',
     };
   }
+
+  /// Tracks and albums of the artists found by name.
+  Map<String, String> byArtistQuery(String userId, List<String> artistIds, {int limit = 100}) => {
+        'userId': userId,
+        'recursive': 'true',
+        'artistIds': artistIds.join(','),
+        'includeItemTypes': switch (kind) {
+          SearchKind.tracks => 'Audio',
+          SearchKind.albums => 'MusicAlbum',
+          _ => 'MusicAlbum,Audio',
+        },
+        'limit': '$limit',
+        'sortBy': 'Album,ParentIndexNumber,IndexNumber,SortName',
+        'fields': 'PrimaryImageAspectRatio,MediaSourceCount,ProductionYear',
+        'enableUserData': 'true',
+      };
 
   Map<String, String> artistsQuery(String userId, {int limit = 50}) => {
     'userId': userId,

@@ -252,9 +252,12 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
 
   Future<void> _showFilters() async {
     _genres ??= client.genres().onError((e, _) => const <String>[]);
+    // Without this the keyboard came back over the results when the sheet closed.
+    FocusScope.of(context).unfocus();
     final result = await showModalBottomSheet<SearchFilters>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (context) => _FiltersSheet(initial: _filters, genres: _genres!),
     );
     if (result != null) _set(result);
