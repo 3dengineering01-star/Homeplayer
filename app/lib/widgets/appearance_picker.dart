@@ -25,7 +25,7 @@ class AppearancePicker extends StatelessWidget {
                       ButtonSegment(
                         value: b,
                         tooltip: b.label,
-                        label: Text(b.label, maxLines: 1, overflow: TextOverflow.fade, softWrap: false),
+                        label: Text(b.label, maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false),
                       ),
                   ],
                   selected: {look.brightness},
@@ -61,7 +61,11 @@ class AppearancePicker extends StatelessWidget {
                   showSelectedIcon: false,
                   segments: [
                     for (final l in LibraryLayout.values)
-                      ButtonSegment(value: l, icon: Icon(l.icon), label: Text(l.label, maxLines: 1, softWrap: false)),
+                      ButtonSegment(
+                        value: l,
+                        icon: Icon(l.icon),
+                        label: Text(l.label, maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false),
+                      ),
                   ],
                   selected: {look.libraries},
                   onSelectionChanged: (s) => AppearanceStore.set(look.copyWith(libraries: s.first)),
@@ -243,7 +247,8 @@ class _Swatch extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(palette.label, style: Theme.of(context).textTheme.labelSmall, maxLines: 1),
+            Text(palette.label,
+                style: Theme.of(context).textTheme.labelSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
           ]),
         ),
       ),

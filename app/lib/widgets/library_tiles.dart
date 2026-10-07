@@ -154,7 +154,8 @@ class LibraryCircle extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          // A gap between neighbours' names, which with big letters ran together.
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Container(
               width: 64,
