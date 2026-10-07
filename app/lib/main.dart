@@ -51,11 +51,16 @@ class HomeplayApp extends StatelessWidget {
             theme: look.theme(dark: false, wallpaper: wallpaper),
             darkTheme: look.theme(dark: true, wallpaper: wallpaper),
             themeMode: look.brightness.mode,
-            builder: (context, child) => Column(children: [
-              Expanded(child: child!),
-              MiniPlayer(
-                  onOpen: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const PlayerScreen()))),
-            ]),
+            // The theme's background under the mini player too: the window's own showed black there
+            // in the light theme.
+            builder: (context, child) => ColoredBox(
+              color: Theme.of(context).colorScheme.surface,
+              child: Column(children: [
+                Expanded(child: child!),
+                MiniPlayer(
+                    onOpen: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const PlayerScreen()))),
+              ]),
+            ),
             home: const AccountsScreen(),
           );
         },

@@ -207,10 +207,11 @@ class WideCard extends StatelessWidget {
               ]),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2, 6, 2, 0),
-            child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
-          ),
+          if (name.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(2, 6, 2, 0),
+              child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.titleSmall),
+            ),
           if (sub != null && sub.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),

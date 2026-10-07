@@ -112,7 +112,8 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
                         client: client,
                         width: 180,
                         image: client.imageUrl(l, height: 240),
-                        title: l.name,
+                        // Jellyfin's library pictures carry the name already.
+                        title: l.hasPrimaryImage ? '' : l.name,
                         subtitle: '',
                         onTap: () => openItem(home.libraries, l),
                       ),

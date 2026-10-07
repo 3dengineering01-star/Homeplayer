@@ -31,6 +31,10 @@ class AppearancePicker extends StatelessWidget {
                   onSelectionChanged: (s) => AppearanceStore.set(look.copyWith(brightness: s.first)),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text('Black saves battery on OLED screens.', style: theme.textTheme.bodySmall),
+              ),
               const SizedBox(height: 16),
               Wrap(spacing: 12, runSpacing: 12, children: [
                 for (final p in Palette.values)
@@ -42,13 +46,11 @@ class AppearancePicker extends StatelessWidget {
                     onTap: () => AppearanceStore.set(look.copyWith(palette: p)),
                   ),
               ]),
-              const SizedBox(height: 8),
-              Text(
-                look.palette == Palette.wallpaper
-                    ? 'Colours follow your wallpaper (Android 12 and newer).'
-                    : 'Black saves battery on OLED screens.',
-                style: theme.textTheme.bodySmall,
-              ),
+              if (look.palette == Palette.wallpaper)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('Colours follow your wallpaper (Android 12 and newer).', style: theme.textTheme.bodySmall),
+                ),
             ]),
           );
         },
