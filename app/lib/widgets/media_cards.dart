@@ -228,10 +228,13 @@ class WideCard extends StatelessWidget {
 
 /// A home screen section's heading, with an "All" button when there is more.
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.title, {super.key, this.onMore});
+  const SectionTitle(this.title, {super.key, this.onMore, this.trailing});
 
   final String title;
   final VoidCallback? onMore;
+
+  /// Something else at the end of the line, such as a choice of how the section looks.
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -242,6 +245,7 @@ class SectionTitle extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
           ),
           if (onMore != null) TextButton(onPressed: onMore, child: const Text('All')),
+          ?trailing,
         ]),
       );
 }

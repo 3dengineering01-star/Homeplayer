@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
+import '../services/appearance.dart';
 import '../widgets/library_tiles.dart';
 import '../widgets/media_cards.dart';
 import 'backup_screen.dart';
@@ -152,27 +153,17 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
             },
             child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
               if (home.libraries.isNotEmpty) ...[
-                const SectionTitle('Libraries'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.6,
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    physics: const NeverScrollableScrollPhysics(),
-                    children: [
-                      for (final (i, l) in home.libraries.indexed)
-                        LibraryTile(
-                          library: l,
-                          index: i,
-                          count: _counts[l.id],
-                          onTap: () => openItem(home.libraries, l),
-                        ),
-                    ],
-                  ),
+                ValueListenableBuilder<Appearance>(
+                  valueListenable: AppearanceStore.current,
+                  builder: (context, look, _) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    SectionTitle('Libraries', trailing: LibraryLayoutButton(look: look)),
+                    LibrariesView(
+                      layout: look.libraries,
+                      libraries: home.libraries,
+                      counts: _counts,
+                      onOpen: (l) => openItem(home.libraries, l),
+                    ),
+                  ]),
                 ),
               ],
               if (home.resume.isNotEmpty)

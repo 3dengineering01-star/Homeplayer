@@ -53,6 +53,21 @@ class AppearancePicker extends StatelessWidget {
                   child: Text('Colours follow your wallpaper (Android 12 and newer).', style: theme.textTheme.bodySmall),
                 ),
               const SizedBox(height: 20),
+              Text('Libraries on the home screen', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<LibraryLayout>(
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final l in LibraryLayout.values)
+                      ButtonSegment(value: l, icon: Icon(l.icon), label: Text(l.label, maxLines: 1, softWrap: false)),
+                  ],
+                  selected: {look.libraries},
+                  onSelectionChanged: (s) => AppearanceStore.set(look.copyWith(libraries: s.first)),
+                ),
+              ),
+              const SizedBox(height: 20),
               Text('Background', style: theme.textTheme.titleSmall),
               const SizedBox(height: 10),
               Wrap(spacing: 10, runSpacing: 12, children: [

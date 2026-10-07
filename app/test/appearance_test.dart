@@ -79,4 +79,13 @@ void main() {
       expect(b.colors.isEmpty, own, reason: b.name);
     }
   });
+
+  test('the home screen keeps its chosen look of the libraries', () {
+    const a = Appearance(libraries: LibraryLayout.circles);
+    final saved = a.toPrefs();
+    expect(Appearance.fromPrefs((k) => saved[k]).libraries, LibraryLayout.circles);
+    expect(Appearance.fromPrefs((k) => {'home_libraries': 'carousel'}[k]).libraries, LibraryLayout.tiles);
+    expect(const Appearance().libraries, LibraryLayout.tiles);
+    expect(a.copyWith(palette: Palette.ruby).libraries, LibraryLayout.circles);
+  });
 }

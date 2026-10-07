@@ -64,6 +64,17 @@ enum Backdrop {
   final List<Color> colors;
 }
 
+/// How the home screen shows the server's libraries.
+enum LibraryLayout {
+  tiles('Tiles', Icons.grid_view),
+  list('List', Icons.view_list),
+  circles('Circles', Icons.apps);
+
+  const LibraryLayout(this.label, this.icon);
+  final String label;
+  final IconData icon;
+}
+
 /// How the app looks.
 class Appearance {
   const Appearance({
@@ -73,6 +84,7 @@ class Appearance {
     this.picture,
     this.show = 0.45,
     this.blur = false,
+    this.libraries = LibraryLayout.tiles,
   });
 
   final ThemeBrightness brightness;
@@ -88,6 +100,8 @@ class Appearance {
   /// The picture softened, so text over it reads easier.
   final bool blur;
 
+  final LibraryLayout libraries;
+
   /// Whether the screens let a background through instead of painting the theme's colour.
   bool get seeThrough => backdrop != Backdrop.plain && (backdrop != Backdrop.picture || picture != null);
 
@@ -101,6 +115,7 @@ class Appearance {
     String? picture,
     double? show,
     bool? blur,
+    LibraryLayout? libraries,
   }) =>
       Appearance(
         brightness: brightness ?? this.brightness,
@@ -109,6 +124,7 @@ class Appearance {
         picture: picture ?? this.picture,
         show: show ?? this.show,
         blur: blur ?? this.blur,
+        libraries: libraries ?? this.libraries,
       );
 
   static const _brightnessKey = 'theme_brightness';
@@ -117,6 +133,7 @@ class Appearance {
   static const _pictureKey = 'backdrop_picture';
   static const _showKey = 'backdrop_show';
   static const _blurKey = 'backdrop_blur';
+  static const _librariesKey = 'home_libraries';
 
   Map<String, String> toPrefs() => {
         _brightnessKey: brightness.name,
@@ -125,6 +142,7 @@ class Appearance {
         _pictureKey: picture ?? '',
         _showKey: show.toStringAsFixed(2),
         _blurKey: '$blur',
+        _librariesKey: libraries.name,
       };
 
   static Appearance fromPrefs(Object? Function(String key) read) {
@@ -136,6 +154,7 @@ class Appearance {
       picture: picture == null || picture.isEmpty ? null : picture,
       show: (double.tryParse('${read(_showKey)}') ?? 0.45).clamp(0.1, 1.0),
       blur: read(_blurKey) == 'true',
+      libraries: LibraryLayout.values.firstWhere((l) => l.name == read(_librariesKey), orElse: () => LibraryLayout.tiles),
     );
   }
 
