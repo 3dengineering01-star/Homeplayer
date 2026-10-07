@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,15 +11,25 @@ import '../services/quality.dart';
 import 'item_details_screen.dart';
 import 'jellyfin_browser.dart';
 import 'library_screen.dart';
+import 'music_library_screen.dart';
 import 'photo_viewer.dart';
 import 'player_screen.dart';
+import 'playlist_picker.dart';
+import 'track_list_screen.dart';
 
-/// The page for a Jellyfin folder: a series has its details page, a movie or show library its
-/// poster grid, anything else (seasons, albums, home videos) its list.
+/// The page for a Jellyfin folder: a series has its details page, music its artists, albums and
+/// playlists, a movie or show library its poster grid, anything else (seasons, home videos) its
+/// list.
 Widget jellyfinPage(JellyfinClient client, JellyfinItem item) {
   if (item.type == 'Series' || item.type == 'Movie') return ItemDetailsScreen(client: client, item: item);
+  final library = item.type == 'CollectionFolder' || item.type == 'UserView';
+  if (library && item.collectionType == 'music') return MusicLibraryScreen(client: client, library: item);
+  if (library && item.collectionType == 'playlists') return PlaylistsScreen(client: client, title: item.name);
+  if (item.type == 'Playlist') return TrackListScreen.playlist(client: client, playlist: item);
+  if (item.type == 'MusicAlbum') return TrackListScreen.album(client: client, album: item);
+  if (item.type == 'MusicArtist') return TrackListScreen.artist(client: client, artist: item);
   final types = posterTypes(item.collectionType);
-  if (types != null && (item.type == 'CollectionFolder' || item.type == 'UserView')) {
+  if (types != null && library) {
     return LibraryScreen(client: client, library: item, types: types);
   }
   return JellyfinBrowser(client: client, title: item.name, parentId: item.id);
@@ -144,7 +156,16 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
   }
 
   /// Long press: download (a single item, or everything playable in a folder), or pick a version.
-  Future<void> itemActions(List<JellyfinItem> items, JellyfinItem item) async {
+  /// Plays [tracks] in their order, or all in random order with [shuffle].
+  Future<void> playAll(List<JellyfinItem> tracks, {bool shuffle = false}) async {
+    if (tracks.isEmpty) return;
+    final pb = Playback.instance;
+    if (pb.shuffle.value != shuffle) await pb.setShuffle(shuffle);
+    await openItem(tracks, tracks[shuffle ? Random().nextInt(tracks.length) : 0]);
+  }
+
+  /// [extra] goes at the top of the menu, e.g. "Remove from playlist" on a playlist's page.
+  Future<void> itemActions(List<JellyfinItem> items, JellyfinItem item, {List<SheetAction> extra = const []}) async {
     final downloads = Downloads.instance;
     await downloads.init();
     if (!mounted) return;
@@ -154,6 +175,14 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
       builder: (context) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          for (final (i, e) in extra.indexed)
+            ListTile(leading: Icon(e.icon), title: Text(e.label), onTap: () => Navigator.pop(context, 'extra$i')),
+          if (item.isPlayable || item.type == 'MusicAlbum')
+            ListTile(
+              leading: const Icon(Icons.queue_music),
+              title: const Text('Add to playlist'),
+              onTap: () => Navigator.pop(context, 'playlist'),
+            ),
           if (item.type == 'Audio' || item.type == 'MusicAlbum') ...[
             ListTile(
               leading: const Icon(Icons.playlist_play),
@@ -198,7 +227,15 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
     );
     if (!mounted || action == null) return;
     final messenger = ScaffoldMessenger.of(context);
+    if (action.startsWith('extra')) return extra[int.parse(action.substring(5))].run();
     switch (action) {
+      case 'playlist':
+        await addToPlaylist(
+          context,
+          client,
+          items: item.isPlayable ? [item] : const [],
+          load: item.isPlayable ? null : () => client.albumTracks(item.id),
+        );
       case 'next' || 'queue':
         final List<PlayItem> tracks;
         try {
@@ -325,3 +362,6 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
         ),
       );
 }
+
+/// An entry a screen adds to the long-press menu.
+typedef SheetAction = ({IconData icon, String label, Future<void> Function() run});

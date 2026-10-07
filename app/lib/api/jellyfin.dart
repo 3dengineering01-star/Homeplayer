@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
 import '../services/quality.dart';
+import '../services/search_filters.dart';
 import 'common.dart';
 
 const _appVersion = '0.1.0';
@@ -51,7 +52,28 @@ class JellyfinItem {
   int? get year => (_j['ProductionYear'] as num?)?.toInt();
   String? get seriesId => _j['SeriesId'] as String?;
   String? get seriesName => (_j['SeriesName'] as String?)?.trim();
-  String? get album => (_j['Album'] as String?)?.trim();
+  String? get album => _text(_j['Album']);
+  String? get albumId => _j['AlbumId'] as String?;
+  String? get albumArtist => _text(_j['AlbumArtist']);
+
+  /// A track's performers; tags sometimes come padded with spaces.
+  List<String> get artists => [
+        for (final a in (_j['Artists'] as List?) ?? const []) ?_text(a),
+      ];
+
+  /// When the server first saw the file.
+  DateTime? get dateCreated => DateTime.tryParse((_j['DateCreated'] as String?) ?? '');
+
+  /// The entry's own id in a playlist, which removing it from the playlist needs.
+  String? get playlistEntryId => _j['PlaylistItemId'] as String?;
+
+  /// How many items a folder or playlist holds, when the server says.
+  int? get childCount => (_j['ChildCount'] as num?)?.toInt();
+
+  static String? _text(Object? v) {
+    final t = (v as String?)?.trim();
+    return t == null || t.isEmpty ? null : t;
+  }
   String? get seasonId => _j['SeasonId'] as String?;
   int? get indexNumber => (_j['IndexNumber'] as num?)?.toInt();
   int? get seasonNumber => (_j['ParentIndexNumber'] as num?)?.toInt();
@@ -88,11 +110,9 @@ class JellyfinItem {
         final code = (s != null && e != null) ? 'S${s}E$e' : null;
         return [_j['SeriesName'], code].whereType<String>().join(' · ');
       case 'Audio':
-        // Tags sometimes come padded with spaces.
-        final artists = [for (final a in (_j['Artists'] as List?)?.cast<String>() ?? const <String>[]) a.trim()];
-        return artists.isNotEmpty ? artists.join(', ') : (_j['AlbumArtist'] as String?)?.trim();
+        return artists.isNotEmpty ? artists.join(', ') : albumArtist;
       case 'MusicAlbum':
-        return (_j['AlbumArtist'] as String?)?.trim();
+        return albumArtist;
       default:
         return _j['ProductionYear']?.toString();
     }
@@ -340,6 +360,108 @@ class JellyfinClient {
       'excludeLocationTypes': 'Virtual',
     });
     return (items: _items(j).where((i) => !i.isVirtual).toList(), total: (j['TotalRecordCount'] as num?)?.toInt() ?? 0);
+  }
+
+  /// Every track of a music library, page by page: the music screen sorts and groups them
+  /// itself, so it works also where the server has no albums for loose files.
+  Future<List<JellyfinItem>> musicTracks(String libraryId) =>
+      _allPages({'parentId': libraryId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
+
+  /// A music artist's tracks, by the server's artist id (from the search).
+  Future<List<JellyfinItem>> artistTracks(String artistId) =>
+      _allPages({'artistIds': artistId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
+
+  /// An album's tracks, in disc and track order.
+  Future<List<JellyfinItem>> albumTracks(String albumId) => _allPages({
+        'parentId': albumId,
+        'recursive': 'true',
+        'includeItemTypes': 'Audio',
+        'sortBy': 'ParentIndexNumber,IndexNumber,SortName',
+      });
+
+  Future<List<JellyfinItem>> _allPages(Map<String, String> query, {int page = 2000}) async {
+    final all = <JellyfinItem>[];
+    while (true) {
+      final j = await _get('/Items', {
+        'userId': account.userId!,
+        'fields': 'DateCreated,Genres,MediaSourceCount',
+        'enableUserData': 'true',
+        'excludeLocationTypes': 'Virtual',
+        'startIndex': '${all.length}',
+        'limit': '$page',
+        ...query,
+      });
+      final items = _items(j);
+      all.addAll(items);
+      final total = (j['TotalRecordCount'] as num?)?.toInt() ?? all.length;
+      if (items.isEmpty || all.length >= total) return all;
+    }
+  }
+
+  // --- Playlists ---
+
+  /// The user's playlists, by name.
+  Future<List<JellyfinItem>> playlists() async => _items(await _get('/Items', {
+        'userId': account.userId!,
+        'includeItemTypes': 'Playlist',
+        'recursive': 'true',
+        'sortBy': 'SortName',
+        'fields': 'ChildCount,DateCreated',
+      }));
+
+  /// A playlist's entries in their order; each carries its [JellyfinItem.playlistEntryId].
+  Future<List<JellyfinItem>> playlistItems(String playlistId) async =>
+      _items(await _get('/Playlists/$playlistId/Items', {'userId': account.userId!, 'fields': 'MediaSourceCount'}));
+
+  /// A new playlist with [ids] in it; its id.
+  Future<String> createPlaylist(String name, List<String> ids, {String mediaType = 'Audio'}) async {
+    final j = await _send('POST', '/Playlists', body: {
+      'Name': name,
+      'Ids': ids,
+      'UserId': account.userId,
+      'MediaType': mediaType,
+    });
+    return (j?['Id'] as String?) ?? '';
+  }
+
+  Future<void> addToPlaylist(String playlistId, List<String> ids) =>
+      _send('POST', '/Playlists/$playlistId/Items', query: {'ids': ids.join(','), 'userId': account.userId!});
+
+  Future<void> removeFromPlaylist(String playlistId, List<String> entryIds) =>
+      _send('DELETE', '/Playlists/$playlistId/Items', query: {'entryIds': entryIds.join(',')});
+
+  Future<void> deletePlaylist(String playlistId) => _send('DELETE', '/Items/$playlistId');
+
+  // --- Search ---
+
+  /// Items matching [filters]; artists come from their own list on the server.
+  Future<List<JellyfinItem>> search(SearchFilters filters) async {
+    final userId = account.userId!;
+    final results = await Future.wait([
+      if (filters.kind.types != null) _get('/Items', filters.itemsQuery(userId)).then(_items),
+      if (filters.wantsArtists) _get('/Artists', filters.artistsQuery(userId)).then(_items),
+    ]);
+    return [for (final r in results) ...r];
+  }
+
+  /// Genres to pick from in the search filters.
+  Future<List<String>> genres() async => [
+        for (final g in _items(await _get('/Genres', {'userId': account.userId!, 'recursive': 'true', 'sortBy': 'SortName'})))
+          if (g.name.isNotEmpty) g.name,
+      ];
+
+  /// A request that changes something on the server; the answer, when there is one.
+  Future<Map<String, dynamic>?> _send(String method, String path, {Map<String, String>? query, Object? body}) async {
+    final req = http.Request(method, Uri.parse('$_base$path').replace(queryParameters: query))
+      ..headers.addAll({...headers, 'Content-Type': 'application/json'});
+    if (body != null) req.body = jsonEncode(body);
+    final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
+    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (res.statusCode == 403) throw ApiException('The server does not allow this for your user.');
+    if (res.statusCode >= 300) throw ApiException('Server answered ${res.statusCode} for $path');
+    if (res.body.isEmpty) return null;
+    final j = jsonDecode(res.body);
+    return j is Map<String, dynamic> ? j : null;
   }
 
   /// How many items of [types] a library holds, without fetching them.

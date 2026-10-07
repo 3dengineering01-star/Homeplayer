@@ -9,6 +9,7 @@ import 'backup_screen.dart';
 import 'downloads_screen.dart';
 import 'jellyfin_actions.dart';
 import 'jellyfin_browser.dart';
+import 'search_screen.dart';
 import 'settings_screen.dart';
 
 /// A Jellyfin server's front page: its libraries as big buttons, what is being watched, the next
@@ -100,6 +101,11 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          IconButton(
+            tooltip: 'Search',
+            icon: const Icon(Icons.search),
+            onPressed: () => _push(SearchScreen(client: client)),
+          ),
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined),
