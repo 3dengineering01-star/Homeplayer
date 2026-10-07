@@ -5,6 +5,7 @@ import '../api/jellyfin.dart';
 import '../widgets/media_cards.dart';
 import 'jellyfin_actions.dart';
 import 'jellyfin_browser.dart';
+import 'settings_screen.dart';
 
 /// A Jellyfin server's front page: its libraries, what is being watched, the next episodes and
 /// the newest in each library, in rows of pictures.
@@ -64,6 +65,11 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
       appBar: AppBar(
         title: Text(widget.title),
         actions: [
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+          ),
           IconButton(
             tooltip: 'Folders',
             icon: const Icon(Icons.folder_outlined),
