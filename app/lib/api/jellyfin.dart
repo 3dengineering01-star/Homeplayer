@@ -377,13 +377,6 @@ class JellyfinClient {
   Future<List<JellyfinItem>> musicTracks(String libraryId) =>
       _allPages({'parentId': libraryId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
 
-  /// Every track of every music library: the search finds albums among them, as the server
-  /// may have none for loose folders.
-  Future<List<JellyfinItem>> allMusicTracks() async {
-    final music = (await views()).where((v) => v.collectionType == 'music');
-    return [for (final tracks in await Future.wait(music.map((l) => musicTracks(l.id)))) ...tracks];
-  }
-
   /// Every file the search can find by its name on disk: videos, tracks and photos, with
   /// their paths. The server's own search looks at titles only.
   Future<List<JellyfinItem>> allFiles() =>

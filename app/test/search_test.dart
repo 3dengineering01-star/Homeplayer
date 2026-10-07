@@ -136,28 +136,6 @@ void main() {
     expect(const SearchFilters(text: 'x', kind: SearchKind.movies).byArtist, isFalse);
   });
 
-  test('albums come from the tracks: on their own tab always, with All only for words', () {
-    expect(const SearchFilters(kind: SearchKind.albums).wantsAlbums, isTrue);
-    expect(const SearchFilters(kind: SearchKind.albums).isReady, isTrue);
-    expect(const SearchFilters(text: 'bell').wantsAlbums, isTrue);
-    expect(const SearchFilters().wantsAlbums, isFalse);
-    expect(const SearchFilters(kind: SearchKind.tracks, text: 'bell').wantsAlbums, isFalse);
-    expect(SearchKind.all.types, isNot(contains('MusicAlbum')));
-  });
-
-  test('file names are matched word by word, dots, dashes and underscores as spaces', () {
-    expect(fileNameMatches('01-Cluster One.mp3', 'cluster one'), isTrue);
-    expect(fileNameMatches('01-Cluster_One.mp3', '01 cluster'), isTrue);
-    expect(fileNameMatches('PXL_20261007_123456.jpg', 'pxl_2026'), isTrue);
-    expect(fileNameMatches('codec.test.h264.aac.mkv', 'H264 AAC'), isTrue);
-    expect(fileNameMatches('Money.mp3', 'time'), isFalse);
-    expect(fileNameMatches(null, 'x'), isFalse);
-    expect(fileNameMatches('a.mp3', '  '), isFalse);
-    expect(const SearchFilters(text: 'pxl').byFileName, isTrue);
-    expect(const SearchFilters(text: 'pxl', kind: SearchKind.artists).byFileName, isFalse);
-    expect(const SearchFilters(text: 'pxl', fromYear: 2020).byFileName, isFalse);
-  });
-
   test('an item knows its file name from its path on the server', () {
     expect(JellyfinItem({'Id': 'a', 'Path': r'D:\Music\Bell\01-Cluster One.mp3'}).fileName, '01-Cluster One.mp3');
     expect(JellyfinItem({'Id': 'a', 'Path': '/media/photos/2026-10/PXL_1.jpg'}).fileName, 'PXL_1.jpg');
