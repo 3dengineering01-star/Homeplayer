@@ -12,7 +12,7 @@ import 'package:http/testing.dart';
 const _jellyfin = Account(
     id: 'j', kind: ServerKind.jellyfin, baseUrl: 'http://192.168.1.5:8096', username: 'anna', serverName: 'GOODMAN', token: 't', userId: 'u');
 const _navidrome = Account(
-    id: 's', kind: ServerKind.subsonic, baseUrl: 'http://nas:4533', username: 'anna', serverName: 'Navidrome · nas with a long name', token: 't', salt: 's');
+    id: 's', kind: ServerKind.subsonic, baseUrl: 'http://my-very-long-home-server-name.tail1234.ts.net:4533', username: 'anna', serverName: 'Navidrome · nas with a long name', token: 't', salt: 's');
 
 void main() {
   test('the greeting follows the time of day', () {

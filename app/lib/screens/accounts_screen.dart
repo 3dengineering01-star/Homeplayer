@@ -103,8 +103,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
       body: accounts == null
           ? const Center(child: CircularProgressIndicator())
           : CustomScrollView(slivers: [
-              SliverAppBar.large(
-                title: const Text('Homeplay'),
+              // A plain bar for the button; the big name is in the page below. The theme's app bar
+              // title style made SliverAppBar.large's title as small as any other.
+              SliverAppBar(
+                pinned: true,
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.settings_outlined),
@@ -117,6 +119,11 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(
+                      'Homeplay',
+                      style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                    ),
+                    const SizedBox(height: 4),
                     Text(
                       accounts.isEmpty ? 'Your home media, everywhere' : '${greeting(DateTime.now())}. Where to?',
                       style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -282,8 +289,8 @@ class _ServerCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall?.copyWith(color: fg.withValues(alpha: 0.8))),
                     ),
-                    // Room for the arrow in the corner.
-                    const SizedBox(width: 56),
+                    // Room for the arrow in the corner: a long address ends in "…" before it.
+                    const SizedBox(width: 64),
                   ]),
                 ]),
               ),
