@@ -61,6 +61,12 @@ class JellyfinItem {
         for (final a in (_j['Artists'] as List?) ?? const []) ?_text(a),
       ];
 
+  /// Where the file lies on the server, when asked for.
+  String? get path => _j['Path'] as String?;
+
+  /// The file's own name, as on the server's disk ("01-Cluster One.mp3").
+  String? get fileName => path?.split(RegExp(r'[/\\]')).last;
+
   /// A track's number on its album: the tag, else the number the file name starts with
   /// ("01-Cluster One.mp3"), which the server does not always take.
   int? get trackNumber => indexNumber ?? trackNumberFromPath(_j['Path'] as String?);
@@ -377,6 +383,11 @@ class JellyfinClient {
     final music = (await views()).where((v) => v.collectionType == 'music');
     return [for (final tracks in await Future.wait(music.map((l) => musicTracks(l.id)))) ...tracks];
   }
+
+  /// Every file the search can find by its name on disk: videos, tracks and photos, with
+  /// their paths. The server's own search looks at titles only.
+  Future<List<JellyfinItem>> allFiles() =>
+      _allPages({'recursive': 'true', 'includeItemTypes': 'Movie,Episode,Video,MusicVideo,Audio,Photo'});
 
   /// A music artist's tracks, by the server's artist id (from the search).
   Future<List<JellyfinItem>> artistTracks(String artistId) =>

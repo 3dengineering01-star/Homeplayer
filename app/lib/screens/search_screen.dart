@@ -15,7 +15,8 @@ import 'track_list_screen.dart';
 
 const _recentKey = 'recent_searches';
 
-typedef _Found = ({List<JellyfinItem> items, List<AlbumGroup> albums});
+/// What was found; [byFile] are the ids found by their file name only, which show that name.
+typedef _Found = ({List<JellyfinItem> items, List<AlbumGroup> albums, Set<String> byFile});
 
 /// Search across the whole server: words, a kind of item, years, genres, watched or not, and
 /// the order. Results come in sections by kind.
@@ -37,6 +38,9 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
 
   /// The server's albums as the music screen makes them, loaded once when first needed.
   Future<List<AlbumGroup>>? _albums;
+
+  /// Every file with its name on disk, loaded once when first needed.
+  Future<List<JellyfinItem>>? _files;
   SearchFilters _filters = const SearchFilters();
   Future<_Found>? _results;
   Timer? _typing;
@@ -79,9 +83,19 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
   Future<_Found> _search(SearchFilters f) async {
     final albums = f.wantsAlbums ? (_albums ??= client.allMusicTracks().then(groupByAlbum)) : null;
     final items = client.search(f);
+    final files = f.byFileName ? (_files ??= client.allFiles()) : null;
+    final found = await items;
+    final seen = {for (final i in found) i.id};
+    final types = (f.kind.types ?? '').split(',').toSet();
+    final byFile = [
+      if (files != null)
+        for (final i in await files)
+          if (types.contains(i.type) && !seen.contains(i.id) && fileNameMatches(i.fileName, f.text)) i,
+    ];
     return (
-      items: await items,
+      items: [...found, ...byFile],
       albums: albums == null ? const <AlbumGroup>[] : findAlbums(await albums, f.text, from: f.fromYear, to: f.toYear),
+      byFile: {for (final i in byFile) i.id},
     );
   }
 
@@ -291,7 +305,7 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
                   aspect: item.imageAspect,
                 ),
                 title: Text(item.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                subtitle: switch (resultSubtitle(item)) {
+                subtitle: switch (snap.data!.byFile.contains(item.id) ? 'File: ${item.fileName}' : resultSubtitle(item)) {
                   '' => null,
                   final s => Text(s, maxLines: 1, overflow: TextOverflow.ellipsis),
                 },

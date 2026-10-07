@@ -82,6 +82,9 @@ class SearchFilters {
   bool get wantsAlbums =>
       kind == SearchKind.albums || (kind == SearchKind.all && text.trim().isNotEmpty && extraFilters == 0);
 
+  /// File names are matched in the app, by words only and for the kinds that are files.
+  bool get byFileName => text.trim().isNotEmpty && extraFilters == 0 && kind.types != null;
+
   /// Artists are looked for by name only: years, genres and watched marks belong to items.
   bool get wantsArtists =>
       (kind == SearchKind.artists || (kind == SearchKind.all && extraFilters == 0)) && text.trim().isNotEmpty;
@@ -157,6 +160,16 @@ class SearchFilters {
     'limit': '$limit',
     'fields': 'PrimaryImageAspectRatio',
   };
+}
+
+/// Whether a file name has every word of [query]. Dots, dashes and underscores count as spaces
+/// on both sides, so "cluster one" finds "01-Cluster_One.mp3" and "pxl_2026" finds "PXL_20261007.jpg".
+bool fileNameMatches(String? fileName, String query) {
+  if (fileName == null) return false;
+  String plain(String s) => s.toLowerCase().replaceAll(RegExp(r'[._\-]+'), ' ');
+  final name = plain(fileName);
+  final words = plain(query).split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  return words.isNotEmpty && words.every(name.contains);
 }
 
 /// The last searches, newest first: [text] moved to the front, at most [keep] of them.
