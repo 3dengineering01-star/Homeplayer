@@ -139,7 +139,8 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
     final pb = Playback.instance;
     if (pb.currentItem?.isVideo ?? false) await pb.stop();
     await pb.reportsSent;
-    if (mounted) refresh();
+    // Lists show no progress for music, and a reload would scroll them back to the top.
+    if (mounted && item.isVideo) refresh();
   }
 
   /// Long press: download (a single item, or everything playable in a folder), or pick a version.

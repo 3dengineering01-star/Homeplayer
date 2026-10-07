@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/models/account.dart';
@@ -148,5 +149,13 @@ void main() {
     final own = JellyfinItem({'Id': 't', 'Type': 'Audio', 'AlbumId': 'al', 'AlbumPrimaryImageTag': 'x', 'ImageTags': {'Primary': 'p'}});
     expect(c.imageUrl(own)!.path, '/Items/t/Images/Primary');
     expect(c.imageUrl(JellyfinItem({'Id': 't', 'Type': 'Audio', 'AlbumId': 'al'})), isNull);
+  });
+
+  test('library tiles turn round the colour wheel', () {
+    const blue = Color(0xFF2196F3);
+    final hues = [for (var i = 0; i < 5; i++) HSLColor.fromColor(tileSeed(blue, i)).hue.round()];
+    expect(hues.toSet().length, 5);
+    expect(hues.first, HSLColor.fromColor(blue).hue.round());
+    expect(tileSeed(blue, 5), tileSeed(blue, 0));
   });
 }

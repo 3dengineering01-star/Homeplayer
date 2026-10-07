@@ -12,7 +12,7 @@ LibraryKind libraryKind(String? collectionType) => switch (collectionType) {
       'music' => (icon: Icons.library_music_outlined, types: 'MusicAlbum', one: 'album', many: 'albums'),
       'musicvideos' => (icon: Icons.music_video_outlined, types: 'MusicVideo', one: 'clip', many: 'clips'),
       'boxsets' => (icon: Icons.collections_bookmark_outlined, types: 'BoxSet', one: 'collection', many: 'collections'),
-      'homevideos' => (icon: Icons.videocam_outlined, types: 'Video,Photo', one: 'file', many: 'files'),
+      'homevideos' => (icon: Icons.perm_media_outlined, types: 'Video,Photo', one: 'file', many: 'files'),
       'photos' => (icon: Icons.photo_library_outlined, types: 'Photo', one: 'photo', many: 'photos'),
       'playlists' => (icon: Icons.queue_music, types: 'Playlist', one: 'playlist', many: 'playlists'),
       'books' => (icon: Icons.menu_book_outlined, types: 'Book', one: 'book', many: 'books'),
@@ -25,8 +25,15 @@ const LibraryKind tracksKind = (icon: Icons.library_music_outlined, types: 'Audi
 /// "1 movie", "124 movies".
 String countLabel(int n, LibraryKind kind) => '$n ${n == 1 ? kind.one : kind.many}';
 
-/// A big button for one library: its icon, name and how much is in it, in one of the
-/// theme's colours so neighbouring libraries look different.
+/// The hue of the [index]th library tile: the theme's own hue turned by a fifth of the colour
+/// wheel per tile, so neighbouring tiles differ clearly while staying in the theme's mood.
+Color tileSeed(Color primary, int index) {
+  final hsl = HSLColor.fromColor(primary);
+  return hsl.withHue((hsl.hue + 72 * (index % 5)) % 360).toColor();
+}
+
+/// A big button for one library: its icon, name and how much is in it, each library in its
+/// own colour.
 class LibraryTile extends StatelessWidget {
   const LibraryTile({super.key, required this.library, required this.index, required this.onTap, this.count});
 
@@ -43,11 +50,10 @@ class LibraryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final (bg, fg) = switch (index % 3) {
-      0 => (scheme.primaryContainer, scheme.onPrimaryContainer),
-      1 => (scheme.tertiaryContainer, scheme.onTertiaryContainer),
-      _ => (scheme.secondaryContainer, scheme.onSecondaryContainer),
-    };
+    final own = index == 0
+        ? scheme
+        : ColorScheme.fromSeed(seedColor: tileSeed(scheme.primary, index), brightness: theme.brightness);
+    final (bg, fg) = (own.primaryContainer, own.onPrimaryContainer);
     final icon = libraryKind(library.collectionType).icon;
     return Material(
       borderRadius: BorderRadius.circular(20),
