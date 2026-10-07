@@ -34,14 +34,14 @@ public sealed class BackupStoreTests : IDisposable
         .ToArray();
 
     [Fact]
-    public async Task WholeFileLandsInUserPhoneYearMonth()
+    public async Task WholeFileLandsInTheMonthItWasTaken()
     {
         var store = new BackupStore(_root);
         Assert.Equal(new UploadState(false, 0), store.Check("anna", "Pixel 10a", "101"));
 
         Assert.Equal(new UploadState(true, 0), await Send(store, "101", "PXL_1.jpg", "hello", 5, 0));
 
-        var photo = Path.Combine(_root, "anna", "Pixel 10a", "2026", "10", "PXL_1.jpg");
+        var photo = Path.Combine(_root, "2026-10", "PXL_1.jpg");
         Assert.Equal("hello", File.ReadAllText(photo));
         Assert.Equal(Taken.UtcDateTime, File.GetLastWriteTimeUtc(photo));
         Assert.Equal(new UploadState(true, 0), store.Check("anna", "Pixel 10a", "101"));
@@ -60,8 +60,8 @@ public sealed class BackupStoreTests : IDisposable
         Assert.Equal(new UploadState(false, 4), e.State);
 
         Assert.Equal(new UploadState(true, 0), await Send(store, "7", "VID.mp4", "efghij", 10, 4));
-        Assert.Equal(["anna/Pixel 10a/2026/10/VID.mp4"], Photos());
-        Assert.Equal("abcdefghij", File.ReadAllText(Path.Combine(_root, "anna/Pixel 10a/2026/10/VID.mp4")));
+        Assert.Equal(["2026-10/VID.mp4"], Photos());
+        Assert.Equal("abcdefghij", File.ReadAllText(Path.Combine(_root, "2026-10/VID.mp4")));
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public sealed class BackupStoreTests : IDisposable
     {
         var store = new BackupStore(_root);
         Assert.Equal(new UploadState(true, 0), await Send(store, "1", "a.jpg", "12345678", 3, 0));
-        Assert.Equal("123", File.ReadAllText(Path.Combine(_root, "anna/Pixel 10a/2026/10/a.jpg")));
+        Assert.Equal("123", File.ReadAllText(Path.Combine(_root, "2026-10/a.jpg")));
     }
 
     [Fact]
@@ -78,8 +78,8 @@ public sealed class BackupStoreTests : IDisposable
         var store = new BackupStore(_root);
         await Send(store, "1", "a.jpg", "one", 3, 0);
         Assert.Equal(new UploadState(true, 0), await Send(store, "1", "a.jpg", "two", 3, 0));
-        Assert.Equal(["anna/Pixel 10a/2026/10/a.jpg"], Photos());
-        Assert.Equal("one", File.ReadAllText(Path.Combine(_root, "anna/Pixel 10a/2026/10/a.jpg")));
+        Assert.Equal(["2026-10/a.jpg"], Photos());
+        Assert.Equal("one", File.ReadAllText(Path.Combine(_root, "2026-10/a.jpg")));
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public sealed class BackupStoreTests : IDisposable
         var store = new BackupStore(_root);
         await Send(store, "1", "IMG.jpg", "one", 3, 0);
         await Send(store, "2", "IMG.jpg", "two", 3, 0);
-        Assert.Equal(["anna/Pixel 10a/2026/10/IMG (2).jpg", "anna/Pixel 10a/2026/10/IMG.jpg"], Photos());
+        Assert.Equal(["2026-10/IMG (2).jpg", "2026-10/IMG.jpg"], Photos());
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class BackupStoreTests : IDisposable
     {
         var store = new BackupStore(_root);
         await store.AppendAsync("../../etc", "..", "x", "../../evil.sh", 1, Taken, 0, Bytes("x"), CancellationToken.None);
-        Assert.Equal([".._.._etc/phone/2026/10/.._.._evil.sh"], Photos());
+        Assert.Equal(["2026-10/.._.._evil.sh"], Photos());
         Assert.Equal(new UploadState(false, 0), store.Check("anna", "p", "../x")); // becomes ___x
         Assert.Throws<UploadException>(() => store.Check("anna", "p", string.Empty));
     }
@@ -118,4 +118,38 @@ public sealed class BackupStoreTests : IDisposable
         await Assert.ThrowsAsync<UploadException>(() => Send(store, "1", "a.jpg", "x", 3, 5));
         await Assert.ThrowsAsync<UploadException>(() => Send(store, "1", "a.jpg", "x", -1, 0));
     }
+
+    [Fact]
+    public async Task PhotosKeptTheOldWayMoveIntoMonthFolders()
+    {
+        // Two photos the old version put in {user}/{device}/{yyyy}/{MM}, one of them with a name
+        // a new photo already has; and a file of the user's own that the store did not put there.
+        var old = Path.Combine(_root, "anna", "Pixel 10a", "2026", "09");
+        Directory.CreateDirectory(old);
+        File.WriteAllText(Path.Combine(old, "a.jpg"), "old a");
+        File.WriteAllText(Path.Combine(old, "b.jpg"), "old b");
+        Directory.CreateDirectory(Path.Combine(_root, "anna", "Pixel 10a", "2026", "10"));
+        File.WriteAllText(Path.Combine(_root, "anna", "Pixel 10a", "2026", "10", "mine.txt"), "keep");
+        var index = Path.Combine(_root, ".homeplay", "done", "anna", "Pixel 10a");
+        Directory.CreateDirectory(index);
+        File.WriteAllText(Path.Combine(index, "1"), "anna/Pixel 10a/2026/09/a.jpg");
+        File.WriteAllText(Path.Combine(index, "2"), "anna\\Pixel 10a\\2026\\09\\b.jpg");
+        Directory.CreateDirectory(Path.Combine(_root, "2026-09"));
+        File.WriteAllText(Path.Combine(_root, "2026-09", "b.jpg"), "new b");
+
+        var store = new BackupStore(_root);
+        Assert.Equal(2, store.MoveToMonthFolders());
+
+        Assert.Equal(["2026-09/a.jpg", "2026-09/b (2).jpg", "2026-09/b.jpg", "anna/Pixel 10a/2026/10/mine.txt"], Photos());
+        Assert.Equal("old b", File.ReadAllText(Path.Combine(_root, "2026-09", "b (2).jpg")));
+        Assert.Equal(Path.Combine("2026-09", "a.jpg"), File.ReadAllText(Path.Combine(index, "1")));
+        Assert.False(Directory.Exists(old));
+        Assert.Equal(new UploadState(true, 0), store.Check("anna", "Pixel 10a", "1"));
+
+        // Once only.
+        Assert.Equal(0, store.MoveToMonthFolders());
+    }
+
+    [Fact]
+    public void NothingToMoveOnAFreshFolder() => Assert.Equal(0, new BackupStore(_root).MoveToMonthFolders());
 }

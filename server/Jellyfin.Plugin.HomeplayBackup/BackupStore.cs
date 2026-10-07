@@ -39,14 +39,17 @@ public sealed class UploadException : Exception
 }
 
 /// <summary>
-/// Files from phones, kept as {root}/{user}/{device}/{yyyy}/{MM}/{name}. Uploads come in
-/// chunks and resume after a broken connection; a file already received is never taken twice.
-/// Bookkeeping lives in {root}/.homeplay: partial files, and one small index file per finished
-/// photo that names where it went.
+/// Files from phones, kept as {root}/{yyyy-MM}/{name}: one folder per month the photo was
+/// taken in. Uploads come in chunks and resume after a broken connection; a file already
+/// received is never taken twice. Bookkeeping lives in {root}/.homeplay, kept apart for each
+/// user and phone: partial files, and one small index file per finished photo that names where
+/// it went.
 /// </summary>
 public sealed class BackupStore
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Locks = new(StringComparer.Ordinal);
+
+    private static readonly object MoveGate = new();
 
     private readonly string _root;
 
@@ -138,7 +141,7 @@ public sealed class BackupStore
                 return new UploadState(false, written);
             }
 
-            var target = Place(user, device, name, takenAt);
+            var target = Place(name, takenAt);
             File.Move(part, target);
             File.SetCreationTimeUtc(target, takenAt.UtcDateTime);
             File.SetLastWriteTimeUtc(target, takenAt.UtcDateTime);
@@ -216,17 +219,80 @@ public sealed class BackupStore
     }
 
     /// <summary>
-    /// A free path in the month folder; "IMG_1.jpg" becomes "IMG_1 (2).jpg" when taken.
+    /// Moves photos kept the old way, {root}/{user}/{device}/{yyyy}/{MM}/{name}, into the month
+    /// folders. Only files this store put there itself, as its index names them, are moved; the
+    /// folders they leave empty go. Done once: a mark in the bookkeeping says so.
     /// </summary>
-    private string Place(string user, string device, string name, DateTimeOffset takenAt)
+    /// <returns>How many files were moved.</returns>
+    public int MoveToMonthFolders()
     {
-        var local = takenAt.ToLocalTime();
-        var folder = Path.Combine(
-            _root,
-            SafeSegment(user, "user"),
-            SafeSegment(device, "phone"),
-            local.Year.ToString("D4", CultureInfo.InvariantCulture),
-            local.Month.ToString("D2", CultureInfo.InvariantCulture));
+        lock (MoveGate)
+        {
+            var mark = Path.Combine(Meta, "month-folders");
+            if (File.Exists(mark))
+            {
+                return 0;
+            }
+
+            var moved = 0;
+            var done = Path.Combine(Meta, "done");
+            if (Directory.Exists(done))
+            {
+                foreach (var index in Directory.GetFiles(done, "*", SearchOption.AllDirectories))
+                {
+                    var parts = File.ReadAllText(index).Trim().Split('/', '\\');
+                    if (parts.Length != 5 || !IsNumber(parts[2], 4) || !IsNumber(parts[3], 2))
+                    {
+                        continue;
+                    }
+
+                    var old = Path.GetFullPath(Path.Combine([_root, .. parts]));
+                    if (!old.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) || !File.Exists(old))
+                    {
+                        continue;
+                    }
+
+                    var target = FreePath(Path.Combine(_root, parts[2] + "-" + parts[3]), parts[4]);
+                    File.Move(old, target);
+                    File.WriteAllText(index, Path.GetRelativePath(_root, target));
+                    moved++;
+                    RemoveEmptyFolders(Path.GetDirectoryName(old)!);
+                }
+            }
+
+            Directory.CreateDirectory(Meta);
+            File.WriteAllText(mark, string.Empty);
+            return moved;
+        }
+    }
+
+    private static bool IsNumber(string s, int digits) => s.Length == digits && s.All(char.IsAsciiDigit);
+
+    /// <summary>
+    /// Removes [folder] and the folders above it while they are empty, up to the root.
+    /// </summary>
+    private void RemoveEmptyFolders(string folder)
+    {
+        while (folder.StartsWith(_root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+            && Directory.Exists(folder)
+            && !Directory.EnumerateFileSystemEntries(folder).Any())
+        {
+            Directory.Delete(folder);
+            folder = Path.GetDirectoryName(folder)!;
+        }
+    }
+
+    /// <summary>
+    /// A free path in the month the photo was taken; "IMG_1.jpg" becomes "IMG_1 (2).jpg" when taken.
+    /// </summary>
+    private string Place(string name, DateTimeOffset takenAt)
+    {
+        var month = takenAt.ToLocalTime().ToString("yyyy-MM", CultureInfo.InvariantCulture);
+        return FreePath(Path.Combine(_root, month), name);
+    }
+
+    private static string FreePath(string folder, string name)
+    {
         Directory.CreateDirectory(folder);
         var file = SafeSegment(name, "file");
         var stem = Path.GetFileNameWithoutExtension(file);
