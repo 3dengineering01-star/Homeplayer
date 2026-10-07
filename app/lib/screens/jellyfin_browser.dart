@@ -154,7 +154,12 @@ class _TrackRow extends StatelessWidget {
               maxLines: 1, overflow: TextOverflow.ellipsis, style: now ? const TextStyle(fontWeight: FontWeight.w700) : null),
           subtitle: item.subtitle == null ? null : Text(item.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis),
           trailing: now
-              ? Icon(Icons.graphic_eq, color: scheme.primary, semanticLabel: 'Playing')
+              ? StreamBuilder<bool>(
+                  stream: pb.player.stream.playing,
+                  initialData: pb.player.state.playing,
+                  builder: (context, s) => Icon(s.data! ? Icons.graphic_eq : Icons.pause,
+                      color: scheme.primary, semanticLabel: s.data! ? 'Playing' : 'Paused'),
+                )
               : item.runTime == null
                   ? null
                   : Text(_clock(item.runTime!), style: Theme.of(context).textTheme.bodySmall),

@@ -104,7 +104,8 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
               if (home.libraries.isNotEmpty)
                 Shelf(
                   title: 'Libraries',
-                  height: 130,
+                  // The 16:9 picture of a 180 wide card, with no caption under it.
+                  height: 104,
                   children: [
                     for (final l in home.libraries)
                       WideCard(
