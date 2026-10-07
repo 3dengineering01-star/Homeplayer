@@ -226,6 +226,30 @@ class WideCard extends StatelessWidget {
   }
 }
 
+/// A home screen section's heading, with an "All" button when there is more.
+class SectionTitle extends StatelessWidget {
+  const SectionTitle(this.title, {super.key, this.onMore, this.trailing});
+
+  final String title;
+  final VoidCallback? onMore;
+
+  /// Something else at the end of the line, such as a choice of how the section looks.
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 8, 8),
+        child: Row(children: [
+          Expanded(
+            child: Text(title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ),
+          if (onMore != null) TextButton(onPressed: onMore, child: const Text('All')),
+          ?trailing,
+        ]),
+      );
+}
+
 /// A titled row of cards that scrolls sideways.
 class Shelf extends StatelessWidget {
   const Shelf({super.key, required this.title, required this.height, required this.children, this.onMore});
@@ -237,16 +261,8 @@ class Shelf extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 8, 8),
-        child: Row(children: [
-          Expanded(child: Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600))),
-          if (onMore != null)
-            TextButton(onPressed: onMore, child: const Text('All')),
-        ]),
-      ),
+      SectionTitle(title, onMore: onMore),
       SizedBox(
         height: height,
         child: ListView.separated(

@@ -21,6 +21,9 @@ class AccountsScreen extends StatefulWidget {
 class _AccountsScreenState extends State<AccountsScreen> {
   List<Account>? _accounts;
 
+  /// The app starts on the server opened last time; this list stays behind it, one step back.
+  bool _started = false;
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +32,13 @@ class _AccountsScreenState extends State<AccountsScreen> {
 
   Future<void> _load() async {
     final accounts = await AccountStore.load();
+    if (!_started) {
+      _started = true;
+      final last = await AccountStore.lastOpened();
+      final open = pickStartAccount(accounts, last);
+      // Opened before the list shows, so the list does not flash by on start.
+      if (open != null) await _open(open, instant: true);
+    }
     if (mounted) setState(() => _accounts = accounts);
   }
 
@@ -37,7 +47,8 @@ class _AccountsScreenState extends State<AccountsScreen> {
     if (added == true) _load();
   }
 
-  Future<void> _open(Account a) async {
+  Future<void> _open(Account a, {bool instant = false}) async {
+    AccountStore.setLastOpened(a.id);
     final Widget screen;
     switch (a.kind) {
       case ServerKind.jellyfin:
@@ -46,7 +57,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         screen = SubsonicArtists(client: SubsonicClient(a), title: a.serverName);
     }
     if (!mounted) return;
-    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    Navigator.push(context, instant ? _InstantRoute(builder: (_) => screen) : MaterialPageRoute(builder: (_) => screen));
   }
 
   Future<void> _remove(Account a) async {
@@ -147,4 +158,19 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 ]),
     );
   }
+}
+
+/// The server to open on start: the one opened last, or the only one there is.
+Account? pickStartAccount(List<Account> accounts, String? lastId) =>
+    accounts.where((a) => a.id == lastId).firstOrNull ?? (accounts.length == 1 ? accounts.first : null);
+
+/// Shows the page at once, without sliding in, and slides it out as usual on Back.
+class _InstantRoute<T> extends MaterialPageRoute<T> {
+  _InstantRoute({required super.builder});
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 300);
 }

@@ -130,10 +130,30 @@ public class BackupController : ControllerBase
         }
     }
 
-    private static BackupStore? Store()
+    private BackupStore? Store()
     {
         var folder = Plugin.Instance?.Configuration.BackupFolder;
-        return string.IsNullOrWhiteSpace(folder) ? null : new BackupStore(folder);
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return null;
+        }
+
+        var store = new BackupStore(folder);
+        try
+        {
+            var moved = store.MoveToMonthFolders();
+            if (moved > 0)
+            {
+                _logger.LogInformation("Homeplay backup: moved {Count} photos into month folders", moved);
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // Tried again with the next request; uploads go on meanwhile.
+            _logger.LogWarning(e, "Homeplay backup: could not move photos into month folders");
+        }
+
+        return store;
     }
 
     private ObjectResult NotConfigured() =>

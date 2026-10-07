@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
 import '../services/quality.dart';
+import '../services/search_filters.dart';
 import 'common.dart';
 
 const _appVersion = '0.1.0';
@@ -24,6 +25,9 @@ class JellyfinItem {
   bool get isPhoto => !isFolder && _j['MediaType'] == 'Photo';
   bool get isPlayable => !isFolder && (_j['MediaType'] == 'Video' || _j['MediaType'] == 'Audio');
   bool get hasPrimaryImage => (_j['ImageTags'] as Map?)?.containsKey('Primary') ?? false;
+
+  /// The album whose cover a track shows, when the album has one.
+  String? get albumImageOwner => _j['AlbumPrimaryImageTag'] == null ? null : _j['AlbumId'] as String?;
   double get imageAspect => ((_j['PrimaryImageAspectRatio'] as num?)?.toDouble() ?? 1).clamp(0.6, 1.8);
 
   /// Files of the same movie or episode (4K and 1080p, a director's cut...); Jellyfin only
@@ -48,7 +52,32 @@ class JellyfinItem {
   int? get year => (_j['ProductionYear'] as num?)?.toInt();
   String? get seriesId => _j['SeriesId'] as String?;
   String? get seriesName => (_j['SeriesName'] as String?)?.trim();
-  String? get album => (_j['Album'] as String?)?.trim();
+  String? get album => _text(_j['Album']);
+  String? get albumId => _j['AlbumId'] as String?;
+  String? get albumArtist => _text(_j['AlbumArtist']);
+
+  /// A track's performers; tags sometimes come padded with spaces.
+  List<String> get artists => [
+        for (final a in (_j['Artists'] as List?) ?? const []) ?_text(a),
+      ];
+
+  /// A track's number on its album: the tag, else the number the file name starts with
+  /// ("01-Cluster One.mp3"), which the server does not always take.
+  int? get trackNumber => indexNumber ?? trackNumberFromPath(_j['Path'] as String?);
+
+  /// When the server first saw the file.
+  DateTime? get dateCreated => DateTime.tryParse((_j['DateCreated'] as String?) ?? '');
+
+  /// The entry's own id in a playlist, which removing it from the playlist needs.
+  String? get playlistEntryId => _j['PlaylistItemId'] as String?;
+
+  /// How many items a folder or playlist holds, when the server says.
+  int? get childCount => (_j['ChildCount'] as num?)?.toInt();
+
+  static String? _text(Object? v) {
+    final t = (v as String?)?.trim();
+    return t == null || t.isEmpty ? null : t;
+  }
   String? get seasonId => _j['SeasonId'] as String?;
   int? get indexNumber => (_j['IndexNumber'] as num?)?.toInt();
   int? get seasonNumber => (_j['ParentIndexNumber'] as num?)?.toInt();
@@ -85,11 +114,9 @@ class JellyfinItem {
         final code = (s != null && e != null) ? 'S${s}E$e' : null;
         return [_j['SeriesName'], code].whereType<String>().join(' · ');
       case 'Audio':
-        // Tags sometimes come padded with spaces.
-        final artists = [for (final a in (_j['Artists'] as List?)?.cast<String>() ?? const <String>[]) a.trim()];
-        return artists.isNotEmpty ? artists.join(', ') : (_j['AlbumArtist'] as String?)?.trim();
+        return artists.isNotEmpty ? artists.join(', ') : albumArtist;
       case 'MusicAlbum':
-        return (_j['AlbumArtist'] as String?)?.trim();
+        return albumArtist;
       default:
         return _j['ProductionYear']?.toString();
     }
@@ -243,7 +270,7 @@ class JellyfinClient {
         'parentId': parentId,
         'sortBy': 'ParentIndexNumber,IndexNumber,SortName',
         'sortOrder': 'Ascending',
-        'fields': 'PrimaryImageAspectRatio,MediaSourceCount',
+        'fields': 'PrimaryImageAspectRatio,MediaSourceCount,Path',
         'enableImageTypes': 'Primary',
         'enableUserData': 'true',
         // Episodes and seasons Jellyfin knows from online metadata but has no files for.
@@ -339,6 +366,139 @@ class JellyfinClient {
     return (items: _items(j).where((i) => !i.isVirtual).toList(), total: (j['TotalRecordCount'] as num?)?.toInt() ?? 0);
   }
 
+  /// Every track of a music library, page by page: the music screen sorts and groups them
+  /// itself, so it works also where the server has no albums for loose files.
+  Future<List<JellyfinItem>> musicTracks(String libraryId) =>
+      _allPages({'parentId': libraryId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
+
+  /// Every track of every music library: the search finds albums among them, as the server
+  /// may have none for loose folders.
+  Future<List<JellyfinItem>> allMusicTracks() async {
+    final music = (await views()).where((v) => v.collectionType == 'music');
+    return [for (final tracks in await Future.wait(music.map((l) => musicTracks(l.id)))) ...tracks];
+  }
+
+  /// A music artist's tracks, by the server's artist id (from the search).
+  Future<List<JellyfinItem>> artistTracks(String artistId) =>
+      _allPages({'artistIds': artistId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
+
+  /// An album's tracks, in disc and track order.
+  Future<List<JellyfinItem>> albumTracks(String albumId) => _allPages({
+        'parentId': albumId,
+        'recursive': 'true',
+        'includeItemTypes': 'Audio',
+        'sortBy': 'ParentIndexNumber,IndexNumber,SortName',
+      });
+
+  Future<List<JellyfinItem>> _allPages(Map<String, String> query, {int page = 2000}) async {
+    final all = <JellyfinItem>[];
+    while (true) {
+      final j = await _get('/Items', {
+        'userId': account.userId!,
+        'fields': 'DateCreated,Genres,MediaSourceCount,Path',
+        'enableUserData': 'true',
+        'excludeLocationTypes': 'Virtual',
+        'startIndex': '${all.length}',
+        'limit': '$page',
+        ...query,
+      });
+      final items = _items(j);
+      all.addAll(items);
+      final total = (j['TotalRecordCount'] as num?)?.toInt() ?? all.length;
+      if (items.isEmpty || all.length >= total) return all;
+    }
+  }
+
+  // --- Playlists ---
+
+  /// The user's playlists, by name.
+  Future<List<JellyfinItem>> playlists() async => _items(await _get('/Items', {
+        'userId': account.userId!,
+        'includeItemTypes': 'Playlist',
+        'recursive': 'true',
+        'sortBy': 'SortName',
+        'fields': 'ChildCount,DateCreated',
+      }));
+
+  /// A playlist's entries in their order; each carries its [JellyfinItem.playlistEntryId].
+  Future<List<JellyfinItem>> playlistItems(String playlistId) async =>
+      _items(await _get('/Playlists/$playlistId/Items', {'userId': account.userId!, 'fields': 'MediaSourceCount,Path'}));
+
+  /// A new playlist with [ids] in it; its id.
+  Future<String> createPlaylist(String name, List<String> ids, {String mediaType = 'Audio'}) async {
+    final j = await _send('POST', '/Playlists', body: {
+      'Name': name,
+      'Ids': ids,
+      'UserId': account.userId,
+      'MediaType': mediaType,
+    });
+    return (j?['Id'] as String?) ?? '';
+  }
+
+  Future<void> addToPlaylist(String playlistId, List<String> ids) =>
+      _send('POST', '/Playlists/$playlistId/Items', query: {'ids': ids.join(','), 'userId': account.userId!});
+
+  Future<void> removeFromPlaylist(String playlistId, List<String> entryIds) =>
+      _send('DELETE', '/Playlists/$playlistId/Items', query: {'entryIds': entryIds.join(',')});
+
+  Future<void> deletePlaylist(String playlistId) => _send('DELETE', '/Items/$playlistId');
+
+  // --- Search ---
+
+  /// Items matching [filters]; artists come from their own list on the server.
+  Future<List<JellyfinItem>> search(SearchFilters filters) async {
+    final userId = account.userId!;
+    final artists = filters.wantsArtists || filters.byArtist
+        ? _get('/Artists', filters.artistsQuery(userId)).then(_items)
+        : Future.value(const <JellyfinItem>[]);
+    final byName = filters.kind.types != null ? _get('/Items', filters.itemsQuery(userId)).then(_items) : null;
+    final found = await artists;
+    // "danheim" with Tracks: the server's word search looks at track names only.
+    final byArtist = filters.byArtist && found.isNotEmpty
+        ? _get('/Items', filters.byArtistQuery(userId, [for (final a in found.take(10)) a.id])).then(_items)
+        : null;
+    final seen = <String>{};
+    return [
+      if (filters.wantsArtists) ...found,
+      if (byName != null) ...await byName,
+      if (byArtist != null) ...await byArtist,
+    ].where((i) => seen.add(i.id)).toList();
+  }
+
+  /// Genres to pick from in the search filters.
+  Future<List<String>> genres() async => [
+        for (final g in _items(await _get('/Genres', {'userId': account.userId!, 'recursive': 'true', 'sortBy': 'SortName'})))
+          if (g.name.isNotEmpty) g.name,
+      ];
+
+  /// A request that changes something on the server; the answer, when there is one.
+  Future<Map<String, dynamic>?> _send(String method, String path, {Map<String, String>? query, Object? body}) async {
+    final req = http.Request(method, Uri.parse('$_base$path').replace(queryParameters: query))
+      ..headers.addAll({...headers, 'Content-Type': 'application/json'});
+    if (body != null) req.body = jsonEncode(body);
+    final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
+    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (res.statusCode == 403) throw ApiException('The server does not allow this for your user.');
+    if (res.statusCode >= 300) throw ApiException('Server answered ${res.statusCode} for $path');
+    if (res.body.isEmpty) return null;
+    final j = jsonDecode(res.body);
+    return j is Map<String, dynamic> ? j : null;
+  }
+
+  /// How many items of [types] a library holds, without fetching them.
+  Future<int> count(String libraryId, String types) async {
+    final j = await _get('/Items', {
+      'userId': account.userId!,
+      'parentId': libraryId,
+      'recursive': 'true',
+      'includeItemTypes': types,
+      'limit': '0',
+      'enableTotalRecordCount': 'true',
+      'isMissing': 'false',
+    });
+    return (j['TotalRecordCount'] as num?)?.toInt() ?? 0;
+  }
+
   /// A wide picture for [item]: its own backdrop, its series', or for an episode its still.
   Uri? backdropUrl(JellyfinItem item, {int width = 1280}) {
     final owner = item.backdropOwner;
@@ -383,10 +543,14 @@ class JellyfinClient {
           .where((i) => i.isPlayable && !i.isVirtual)
           .toList();
 
-  Uri? imageUrl(JellyfinItem item, {int height = 300}) => item.hasPrimaryImage
-      ? Uri.parse('$_base/Items/${item.id}/Images/Primary')
-          .replace(queryParameters: {'fillHeight': '$height', 'quality': '90'})
-      : null;
+  /// The item's own picture or, for a track without one, its album's cover.
+  Uri? imageUrl(JellyfinItem item, {int height = 300}) {
+    final owner = item.hasPrimaryImage ? item.id : item.albumImageOwner;
+    return owner == null
+        ? null
+        : Uri.parse('$_base/Items/$owner/Images/Primary')
+            .replace(queryParameters: {'fillHeight': '$height', 'quality': '90'});
+  }
 
   /// A photo scaled by the server to fit [maxSide] pixels; the original may be far larger
   /// than the screen. Jellyfin applies the EXIF rotation.
@@ -730,4 +894,13 @@ String runTimeLabel(Duration d) {
   if (d < const Duration(minutes: 1)) return '${d.inSeconds} s';
   final h = d.inHours, m = d.inMinutes.remainder(60);
   return h > 0 ? (m > 0 ? '$h h $m min' : '$h h') : '${d.inMinutes} min';
+}
+
+/// The number a file name starts with, as in "01-Cluster One.mp3" or "3. Time.flac"; null when
+/// it does not start with one, or the number looks like a year.
+int? trackNumberFromPath(String? path) {
+  if (path == null) return null;
+  final name = path.split(RegExp(r'[/\\]')).last;
+  final m = RegExp(r'^(\d{1,3})(?:[\s._\-)]|$)').firstMatch(name);
+  return m == null ? null : int.parse(m.group(1)!);
 }

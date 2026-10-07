@@ -28,10 +28,15 @@ import 'video_tuning.dart';
 class Playback extends BaseAudioHandler with SeekHandler {
   Playback._();
 
-  static late final Playback instance;
+  static Playback? _instance;
+
+  static Playback get instance => _instance!;
+
+  /// The player once [init] has run; null before, as in widget tests.
+  static Playback? get maybe => _instance;
 
   static Future<void> init() async {
-    instance = await AudioService.init(
+    _instance = await AudioService.init(
       builder: Playback._,
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'dev.homeplay.playback',

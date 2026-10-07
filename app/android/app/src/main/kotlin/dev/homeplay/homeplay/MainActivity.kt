@@ -10,10 +10,12 @@ import android.media.audiofx.DynamicsProcessing
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
+import android.util.Log
 import android.util.Rational
 import androidx.lifecycle.Lifecycle
 import com.ryanheise.audioservice.AudioService
 import com.ryanheise.audioservice.AudioServiceActivity
+import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -34,7 +36,31 @@ class MainActivity : AudioServiceActivity() {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
+        applyWallpaper(showsWallpaper())
     }
+
+    override fun onResume() {
+        super.onResume()
+        applyWallpaper(showsWallpaper())
+    }
+
+    // Flutter always draws on a clear window, so the home screen wallpaper can show under it.
+    // A window made clear only when the wallpaper was chosen stayed opaque if the app had
+    // started without it: the Flutter engine lives on from window to window and kept drawing
+    // the opaque way.
+    override fun getBackgroundMode(): BackgroundMode = BackgroundMode.transparent
+
+    // The wallpaper shows or not by a window flag alone; when it is off, the app paints its
+    // own background over the whole window.
+    private fun applyWallpaper(show: Boolean) {
+        val flag = WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER
+        if (show) window.addFlags(flag) else window.clearFlags(flag)
+        Log.i("homeplay", "window: wallpaper=$show")
+    }
+
+    private fun windowPrefs() = getSharedPreferences("homeplay_window", Context.MODE_PRIVATE)
+
+    private fun showsWallpaper() = windowPrefs().getBoolean("wallpaper", false)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -49,6 +75,17 @@ class MainActivity : AudioServiceActivity() {
                     result.success(null)
                 }
                 "keepControls" -> result.success(keepControls())
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/window").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "showWallpaper" -> {
+                    val show = call.arguments == true
+                    windowPrefs().edit().putBoolean("wallpaper", show).apply()
+                    applyWallpaper(show)
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
