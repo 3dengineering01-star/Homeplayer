@@ -9,6 +9,7 @@ class AccountStore {
   static const _storage = FlutterSecureStorage();
   static const _accountsKey = 'accounts';
   static const _deviceIdKey = 'device_id';
+  static const _lastOpenedKey = 'last_opened';
 
   static Future<List<Account>> load() async {
     final raw = await _storage.read(key: _accountsKey);
@@ -32,6 +33,11 @@ class AccountStore {
     accounts.removeWhere((a) => a.id == id);
     await _save(accounts);
   }
+
+  /// The server opened last, which the app opens again on start.
+  static Future<String?> lastOpened() => _storage.read(key: _lastOpenedKey);
+
+  static Future<void> setLastOpened(String id) => _storage.write(key: _lastOpenedKey, value: id);
 
   /// Stable per-install id; Jellyfin uses it to tell sessions apart.
   static Future<String> deviceId() async {

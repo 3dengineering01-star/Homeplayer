@@ -339,6 +339,20 @@ class JellyfinClient {
     return (items: _items(j).where((i) => !i.isVirtual).toList(), total: (j['TotalRecordCount'] as num?)?.toInt() ?? 0);
   }
 
+  /// How many items of [types] a library holds, without fetching them.
+  Future<int> count(String libraryId, String types) async {
+    final j = await _get('/Items', {
+      'userId': account.userId!,
+      'parentId': libraryId,
+      'recursive': 'true',
+      'includeItemTypes': types,
+      'limit': '0',
+      'enableTotalRecordCount': 'true',
+      'excludeLocationTypes': 'Virtual',
+    });
+    return (j['TotalRecordCount'] as num?)?.toInt() ?? 0;
+  }
+
   /// A wide picture for [item]: its own backdrop, its series', or for an episode its still.
   Uri? backdropUrl(JellyfinItem item, {int width = 1280}) {
     final owner = item.backdropOwner;

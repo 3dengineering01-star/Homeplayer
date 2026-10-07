@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/models/account.dart';
+import 'package:homeplay/screens/accounts_screen.dart';
+import 'package:homeplay/widgets/library_tiles.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -107,5 +109,35 @@ void main() {
     expect(posterTypes('music'), 'MusicAlbum');
     expect(posterTypes('homevideos'), isNull);
     expect(posterTypes(null), isNull);
+  });
+
+  test('a library count asks for no items, only the total', () async {
+    final seen = <http.Request>[];
+    final c = server((_) => {'Items': [], 'TotalRecordCount': 124}, seen: seen);
+    expect(await c.count('lib', 'Movie'), 124);
+    final q = seen.single.url.queryParameters;
+    expect(q['parentId'], 'lib');
+    expect(q['includeItemTypes'], 'Movie');
+    expect(q['limit'], '0');
+    expect(q['recursive'], 'true');
+  });
+
+  test('library tiles say what is inside in plain words', () {
+    expect(countLabel(124, libraryKind('movies')), '124 movies');
+    expect(countLabel(1, libraryKind('tvshows')), '1 show');
+    expect(countLabel(0, libraryKind('music')), '0 albums');
+    expect(countLabel(37, tracksKind), '37 tracks');
+    expect(libraryKind('homevideos').types, 'Video,Photo');
+    expect(libraryKind(null).types, isNull);
+  });
+
+  test('the app starts on the server opened last, or the only one', () {
+    const other = Account(
+        id: 'b', kind: ServerKind.subsonic, baseUrl: 'http://nas:4533', username: 'u', serverName: 'Music', token: 't');
+    expect(pickStartAccount([_account, other], 'b'), other);
+    expect(pickStartAccount([_account, other], null), isNull);
+    expect(pickStartAccount([_account, other], 'gone'), isNull);
+    expect(pickStartAccount([_account], null), _account);
+    expect(pickStartAccount([], 'a'), isNull);
   });
 }

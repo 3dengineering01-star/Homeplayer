@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
+import '../widgets/library_tiles.dart';
 import '../widgets/media_cards.dart';
+import 'backup_screen.dart';
+import 'downloads_screen.dart';
 import 'jellyfin_actions.dart';
 import 'jellyfin_browser.dart';
 import 'settings_screen.dart';
 
-/// A Jellyfin server's front page: its libraries, what is being watched, the next episodes and
-/// the newest in each library, in rows of pictures.
+/// A Jellyfin server's front page: its libraries as big buttons, what is being watched, the next
+/// episodes and the newest in each library, in rows of pictures.
 class JellyfinHome extends StatefulWidget {
   const JellyfinHome({super.key, required this.client, required this.title});
 
@@ -32,11 +35,15 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
 
   late Future<_Home> _home = _load();
 
+  /// "124 movies" by library id, filled in after the page shows.
+  final Map<String, String> _counts = {};
+
   @override
   void refresh() => setState(() => _home = _load());
 
   Future<_Home> _load() async {
     final libraries = await client.views();
+    _countAll(libraries);
     // Each row on its own: one failing (an old server without an endpoint) leaves the rest.
     Future<List<JellyfinItem>> safe(Future<List<JellyfinItem>> f) => f.onError((e, _) {
           debugPrint('homeplay home row failed: $e');
@@ -59,6 +66,33 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
     );
   }
 
+  Future<void> _countAll(List<JellyfinItem> libraries) async {
+    await Future.wait([
+      for (final l in libraries)
+        _count(l).then((label) {
+          if (label != null && mounted) setState(() => _counts[l.id] = label);
+        }),
+    ]);
+  }
+
+  Future<String?> _count(JellyfinItem library) async {
+    var kind = libraryKind(library.collectionType);
+    if (kind.types == null) return null;
+    try {
+      var n = await client.count(library.id, kind.types!);
+      if (n == 0 && library.collectionType == 'music') {
+        kind = tracksKind;
+        n = await client.count(library.id, kind.types!);
+      }
+      return countLabel(n, kind);
+    } catch (e) {
+      debugPrint('homeplay library count failed: $e');
+      return null;
+    }
+  }
+
+  void _push(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -68,13 +102,29 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
           IconButton(
             tooltip: 'Settings',
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+            onPressed: () => _push(const SettingsScreen()),
           ),
-          IconButton(
-            tooltip: 'Folders',
-            icon: const Icon(Icons.folder_outlined),
-            onPressed: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => JellyfinBrowser(client: client, title: widget.title))),
+          PopupMenuButton<VoidCallback>(
+            tooltip: 'More',
+            onSelected: (action) => action(),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: () => _push(JellyfinBrowser(client: client, title: widget.title)),
+                child: const ListTile(leading: Icon(Icons.folder_outlined), title: Text('Folders')),
+              ),
+              PopupMenuItem(
+                value: () => _push(const DownloadsScreen()),
+                child: const ListTile(leading: Icon(Icons.download_for_offline_outlined), title: Text('Downloads')),
+              ),
+              PopupMenuItem(
+                value: () => _push(BackupScreen(account: client.account)),
+                child: const ListTile(leading: Icon(Icons.backup_outlined), title: Text('Photo backup')),
+              ),
+              PopupMenuItem(
+                value: () => Navigator.of(context).pop(),
+                child: const ListTile(leading: Icon(Icons.dns_outlined), title: Text('All servers')),
+              ),
+            ],
           ),
         ],
       ),
@@ -101,25 +151,30 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
               await _home.then((_) {}, onError: (_) {});
             },
             child: ListView(padding: const EdgeInsets.only(bottom: 24), children: [
-              if (home.libraries.isNotEmpty)
-                Shelf(
-                  title: 'Libraries',
-                  // The 16:9 picture of a 180 wide card, with no caption under it.
-                  height: 104,
-                  children: [
-                    for (final l in home.libraries)
-                      WideCard(
-                        item: l,
-                        client: client,
-                        width: 180,
-                        image: client.imageUrl(l, height: 240),
-                        // Jellyfin's library pictures carry the name already.
-                        title: l.hasPrimaryImage ? '' : l.name,
-                        subtitle: '',
-                        onTap: () => openItem(home.libraries, l),
-                      ),
-                  ],
+              if (home.libraries.isNotEmpty) ...[
+                const SectionTitle('Libraries'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.6,
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      for (final (i, l) in home.libraries.indexed)
+                        LibraryTile(
+                          library: l,
+                          index: i,
+                          count: _counts[l.id],
+                          onTap: () => openItem(home.libraries, l),
+                        ),
+                    ],
+                  ),
                 ),
+              ],
               if (home.resume.isNotEmpty)
                 Shelf(
                   title: 'Continue watching',
