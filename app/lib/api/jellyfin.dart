@@ -24,6 +24,9 @@ class JellyfinItem {
   bool get isPhoto => !isFolder && _j['MediaType'] == 'Photo';
   bool get isPlayable => !isFolder && (_j['MediaType'] == 'Video' || _j['MediaType'] == 'Audio');
   bool get hasPrimaryImage => (_j['ImageTags'] as Map?)?.containsKey('Primary') ?? false;
+
+  /// The album whose cover a track shows, when the album has one.
+  String? get albumImageOwner => _j['AlbumPrimaryImageTag'] == null ? null : _j['AlbumId'] as String?;
   double get imageAspect => ((_j['PrimaryImageAspectRatio'] as num?)?.toDouble() ?? 1).clamp(0.6, 1.8);
 
   /// Files of the same movie or episode (4K and 1080p, a director's cut...); Jellyfin only
@@ -397,10 +400,14 @@ class JellyfinClient {
           .where((i) => i.isPlayable && !i.isVirtual)
           .toList();
 
-  Uri? imageUrl(JellyfinItem item, {int height = 300}) => item.hasPrimaryImage
-      ? Uri.parse('$_base/Items/${item.id}/Images/Primary')
-          .replace(queryParameters: {'fillHeight': '$height', 'quality': '90'})
-      : null;
+  /// The item's own picture or, for a track without one, its album's cover.
+  Uri? imageUrl(JellyfinItem item, {int height = 300}) {
+    final owner = item.hasPrimaryImage ? item.id : item.albumImageOwner;
+    return owner == null
+        ? null
+        : Uri.parse('$_base/Items/$owner/Images/Primary')
+            .replace(queryParameters: {'fillHeight': '$height', 'quality': '90'});
+  }
 
   /// A photo scaled by the server to fit [maxSide] pixels; the original may be far larger
   /// than the screen. Jellyfin applies the EXIF rotation.

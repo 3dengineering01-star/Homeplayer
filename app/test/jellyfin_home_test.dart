@@ -140,4 +140,13 @@ void main() {
     expect(pickStartAccount([_account], null), _account);
     expect(pickStartAccount([], 'a'), isNull);
   });
+
+  test('a track without its own picture shows its album cover', () {
+    final c = server((_) => {});
+    final track = JellyfinItem({'Id': 't', 'Type': 'Audio', 'AlbumId': 'al', 'AlbumPrimaryImageTag': 'x'});
+    expect(c.imageUrl(track)!.path, '/Items/al/Images/Primary');
+    final own = JellyfinItem({'Id': 't', 'Type': 'Audio', 'AlbumId': 'al', 'AlbumPrimaryImageTag': 'x', 'ImageTags': {'Primary': 'p'}});
+    expect(c.imageUrl(own)!.path, '/Items/t/Images/Primary');
+    expect(c.imageUrl(JellyfinItem({'Id': 't', 'Type': 'Audio', 'AlbumId': 'al'})), isNull);
+  });
 }
