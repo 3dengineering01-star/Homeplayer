@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api/common.dart';
 import '../screens/equalizer_screen.dart';
+import '../services/appearance.dart';
 import '../services/playback.dart';
 import '../services/video_tuning.dart';
 import 'appearance_picker.dart';
@@ -26,6 +27,8 @@ class MusicView extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final hasArt = item.artwork != null || item.artworkPath != null;
+    // With a background of the user's choosing, that background instead of the cover's colours.
+    final ownBackground = !AppearanceStore.current.value.seeThrough;
     // Without a cover, a record in the theme's colours; it turns while the music plays.
     final noArt = StreamBuilder<bool>(
       stream: pb.player.stream.playing,
@@ -41,7 +44,9 @@ class MusicView extends StatelessWidget {
           // The cover's colours, blurred, behind everything: a 12-pixel copy stretched over the
           // screen. A blur filter here was redrawn with every frame of the seek bar, and the
           // load made the sound crackle.
-          if (hasArt) ...[
+          if (!ownBackground)
+            const SizedBox.shrink()
+          else if (hasArt) ...[
             RepaintBoundary(
               child: artworkImage(item, cacheWidth: 12, fallback: ColoredBox(color: scheme.surface)),
             ),

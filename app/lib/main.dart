@@ -9,6 +9,7 @@ import 'services/backup.dart';
 import 'services/downloads.dart';
 import 'services/pip.dart';
 import 'services/playback.dart';
+import 'widgets/backdrop.dart';
 import 'widgets/mini_player.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -51,10 +52,10 @@ class HomeplayApp extends StatelessWidget {
             theme: look.theme(dark: false, wallpaper: wallpaper),
             darkTheme: look.theme(dark: true, wallpaper: wallpaper),
             themeMode: look.brightness.mode,
-            // The theme's background under the mini player too: the window's own showed black there
-            // in the light theme.
-            builder: (context, child) => ColoredBox(
-              color: Theme.of(context).colorScheme.surface,
+            // The background goes under the mini player too: the window's own showed black there in
+            // the light theme.
+            builder: (context, child) => AppBackdrop(
+              look: look,
               child: Column(children: [
                 Expanded(child: child!),
                 MiniPlayer(

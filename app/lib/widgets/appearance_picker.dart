@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/appearance.dart';
+import 'backdrop.dart';
 
 /// Light, dark or black, and the app's colours, with the change shown at once.
 class AppearancePicker extends StatelessWidget {
@@ -51,10 +52,130 @@ class AppearancePicker extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text('Colours follow your wallpaper (Android 12 and newer).', style: theme.textTheme.bodySmall),
                 ),
+              const SizedBox(height: 20),
+              Text('Background', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 10),
+              Wrap(spacing: 10, runSpacing: 12, children: [
+                for (final b in Backdrop.values)
+                  _BackdropChoice(
+                    look: look,
+                    backdrop: b,
+                    onTap: () => _choose(context, look, b),
+                  ),
+              ]),
+              if (look.backdrop == Backdrop.picture && look.picture != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _pick(context),
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: const Text('Another picture'),
+                  ),
+                ),
+              if (look.backdrop == Backdrop.wallpaper)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text('Your home screen wallpaper shows through the app.', style: theme.textTheme.bodySmall),
+                ),
+              if (look.seeThrough) ...[
+                const SizedBox(height: 12),
+                Row(children: [
+                  Text('Background strength', style: theme.textTheme.bodyMedium),
+                  Expanded(
+                    child: Slider(
+                      value: look.show,
+                      min: 0.1,
+                      max: 1,
+                      onChanged: (v) => AppearanceStore.preview(look.copyWith(show: v)),
+                      onChangeEnd: (v) => AppearanceStore.set(look.copyWith(show: v)),
+                    ),
+                  ),
+                ]),
+                if (look.backdrop == Backdrop.picture)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Soften the picture'),
+                    subtitle: const Text('Blurred, so text over it reads easier'),
+                    value: look.blur,
+                    onChanged: (v) => AppearanceStore.set(look.copyWith(blur: v)),
+                  ),
+              ],
             ]),
           );
         },
       );
+}
+
+Future<void> _choose(BuildContext context, Appearance look, Backdrop b) async {
+  // The picture tile picks one the first time, and goes back to the one picked later on.
+  if (b == Backdrop.picture && look.picture == null) return _pick(context);
+  await AppearanceStore.set(look.copyWith(backdrop: b));
+}
+
+Future<void> _pick(BuildContext context) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  try {
+    await AppearanceStore.pickPicture();
+  } catch (e) {
+    debugPrint('homeplay background picture failed: $e');
+    messenger?.showSnackBar(const SnackBar(content: Text('Could not use that picture')));
+  }
+}
+
+/// A small upright preview of a background with its name, outlined when chosen.
+class _BackdropChoice extends StatelessWidget {
+  const _BackdropChoice({required this.look, required this.backdrop, required this.onTap});
+
+  final Appearance look;
+  final Backdrop backdrop;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final selected = look.backdrop == backdrop;
+    final icon = switch (backdrop) {
+      Backdrop.wallpaper => Icons.wallpaper,
+      Backdrop.picture when look.picture == null => Icons.add_photo_alternate_outlined,
+      _ => null,
+    };
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: backdrop.label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: SizedBox(
+          width: 64,
+          child: Column(children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 56,
+              height: 84,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: selected ? scheme.primary : scheme.outlineVariant, width: selected ? 2.5 : 1),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Stack(fit: StackFit.expand, children: [
+                  Container(color: backdrop == Backdrop.plain ? scheme.surface : scheme.surfaceContainerHighest),
+                  if (backdrop != Backdrop.plain && backdrop != Backdrop.wallpaper)
+                    BackdropLayer(look: look.copyWith(backdrop: backdrop, blur: false)),
+                  if (icon != null) Icon(icon, color: scheme.onSurfaceVariant),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(backdrop.label, style: theme.textTheme.labelSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+      ),
+    );
+  }
 }
 
 class _Swatch extends StatelessWidget {

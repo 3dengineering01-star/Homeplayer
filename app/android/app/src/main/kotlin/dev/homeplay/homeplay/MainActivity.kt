@@ -14,6 +14,7 @@ import android.util.Rational
 import androidx.lifecycle.Lifecycle
 import com.ryanheise.audioservice.AudioService
 import com.ryanheise.audioservice.AudioServiceActivity
+import io.flutter.embedding.android.FlutterActivityLaunchConfigs.BackgroundMode
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
@@ -34,7 +35,17 @@ class MainActivity : AudioServiceActivity() {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             }
         }
+        if (showsWallpaper()) window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
     }
+
+    // With the home screen wallpaper as the background, Flutter draws on a clear window and
+    // Android puts the wallpaper under it. Only then: a clear window costs a little more to draw.
+    override fun getBackgroundMode(): BackgroundMode =
+        if (showsWallpaper()) BackgroundMode.transparent else BackgroundMode.opaque
+
+    private fun windowPrefs() = getSharedPreferences("homeplay_window", Context.MODE_PRIVATE)
+
+    private fun showsWallpaper() = windowPrefs().getBoolean("wallpaper", false)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -49,6 +60,21 @@ class MainActivity : AudioServiceActivity() {
                     result.success(null)
                 }
                 "keepControls" -> result.success(keepControls())
+                else -> result.notImplemented()
+            }
+        }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/window").setMethodCallHandler { call, result ->
+            when (call.method) {
+                // The drawing mode is fixed when the window is made, so a change makes it anew.
+                // The Flutter engine lives on with audio_service: the app and playback go on.
+                "showWallpaper" -> {
+                    val show = call.arguments == true
+                    result.success(null)
+                    if (show != showsWallpaper()) {
+                        windowPrefs().edit().putBoolean("wallpaper", show).commit()
+                        recreate()
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
