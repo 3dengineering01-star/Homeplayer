@@ -219,7 +219,7 @@ class _BackupScreenState extends State<BackupScreen> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Files go to the backup folder on the server, as user / phone / year / month. '
+                  'Files go to the backup folder on the server, one folder per month taken, e.g. 2026-10. '
                   'Large videos continue where they stopped if the connection drops.',
                   style: theme.textTheme.bodySmall,
                 ),

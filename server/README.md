@@ -35,4 +35,6 @@ dotnet build server/Jellyfin.Plugin.HomeplayBackup -c Release
 3. Панель управления → Плагины → Homeplay Backup: указать папку для фото.
 
 Обновление: остановить Jellyfin, заменить `Jellyfin.Plugin.HomeplayBackup.dll` в той же папке плагина новой,
-запустить Jellyfin.
+запустить Jellyfin. Номер версии в панели Jellyfin берёт из `meta.json` в папке плагина (и имени папки), а не
+из dll: после замены dll панель может показывать старый номер, на работу это не влияет. Чтобы номер был
+верным, поправить `"version"` в `meta.json` до запуска Jellyfin.
