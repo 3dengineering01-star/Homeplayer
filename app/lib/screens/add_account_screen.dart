@@ -37,6 +37,8 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     setState(() {
       _found = found;
       _searching = false;
+      // The only server at home: its address is filled in, only the name and password are left.
+      if (found.length == 1 && _url.text.trim().isEmpty) _url.text = found.single.address;
     });
   }
 

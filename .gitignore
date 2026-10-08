@@ -6,3 +6,5 @@ server/**/obj/
 app/android/key.properties
 *.jks
 *.keystore
+# APK files made for people to install (./app/build.sh apk).
+app/dist/

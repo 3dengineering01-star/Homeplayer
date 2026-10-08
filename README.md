@@ -15,7 +15,8 @@
 ./app/build.sh          # debug-APK -> app/build/app/outputs/flutter-apk/app-debug.apk
 ./app/build.sh run      # собрать и запустить на подключённом телефоне
 ./app/build.sh test     # юнит-тесты
-./app/build.sh release  # release-APK по ABI
+./app/build.sh release  # release-APK: один файл для всех телефонов
+./app/build.sh apk      # APK для установки людям -> app/dist/Homeplay-<версия>.apk (docs/install.md)
 ```
 
 ## Что умеет версия 0.1
