@@ -67,7 +67,8 @@ class SaveToPhone {
         metaData: folder,
         updates: Updates.status,
         retries: 3,
-        priority: 0,
+        // Not 0: that runs each file as an Android 14 user-initiated job, which must show a
+        // notification of its own or the app is reported as not responding; these share one.
       ));
       if (ok) queued++;
     }
@@ -98,6 +99,13 @@ class SaveToPhone {
     final task = update.task;
     if (task is! DownloadTask) return;
     final path = await task.filePath();
+    // A file fetched a second time (the job restarted after the app was closed, an update
+    // delivered again) would land beside the first as "01 Gripir (1).flac".
+    if (await _inMusic(task.metaData, task.filename)) {
+      final left = File(path);
+      if (await left.exists()) await left.delete();
+      return;
+    }
     final moved = await FileDownloader().moveFileToSharedStorage(path, SharedStorage.audio, directory: task.metaData);
     if (moved == null) {
       debugPrint('homeplay save to phone: could not move ${task.filename} into Music');
