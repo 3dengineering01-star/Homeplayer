@@ -1,7 +1,10 @@
 name: homeplay
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.0+1
+# The build number is the Android version code. Earlier test builds were split per processor and got
+# 2000 + 1 on arm64 phones; one file for all phones uses the number as it is, so it starts above that
+# to install over them. Raise it with every APK given out.
+version: 0.2.0+2002
 
 environment:
   sdk: ^3.13.4

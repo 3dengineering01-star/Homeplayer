@@ -22,25 +22,29 @@ JellyfinClient server(Object Function(http.Request r) answer, {List<http.Request
     );
 
 void main() {
-  test('latest reads a bare list, resume and next up read {Items}', () async {
+  test('continue watching asks for one library; next up only adds what is not started', () async {
     final seen = <http.Request>[];
-    final c = server((r) => r.url.path == '/Items/Latest'
-        ? [
-            {'Id': '1', 'Name': 'Dune', 'Type': 'Movie'},
-          ]
-        : {
-            'Items': [
-              {'Id': '2', 'Name': 'Pilot', 'Type': 'Episode'},
-            ],
-          }, seen: seen);
-    expect((await c.latest('lib')).single.name, 'Dune');
-    expect((await c.resume()).single.name, 'Pilot');
-    expect((await c.nextUp()).single.name, 'Pilot');
-    expect(seen[0].url.queryParameters['parentId'], 'lib');
-    expect(seen[1].url.path, '/UserItems/Resume');
-    expect(seen[1].url.queryParameters['mediaTypes'], 'Video');
-    expect(seen[2].url.path, '/Shows/NextUp');
+    final c = server((r) => {
+          'Items': [
+            {'Id': '2', 'Name': 'Pilot', 'Type': 'Episode'},
+          ],
+        }, seen: seen);
+    expect((await c.resume(parentId: 'shows')).single.name, 'Pilot');
+    expect((await c.nextUp(parentId: 'shows')).single.name, 'Pilot');
+    expect(seen[0].url.path, '/UserItems/Resume');
+    expect(seen[0].url.queryParameters['mediaTypes'], 'Video');
+    expect(seen[1].url.path, '/Shows/NextUp');
+    expect(seen.every((r) => r.url.queryParameters['parentId'] == 'shows'), isTrue);
     expect(seen.every((r) => r.url.queryParameters['userId'] == 'me'), isTrue);
+    await c.resume();
+    expect(seen.last.url.queryParameters.containsKey('parentId'), isFalse);
+
+    JellyfinItem e(String id) => JellyfinItem({'Id': id, 'Name': id});
+    expect(continueWatching([e('a'), e('b')], [e('b'), e('c')]).map((i) => i.id), ['a', 'b', 'c']);
+    expect(watchesInLibrary('movies'), isTrue);
+    expect(watchesInLibrary('tvshows'), isTrue);
+    expect(watchesInLibrary('music'), isFalse);
+    expect(watchesInLibrary('homevideos'), isFalse);
   });
 
   test('a library page asks for its type and order and reads the total', () async {

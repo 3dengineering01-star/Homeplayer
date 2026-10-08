@@ -55,6 +55,15 @@ android {
             signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
+
+    // Phones only (arm and arm64). Plugins such as libmpv bring x86_64 libraries of their own
+    // whatever --target-platform or abiFilters say; left out, the APK is 15 MB smaller. The app
+    // then does not run on x86 emulators.
+    packaging {
+        jniLibs {
+            excludes += listOf("lib/x86_64/**", "lib/x86/**")
+        }
+    }
 }
 
 kotlin {
