@@ -157,6 +157,7 @@ class _TrackListScreenState extends State<TrackListScreen> with JellyfinActions 
               tracks: tracks,
               onPlay: () => playAll(tracks),
               onShuffle: () => playAll(tracks, shuffle: true),
+              onSave: tracks.any((t) => t.type == 'Audio') ? () => saveToPhone(tracks) : null,
               onAddAll: widget.playlist != null || tracks.isEmpty
                   ? null
                   : () => addToPlaylist(context, client, items: tracks),
@@ -227,6 +228,7 @@ class _Header extends StatelessWidget {
     required this.onPlay,
     required this.onShuffle,
     required this.onAddAll,
+    required this.onSave,
   });
 
   final JellyfinClient client;
@@ -237,6 +239,9 @@ class _Header extends StatelessWidget {
   final VoidCallback onPlay;
   final VoidCallback onShuffle;
   final VoidCallback? onAddAll;
+
+  /// Saves the tracks into the phone's Music folder; null when there are none.
+  final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context) {
@@ -303,6 +308,8 @@ class _Header extends StatelessWidget {
               ),
               if (onAddAll != null)
                 IconButton(tooltip: 'Add to playlist', onPressed: onAddAll, icon: const Icon(Icons.playlist_add)),
+              if (onSave != null)
+                IconButton(tooltip: "Save to phone's Music", onPressed: onSave, icon: const Icon(Icons.save_alt)),
             ],
           ),
         ],

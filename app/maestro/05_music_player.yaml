@@ -1,0 +1,46 @@
+# The music player: a track from an album plays, the counter and Next/Previous work, the queue
+# opens, closing leaves the mini player, and its Stop ends playback. A track row is tapped, not
+# "Play" or "Shuffle": those set the shuffle choice the user keeps.
+appId: dev.homeplay.homeplay
+name: Музыкальный плеер
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Libraries"
+    timeout: 20000
+- tapOn: ".*Музыка.*"
+- extendedWaitUntil:
+    visible: "Albums.*"
+    timeout: 20000
+- tapOn: "Albums.*"
+- tapOn: ".*Mannavegr.*"
+- extendedWaitUntil:
+    visible: "Gripir\\n.*"
+    timeout: 15000
+- tapOn: "Gripir\\n.*"
+- extendedWaitUntil:
+    visible: "Now playing.*"
+    timeout: 20000
+- assertVisible: ".*\\d+ of 15.*"
+- extendedWaitUntil:
+    visible: "Pause"
+    timeout: 15000
+- tapOn: "Next"
+- assertVisible: "Now playing.*"
+- tapOn: "Previous"
+- assertVisible: "Now playing.*"
+- tapOn: "Pause"
+- assertVisible: "Play"
+- tapOn:
+    text: "Queue"
+    index: 0
+- assertVisible: ".*Gripir.*"
+- back
+- tapOn: "Close"
+- extendedWaitUntil:
+    visible: "Stop"
+    timeout: 10000
+- tapOn: "Stop"
+- assertNotVisible: "Stop"
+- back

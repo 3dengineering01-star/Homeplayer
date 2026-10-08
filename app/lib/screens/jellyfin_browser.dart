@@ -35,7 +35,11 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> with JellyfinActions 
       color: theme.colorScheme.surfaceContainerHighest,
       child: Icon(itemIcon(item), size: 32),
     );
-    return InkWell(
+    // The name for screen readers (and test tools): a photo tile has no text of its own.
+    return Semantics(
+      label: item.isFolder ? null : item.name,
+      button: true,
+      child: InkWell(
       onTap: () => openItem(items, item),
       onLongPress: item.isPlayable || item.isFolder ? () => itemActions(items, item) : null,
       child: Stack(fit: StackFit.expand, children: [
@@ -57,6 +61,7 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> with JellyfinActions 
             ),
           ),
       ]),
+      ),
     );
   }
 

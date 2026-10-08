@@ -1,0 +1,40 @@
+# Photos: the phone's library opens on the month folders, a photo opens full screen and the
+# next one comes with a swipe; the backup screen shows the server ready. Nothing is sent or
+# switched on.
+appId: dev.homeplay.homeplay
+name: Фото
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Libraries"
+    timeout: 20000
+- tapOn: ".*Фото с телефона.*"
+- extendedWaitUntil:
+    visible: ".*2026-10.*"
+    timeout: 20000
+- assertVisible: ".*2026-09.*"
+- assertNotVisible: ".*Pixel 10a.*"
+- tapOn: ".*2026-10.*"
+- extendedWaitUntil:
+    visible: "PXL_.*"
+    timeout: 20000
+- tapOn:
+    text: "PXL_.*"
+    index: 0
+- extendedWaitUntil:
+    visible: "1 / \\d+"
+    timeout: 10000
+- swipe:
+    direction: LEFT
+- assertVisible: "2 / \\d+"
+- back
+- back
+- back
+- tapOn: "More"
+- tapOn: "Photo backup"
+- extendedWaitUntil:
+    visible: ".*on the server.*"
+    timeout: 20000
+- assertVisible: "Photo backup"
+- back

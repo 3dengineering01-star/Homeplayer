@@ -8,6 +8,7 @@ import '../api/jellyfin.dart';
 import '../services/downloads.dart';
 import '../services/playback.dart';
 import '../services/quality.dart';
+import '../services/save_to_phone.dart';
 import 'item_details_screen.dart';
 import 'jellyfin_browser.dart';
 import 'library_screen.dart';
@@ -183,6 +184,13 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
               title: const Text('Add to playlist'),
               onTap: () => Navigator.pop(context, 'playlist'),
             ),
+          if (item.type == 'Audio' || item.type == 'MusicAlbum')
+            ListTile(
+              leading: const Icon(Icons.save_alt),
+              title: const Text("Save to phone's Music"),
+              subtitle: const Text('The file itself, for any player on the phone'),
+              onTap: () => Navigator.pop(context, 'phone'),
+            ),
           if (item.type == 'Audio' || item.type == 'MusicAlbum') ...[
             ListTile(
               leading: const Icon(Icons.playlist_play),
@@ -229,6 +237,15 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
     final messenger = ScaffoldMessenger.of(context);
     if (action.startsWith('extra')) return extra[int.parse(action.substring(5))].run();
     switch (action) {
+      case 'phone':
+        final List<JellyfinItem> tracks;
+        try {
+          tracks = item.type == 'Audio' ? [item] : await busy(client.albumTracks(item.id));
+        } catch (e) {
+          messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
+          return;
+        }
+        await saveToPhone(tracks);
       case 'playlist':
         await addToPlaylist(
           context,
@@ -292,6 +309,27 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
         if (ok != true) return;
         await downloads.add(client, fresh, group: item.name);
         messenger.showSnackBar(SnackBar(content: Text('Downloading ${fresh.length}. See Downloads on the server list.')));
+    }
+  }
+
+  /// Saves [tracks] as files in the phone's Music folder and says where they go.
+  Future<void> saveToPhone(List<JellyfinItem> tracks) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final (:queued, :already) = await SaveToPhone.save(client, tracks);
+      final there = already == 0 ? '' : ' ${already == 1 ? 'One is' : '$already are'} already there.';
+      messenger.showSnackBar(SnackBar(
+        content: Text(queued == 0
+            ? (already == 0
+                ? 'Nothing to save'
+                : already == 1
+                ? 'Already in Music/Homeplay'
+                : 'All $already already in Music/Homeplay')
+            : 'Saving ${queued == 1 && already == 0 ? '"${tracks.firstWhere((t) => t.type == 'Audio').name}"' : '$queued ${queued == 1 ? 'track' : 'tracks'}'} '
+                'to Music/Homeplay.$there The notification shows the progress.'),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
     }
   }
 

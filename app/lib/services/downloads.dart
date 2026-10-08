@@ -12,6 +12,7 @@ import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../models/account.dart';
 import 'account_store.dart';
+import 'save_to_phone.dart';
 
 enum DownloadState { queued, running, paused, done, failed }
 
@@ -309,6 +310,11 @@ class Downloads {
   }
 
   void _onUpdate(TaskUpdate update) {
+    // Files saved into the phone's Music folder are not the app's downloads.
+    if (update.task.group == SaveToPhone.group) {
+      unawaited(SaveToPhone.onUpdate(update));
+      return;
+    }
     final entry = find(update.task.taskId);
     if (entry == null) return;
     switch (update) {
