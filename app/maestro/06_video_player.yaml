@@ -1,5 +1,6 @@
-# The video player: a movie's page, Play, the controls (pause, 10 s forward, the audio and
-# subtitles sheet), Back ends the video. The movie is a test file on the server.
+# The video player: a movie's page (or its card in Continue watching), Play, the controls
+# (pause, 10 s forward, the audio and subtitles sheet), Back ends the video. The movie is a test
+# file on the server.
 appId: dev.homeplay.homeplay
 name: Видеоплеер
 ---
@@ -12,11 +13,17 @@ name: Видеоплеер
 - extendedWaitUntil:
     visible: ".*Vessels.*"
     timeout: 20000
+# A started movie is also in "Continue watching" above the posters: a tap there plays it at
+# once, a tap on the poster opens its page with Play. Either way the video starts.
 - tapOn: ".*Vessels.*"
 - extendedWaitUntil:
-    visible: "(Play|Resume).*"
+    visible: "(Play|Resume|Start over).*"
     timeout: 15000
-- tapOn: "(Play|Resume).*"
+- runFlow:
+    when:
+      visible: "(Play|Resume).*"
+    commands:
+      - tapOn: "(Play|Resume).*"
 # A started movie asks where to begin.
 - runFlow:
     when:

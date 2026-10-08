@@ -6,7 +6,8 @@ import '../widgets/media_cards.dart';
 import 'jellyfin_actions.dart';
 import 'jellyfin_browser.dart';
 
-/// A movie, show or music library as a grid of posters, loaded page by page as it scrolls.
+/// A movie, show or music library as a grid of posters, loaded page by page as it scrolls. Movies
+/// and shows begin with a row of what is being watched.
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key, required this.client, required this.library, required this.types});
 
@@ -34,6 +35,9 @@ class _LibraryScreenState extends State<LibraryScreen> with JellyfinActions {
   Object? _error;
   final _scroll = ScrollController();
 
+  /// Started movies and episodes, and the next episodes, of this library.
+  List<JellyfinItem> _watching = const [];
+
   bool get _square => widget.types == 'MusicAlbum';
 
   @override
@@ -43,6 +47,22 @@ class _LibraryScreenState extends State<LibraryScreen> with JellyfinActions {
       if (_scroll.position.extentAfter < 800) _more();
     });
     _more();
+    _loadWatching();
+  }
+
+  Future<void> _loadWatching() async {
+    if (!watchesInLibrary(widget.library.collectionType)) return;
+    final id = widget.library.id;
+    // Either failing (an old server without an endpoint) leaves the other.
+    Future<List<JellyfinItem>> safe(Future<List<JellyfinItem>> f) => f.onError((e, _) {
+          debugPrint('homeplay continue watching failed: $e');
+          return const [];
+        });
+    final (resume, next) = await (
+      safe(client.resume(parentId: id)),
+      widget.library.collectionType == 'tvshows' ? safe(client.nextUp(parentId: id)) : Future.value(<JellyfinItem>[]),
+    ).wait;
+    if (mounted) setState(() => _watching = continueWatching(resume, next));
   }
 
   @override
@@ -80,7 +100,10 @@ class _LibraryScreenState extends State<LibraryScreen> with JellyfinActions {
   }
 
   @override
-  void refresh() => _reload();
+  void refresh() {
+    _reload();
+    _loadWatching();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,33 +148,55 @@ class _LibraryScreenState extends State<LibraryScreen> with JellyfinActions {
           : _items.isEmpty && !_loading
               ? const Center(child: Text('Nothing here'))
               : RefreshIndicator(
-                  onRefresh: _reload,
-                  child: GridView.builder(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: _square ? 170 : 140,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      // Picture plus two lines of text under it.
-                      childAspectRatio: _square ? 0.74 : 0.5,
-                    ),
-                    itemCount: _items.length + (_loading ? 1 : 0),
-                    itemBuilder: (context, i) {
-                      if (i >= _items.length) return const Center(child: CircularProgressIndicator());
-                      final item = _items[i];
-                      return LayoutBuilder(
-                        builder: (context, box) => PosterCard(
-                          item: item,
-                          client: client,
-                          width: box.maxWidth,
-                          square: _square,
-                          onTap: () => openItem(_items, item, details: true),
-                          onLongPress: () => itemActions(_items, item),
+                  onRefresh: () async {
+                    _loadWatching();
+                    await _reload();
+                  },
+                  child: CustomScrollView(controller: _scroll, slivers: [
+                    if (_watching.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: Shelf(
+                          title: 'Continue watching',
+                          height: 190,
+                          children: [
+                            for (final w in _watching)
+                              WideCard(
+                                item: w,
+                                client: client,
+                                onTap: () => openItem([w], w),
+                                onLongPress: () => itemActions([w], w),
+                              ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      sliver: SliverGrid.builder(
+                        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: _square ? 170 : 140,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          // Picture plus two lines of text under it.
+                          childAspectRatio: _square ? 0.74 : 0.5,
+                        ),
+                        itemCount: _items.length + (_loading ? 1 : 0),
+                        itemBuilder: (context, i) {
+                          if (i >= _items.length) return const Center(child: CircularProgressIndicator());
+                          final item = _items[i];
+                          return LayoutBuilder(
+                            builder: (context, box) => PosterCard(
+                              item: item,
+                              client: client,
+                              width: box.maxWidth,
+                              square: _square,
+                              onTap: () => openItem(_items, item, details: true),
+                              onLongPress: () => itemActions(_items, item),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ]),
                 ),
     );
   }

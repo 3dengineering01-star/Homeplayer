@@ -301,14 +301,15 @@ class JellyfinClient {
     if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
     if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for $path');
     final body = jsonDecode(res.body);
-    // /Items/Latest answers with a bare list, the others with {Items: [...]}.
+    // Most answer with {Items: [...]}, a few with a bare list.
     final raw = body is List ? body : ((body as Map<String, dynamic>)['Items'] as List?) ?? const [];
     return [for (final e in raw) JellyfinItem(e as Map<String, dynamic>)];
   }
 
   /// Movies and episodes started and not finished, latest first.
-  Future<List<JellyfinItem>> resume({int limit = 16}) => _list('/UserItems/Resume', {
+  Future<List<JellyfinItem>> resume({String? parentId, int limit = 16}) => _list('/UserItems/Resume', {
         'userId': account.userId!,
+        'parentId': ?parentId,
         'limit': '$limit',
         'mediaTypes': 'Video',
         'fields': _richFields,
@@ -316,21 +317,12 @@ class JellyfinClient {
       });
 
   /// The next episode of each series being watched.
-  Future<List<JellyfinItem>> nextUp({int limit = 16}) => _list('/Shows/NextUp', {
+  Future<List<JellyfinItem>> nextUp({String? parentId, int limit = 16}) => _list('/Shows/NextUp', {
         'userId': account.userId!,
+        'parentId': ?parentId,
         'limit': '$limit',
         'fields': _richFields,
         'enableUserData': 'true',
-      });
-
-  /// Newest in a library: movies, series (not single episodes), albums.
-  Future<List<JellyfinItem>> latest(String libraryId, {int limit = 16}) => _list('/Items/Latest', {
-        'userId': account.userId!,
-        'parentId': libraryId,
-        'limit': '$limit',
-        'fields': _richFields,
-        'enableUserData': 'true',
-        'groupItems': 'true',
       });
 
   /// One item with everything the details page shows.
@@ -898,6 +890,16 @@ String? posterTypes(String? collectionType) => switch (collectionType) {
       'boxsets' => 'BoxSet',
       _ => null,
     };
+
+/// Whether a library opens with a "Continue watching" row: movies and shows.
+bool watchesInLibrary(String? collectionType) => collectionType == 'movies' || collectionType == 'tvshows';
+
+/// One row of what to watch on: started movies and episodes first, then the next episode of each
+/// show, without the same item twice.
+List<JellyfinItem> continueWatching(List<JellyfinItem> resume, List<JellyfinItem> nextUp) {
+  final ids = {for (final r in resume) r.id};
+  return [...resume, for (final n in nextUp) if (ids.add(n.id)) n];
+}
 
 /// "2 h 15 min", "48 min", "20 s".
 String runTimeLabel(Duration d) {
