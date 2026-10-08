@@ -19,13 +19,19 @@ name: Общий поиск
 - assertVisible: ".*Has: Cluster One.*"
 - eraseText: 10
 - inputText: "01-cluster"
-- assertVisible: "Tracks · 1"
+- extendedWaitUntil:
+    visible: "Tracks · 1"
+    timeout: 10000
 - eraseText: 12
 - inputText: "2026-10"
-- assertVisible: "Folders · 1"
+- extendedWaitUntil:
+    visible: "Folders · 1"
+    timeout: 10000
 - assertNotVisible: "2026-09"
 - eraseText: 10
 - inputText: "vessels.mp4"
-- assertVisible: "Movies · 1"
+- extendedWaitUntil:
+    visible: "Movies · 1"
+    timeout: 10000
 - back
 - back

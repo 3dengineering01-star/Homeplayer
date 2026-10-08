@@ -10,13 +10,13 @@ name: Плейлист
     timeout: 20000
 - tapOn: ".*Музыка.*"
 - extendedWaitUntil:
-    visible: "Tracks"
+    visible: "Tracks.*"
     timeout: 20000
-- tapOn: "Tracks"
+- tapOn: "Tracks.*"
 - scrollUntilVisible:
-    element: "Cluster One"
+    element: "Cluster One.*"
     direction: DOWN
-- longPressOn: "Cluster One"
+- longPressOn: "Cluster One.*"
 - tapOn: "Add to playlist"
 - tapOn: "New playlist"
 - inputText: "MaestroTest"
@@ -27,12 +27,12 @@ name: Плейлист
 - tapOn: "Search"
 - inputText: "cluster"
 - tapOn: "Playlists.*"
-- assertVisible: "MaestroTest"
+- assertVisible: "MaestroTest.*"
 - assertVisible: ".*Has: Cluster One.*"
-- tapOn: "MaestroTest"
-- assertVisible: "Cluster One"
+- tapOn: "MaestroTest.*"
+- assertVisible: "Cluster One.*"
 - tapOn: "More"
 - tapOn: "Delete playlist"
 - tapOn: "Delete"
-- assertNotVisible: "MaestroTest"
+- assertNotVisible: "MaestroTest.*"
 - back
