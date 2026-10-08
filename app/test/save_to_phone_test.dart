@@ -32,4 +32,13 @@ void main() {
     expect(c.originalFileUrl(JellyfinItem({'Id': 'c1'})).toString(), 'http://nas:8096/Items/c1/Download');
     expect(JellyfinItem({'Id': 'a', 'Container': 'mov,mp4,m4a'}).container, 'mov');
   });
+
+  test('a track counts as saved only when the file found is in its own folder', () {
+    const folder = 'Homeplay/Danheim/Mannavegr', name = '01 Gripir.flac';
+    expect(isSavedAt('/storage/emulated/0/Music/Homeplay/Danheim/Mannavegr/01 Gripir.flac', folder, name), isTrue);
+    expect(isSavedAt(null, folder, name), isFalse, reason: 'not in Music');
+    expect(isSavedAt('/storage/emulated/0/Music/Homeplay/Other/Album/01 Gripir.flac', folder, name), isFalse,
+        reason: 'a namesake in another album');
+    expect(isSavedAt('/storage/emulated/0/Music/Homeplay/Danheim/Mannavegr/01 Gripir (1).flac', folder, name), isFalse);
+  });
 }

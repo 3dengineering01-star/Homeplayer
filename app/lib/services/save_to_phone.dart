@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 
 import '../api/jellyfin.dart';
@@ -19,10 +20,12 @@ class SaveToPhone {
   static const group = 'save-to-phone';
 
   /// Queues [tracks] (non-tracks are skipped); each one moves into the Music folder when it
-  /// is down. Returns how many were queued.
-  static Future<int> save(JellyfinClient client, List<JellyfinItem> tracks) async {
+  /// is down. Tracks already there, or already on their way, are left alone: Android would
+  /// save a second copy as "01 Gripir (1).flac". Returns how many were queued and how many
+  /// were there already.
+  static Future<({int queued, int already})> save(JellyfinClient client, List<JellyfinItem> tracks) async {
     final audio = tracks.where((t) => t.type == 'Audio').toList();
-    if (audio.isEmpty) return 0;
+    if (audio.isEmpty) return (queued: 0, already: 0);
     // Its listener moves each finished file into Music.
     await Downloads.instance.init();
     if (Platform.isAndroid) {
@@ -40,26 +43,51 @@ class SaveToPhone {
       progressBar: true,
       groupNotificationId: group,
     );
-    var queued = 0;
+    final saving = {
+      for (final task in await FileDownloader().allTasks(group: group))
+        if (task is DownloadTask) '${task.metaData}/${task.filename}',
+    };
+    var queued = 0, already = 0;
     for (final t in audio) {
+      final folder = phoneFolder(t), name = phoneFileName(t);
+      if (saving.contains('$folder/$name') || await _inMusic(folder, name)) {
+        already++;
+        continue;
+      }
       final ok = await FileDownloader().enqueue(DownloadTask(
         taskId: 'phone_${t.id}_${DateTime.now().millisecondsSinceEpoch}',
         url: client.originalFileUrl(t).toString(),
         headers: client.headers,
         baseDirectory: BaseDirectory.temporary,
         directory: 'to_phone',
-        filename: phoneFileName(t),
+        filename: name,
         displayName: t.name,
         group: group,
         // Where in Music it goes, read back when the file is down.
-        metaData: phoneFolder(t),
+        metaData: folder,
         updates: Updates.status,
         retries: 3,
         priority: 0,
       ));
       if (ok) queued++;
     }
-    return queued;
+    return (queued: queued, already: already);
+  }
+
+  /// Whether Music already has [folder]/[name]. From Android 10 the phone's media library is
+  /// asked (it knows the files this app put there); before, the library is not involved and
+  /// the place is only worked out, so the file itself is looked for.
+  static Future<bool> _inMusic(String folder, String name) async {
+    if (!Platform.isAndroid) return false;
+    try {
+      final found = await FileDownloader().pathInSharedStorage(name, SharedStorage.audio, directory: folder);
+      if (!isSavedAt(found, folder, name)) return false;
+      final sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+      return sdk >= 29 || await File(found!).exists();
+    } catch (e) {
+      debugPrint('homeplay save to phone: could not look for $name in Music: $e');
+      return false;
+    }
   }
 
   /// A finished file moves from the app's temporary folder into Music.
@@ -92,6 +120,11 @@ String phoneFileName(JellyfinItem t) {
   final name = '${n == null ? '' : '${n.toString().padLeft(2, '0')} '}${t.name}';
   return '${_safe(name, 'track')}.${t.container ?? 'mp3'}';
 }
+
+/// Whether the file the phone's media library found by [name] ([found], its path or null) is
+/// the one in [folder] of Music, not a namesake elsewhere.
+bool isSavedAt(String? found, String folder, String name) =>
+    found != null && found.replaceAll('\\', '/').endsWith('/Music/$folder/$name');
 
 /// Homeplay/artist/album inside Music; tracks without an album go straight under the artist.
 String phoneFolder(JellyfinItem t) =>

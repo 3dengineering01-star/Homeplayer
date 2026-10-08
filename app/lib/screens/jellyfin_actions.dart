@@ -316,12 +316,17 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
   Future<void> saveToPhone(List<JellyfinItem> tracks) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final n = await SaveToPhone.save(client, tracks);
+      final (:queued, :already) = await SaveToPhone.save(client, tracks);
+      final there = already == 0 ? '' : ' ${already == 1 ? 'One is' : '$already are'} already there.';
       messenger.showSnackBar(SnackBar(
-        content: Text(n == 0
-            ? 'Nothing to save'
-            : 'Saving ${n == 1 ? '"${tracks.firstWhere((t) => t.type == 'Audio').name}"' : '$n tracks'} '
-                'to Music/Homeplay. The notification shows the progress.'),
+        content: Text(queued == 0
+            ? (already == 0
+                ? 'Nothing to save'
+                : already == 1
+                ? 'Already in Music/Homeplay'
+                : 'All $already already in Music/Homeplay')
+            : 'Saving ${queued == 1 && already == 0 ? '"${tracks.firstWhere((t) => t.type == 'Audio').name}"' : '$queued ${queued == 1 ? 'track' : 'tracks'}'} '
+                'to Music/Homeplay.$there The notification shows the progress.'),
       ));
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
