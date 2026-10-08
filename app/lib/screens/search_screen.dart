@@ -3,22 +3,25 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../services/music_index.dart';
 import '../services/search_filters.dart';
+import '../services/search_index.dart';
 import '../services/search_results.dart';
 import '../widgets/async_list.dart';
+import '../widgets/highlighted_text.dart';
 import 'jellyfin_actions.dart';
 import 'playlist_picker.dart';
 import 'track_list_screen.dart';
 
 const _recentKey = 'recent_searches';
 
-typedef _Found = ({List<JellyfinItem> items, List<AlbumGroup> albums});
+/// Rows shown per section before "Show all".
+const _sectionRows = 12;
 
-/// Search across the whole server: words, a kind of item, years, genres, watched or not, and
-/// the order. Results come in sections by kind.
+/// Search across the whole server. As letters are typed, matches show at once from a list of
+/// every file, album, folder and playlist kept on the phone, with the typed words marked; the
+/// server's own search (shows, artists, collections, and the filters) joins in a moment later.
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key, required this.client});
 
@@ -34,14 +37,23 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
 
   final _field = TextEditingController();
   final _focus = FocusNode();
-
-  /// The server's albums as the music screen makes them, loaded once when first needed.
-  Future<List<AlbumGroup>>? _albums;
   SearchFilters _filters = const SearchFilters();
-  Future<_Found>? _results;
+
+  /// The phone's own list to search in; null while it loads.
+  SearchIndex? _index;
+  Object? _indexError;
+
+  /// The server's answer for the current words and filters.
+  List<JellyfinItem> _server = const [];
+  bool _asking = false;
+  int _asked = 0;
+
   Timer? _typing;
   List<String> _recent = const [];
   Future<List<String>>? _genres;
+
+  /// Sections opened to show all their rows.
+  final Set<String> _expanded = {};
 
   @override
   void initState() {
@@ -49,6 +61,23 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
     SharedPreferences.getInstance().then((p) {
       if (mounted) setState(() => _recent = p.getStringList(_recentKey) ?? const []);
     });
+    _buildIndex();
+  }
+
+  Future<void> _buildIndex() async {
+    try {
+      final files = client.allFiles();
+      final lists = await client.playlists();
+      final contents = await Future.wait([
+        for (final p in lists)
+          client.playlistItems(p.id).then((items) => (playlist: p, items: items)).onError((e, _) => (playlist: p, items: <JellyfinItem>[])),
+      ]);
+      final index = SearchIndex(await files, contents);
+      if (mounted) setState(() => _index = index);
+    } catch (e) {
+      debugPrint('homeplay search index failed: $e');
+      if (mounted) setState(() => _indexError = e);
+    }
   }
 
   @override
@@ -60,42 +89,40 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
   }
 
   @override
-  void refresh() => _run();
+  void refresh() => _askServer();
 
   void _set(SearchFilters f, {bool now = true}) {
     _filters = f;
+    _expanded.clear();
     _typing?.cancel();
+    // The phone's list answers at once with this rebuild; the server once typing pauses.
     if (now) {
-      _run();
+      _askServer();
     } else {
-      // Asked once typing pauses, not on every letter.
-      _typing = Timer(const Duration(milliseconds: 400), _run);
       setState(() {});
+      _typing = Timer(const Duration(milliseconds: 350), _askServer);
     }
   }
 
-  void _run() => setState(() => _results = _filters.isReady ? _search(_filters) : null);
-
-  Future<_Found> _search(SearchFilters f) async {
-    final albums = f.wantsAlbums ? (_albums ??= client.allMusicTracks().then(groupByAlbum)) : null;
-    final items = client.search(f);
-    return (
-      items: await items,
-      albums: albums == null ? const <AlbumGroup>[] : findAlbums(await albums, f.text, from: f.fromYear, to: f.toYear),
-    );
-  }
-
-  void _openAlbum(AlbumGroup a) {
-    unawaited(_remember());
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => TrackListScreen(
-        client: client,
-        title: a.name,
-        subtitle: [a.artist, a.year?.toString()].whereType<String>().join(' · '),
-        load: () async => a.tracks,
-        cover: a.cover,
-      ),
-    ));
+  Future<void> _askServer() async {
+    final f = _filters;
+    final ask = ++_asked;
+    if (!f.isReady || f.kind.types == null && !f.wantsArtists) {
+      setState(() {
+        _server = const [];
+        _asking = false;
+      });
+      return;
+    }
+    setState(() => _asking = true);
+    try {
+      final found = await client.search(f);
+      if (mounted && ask == _asked) setState(() => _server = found);
+    } catch (e) {
+      debugPrint('homeplay search failed: $e');
+    } finally {
+      if (mounted && ask == _asked) setState(() => _asking = false);
+    }
   }
 
   Future<void> _remember() async {
@@ -123,9 +150,25 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
     }
   }
 
+  void _openList(String title, String? subtitle, List<JellyfinItem> items, {JellyfinItem? cover}) {
+    unawaited(_remember());
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => TrackListScreen(client: client, title: title, subtitle: subtitle, load: () async => items, cover: cover),
+    ));
+  }
+
+  void _openPlaylist(JellyfinItem playlist) {
+    unawaited(_remember());
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackListScreen.playlist(client: client, playlist: playlist)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loading = _asking || (_index == null && _indexError == null && _filters.isReady);
+    // The row of kinds grows with the phone's text size; with big letters the chips' labels
+    // were cut at the bottom.
+    final chips = 32 + MediaQuery.textScalerOf(context).scale(20);
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
@@ -162,28 +205,31 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(52),
-          child: SizedBox(
-            height: 52,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              children: [
-                for (final k in SearchKind.values)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: ChoiceChip(
-                      label: Text(k.label),
-                      selected: _filters.kind == k,
-                      onSelected: (_) => _set(_filters.copyWith(kind: k)),
+          preferredSize: Size.fromHeight(chips + 4),
+          child: Column(children: [
+            SizedBox(
+              height: chips,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                children: [
+                  for (final k in SearchKind.values)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ChoiceChip(
+                        label: Text(k.label),
+                        selected: _filters.kind == k,
+                        onSelected: (_) => _set(_filters.copyWith(kind: k)),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
+            SizedBox(height: 4, child: loading ? const LinearProgressIndicator() : null),
+          ]),
         ),
       ),
-      body: _results == null ? _idle(theme) : _resultList(),
+      body: _filters.isReady ? _results(theme) : _idle(theme),
     );
   }
 
@@ -219,90 +265,172 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
       Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          'Type a name, or pick a kind and filters: for example Movies, 1990 to 1999, not watched.',
+          'Type part of a name: tracks, albums, folders, playlists, movies and photos show as you type. '
+          'Or pick a kind and filters: for example Movies, 1990 to 1999, not watched.',
           style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
       ),
     ],
   );
 
-  Widget _resultList() => FutureBuilder<_Found>(
-    future: _results,
-    builder: (context, snap) {
-      if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-      if (snap.hasError) {
-        return Center(
-          child: Padding(padding: const EdgeInsets.all(24), child: Text(describeError(snap.error!))),
-        );
-      }
-      final sections = groupResults(snap.data!.items);
-      final albums = snap.data!.albums;
-      if (sections.isEmpty && albums.isEmpty) {
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              _filters.kind == SearchKind.artists && _filters.text.trim().isEmpty
-                  ? 'Type an artist\'s name'
-                  : 'Nothing found. Try fewer words or filters.',
-              textAlign: TextAlign.center,
-            ),
+  Widget _results(ThemeData theme) {
+    final f = _filters;
+    final query = f.text;
+    // The phone's list answers words; filters by year, genre or watched are the server's.
+    final local = _index != null && f.extraFilters == 0
+        ? _index!.find(query, f.kind)
+        : _index != null && f.kind == SearchKind.albums
+            ? LocalHits(albums: [
+                for (final a in findAlbums(_index!.albums, query, from: f.fromYear, to: f.toYear)) Hit(a, const []),
+              ])
+            : const LocalHits();
+    final seen = <String>{};
+    final items = [...local.items, ..._server].where((i) => seen.add(i.id)).toList();
+    final playlistIds = {for (final h in local.playlists) h.group.id};
+    final sections = groupResults(items.where((i) => !(i.type == 'Playlist' && playlistIds.contains(i.id))).toList());
+    final bySection = {for (final (title, list) in sections) title: list};
+
+    final rows = <Widget>[];
+    void section<T>(String title, List<T> list, Widget Function(T) row) {
+      if (list.isEmpty) return;
+      final open = _expanded.contains(title) || list.length <= _sectionRows + 2;
+      rows.add(Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 8, 4),
+        child: Row(children: [
+          Expanded(
+            child: Text('$title · ${list.length}',
+                style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
           ),
-        );
-      }
-      final theme = Theme.of(context);
-      return ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          // Albums go after the artists, before the tracks.
-          for (final (title, items) in [
-            ...sections.where((s) => s.$1 == 'Movies' || s.$1 == 'Shows' || s.$1 == 'Episodes' || s.$1 == 'Artists'),
-            if (albums.isNotEmpty) ('Albums', const <JellyfinItem>[]),
-            ...sections.where((s) => !{'Movies', 'Shows', 'Episodes', 'Artists'}.contains(s.$1)),
-          ]) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Text(
-                '$title · ${title == 'Albums' ? albums.length : items.length}',
-                style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary),
-              ),
-            ),
-            if (title == 'Albums')
-              for (final a in albums)
-                ListTile(
-                  leading: ArtThumb(url: client.imageUrl(a.cover, height: 168), headers: client.headers, icon: Icons.album),
-                  title: Text(a.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(
-                    [a.artist, a.year?.toString(), '${a.tracks.length} ${a.tracks.length == 1 ? 'track' : 'tracks'}']
-                        .whereType<String>()
-                        .join(' · '),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onTap: () => _openAlbum(a),
-                  onLongPress: () => addToPlaylist(context, client, items: a.tracks),
-                ),
-            for (final item in items)
-              ListTile(
-                leading: ArtThumb(
-                  url: item.isPhoto ? client.photoUrl(item, maxSide: 200) : client.imageUrl(item, height: 168),
-                  headers: client.headers,
-                  icon: itemIcon(item),
-                  aspect: item.imageAspect,
-                ),
-                title: Text(item.name, maxLines: 2, overflow: TextOverflow.ellipsis),
-                subtitle: switch (resultSubtitle(item)) {
-                  '' => null,
-                  final s => Text(s, maxLines: 1, overflow: TextOverflow.ellipsis),
-                },
-                onTap: () => _open(items, item),
-                onLongPress: item.isPlayable || item.type == 'MusicAlbum' ? () => itemActions(items, item) : null,
-              ),
-          ],
-        ],
+          if (!open) TextButton(onPressed: () => setState(() => _expanded.add(title)), child: const Text('Show all')),
+        ]),
+      ));
+      rows.addAll(list.take(open ? list.length : _sectionRows).map(row));
+    }
+
+    Widget itemRow(List<JellyfinItem> list, JellyfinItem item) {
+      // Found by the file name and not the title: the file name shows why.
+      final sub = foundByFileName(item, query) ? 'File: ${item.fileName}' : resultSubtitle(item);
+      return ListTile(
+        leading: ArtThumb(
+          url: item.isPhoto ? client.photoUrl(item, maxSide: 200) : client.imageUrl(item, height: 168),
+          headers: client.headers,
+          icon: itemIcon(item),
+          aspect: item.imageAspect,
+        ),
+        title: HighlightedText(item.name, query: query, maxLines: 2),
+        subtitle: sub.isEmpty ? null : HighlightedText(sub, query: query, style: theme.textTheme.bodySmall),
+        onTap: () => _open(list, item),
+        onLongPress: item.isPlayable || item.type == 'MusicAlbum' ? () => itemActions(list, item) : null,
       );
-    },
-  );
+    }
+
+    Widget? inside(List<JellyfinItem> found) => found.isEmpty
+        ? null
+        : HighlightedText('Has: ${found.take(3).map((i) => i.name).join(', ')}${found.length > 3 ? ' and ${found.length - 3} more' : ''}',
+            query: query, style: theme.textTheme.bodySmall);
+
+    for (final title in const ['Movies', 'Shows', 'Episodes']) {
+      final list = bySection[title] ?? const [];
+      section(title, list, (JellyfinItem i) => itemRow(list, i));
+    }
+    // Artists found on the phone by name or by a track of theirs, then any others the server knows.
+    final localArtists = {for (final h in local.artists) h.group.name.toLowerCase()};
+    section('Artists', <Object>[
+      ...local.artists,
+      for (final a in bySection['Artists'] ?? const <JellyfinItem>[])
+        if (!localArtists.contains(a.name.toLowerCase())) a,
+    ], (Object o) {
+      if (o is JellyfinItem) return itemRow(const [], o);
+      final h = o as Hit<ArtistGroup>;
+      return ListTile(
+        leading: ArtThumb(url: client.imageUrl(h.group.cover, height: 168), headers: client.headers, icon: Icons.person),
+        title: HighlightedText(h.group.name, query: query),
+        subtitle: inside(h.inside) ??
+            Text('${h.group.trackCount} ${h.group.trackCount == 1 ? 'track' : 'tracks'}', style: theme.textTheme.bodySmall),
+        onTap: () {
+          unawaited(_remember());
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => TrackListScreen(
+              client: client,
+              title: h.group.name,
+              subtitle: 'Artist',
+              load: () async => h.group.tracks,
+              cover: h.group.cover,
+              byAlbum: true,
+            ),
+          ));
+        },
+        onLongPress: () => addToPlaylist(context, client, items: h.group.tracks),
+      );
+    });
+    section('Albums', local.albums, (Hit<AlbumGroup> h) {
+      final a = h.group;
+      return ListTile(
+        leading: ArtThumb(url: client.imageUrl(a.cover, height: 168), headers: client.headers, icon: Icons.album),
+        title: HighlightedText(a.name, query: query, maxLines: 2),
+        subtitle: inside(h.inside) ??
+            HighlightedText(
+              [a.artist, a.year?.toString(), '${a.tracks.length} ${a.tracks.length == 1 ? 'track' : 'tracks'}']
+                  .whereType<String>()
+                  .join(' · '),
+              query: query,
+              style: theme.textTheme.bodySmall,
+            ),
+        onTap: () => _openList(a.name, [a.artist, a.year?.toString()].whereType<String>().join(' · '), a.tracks, cover: a.cover),
+        onLongPress: () => addToPlaylist(context, client, items: a.tracks),
+      );
+    });
+    final tracks = bySection['Tracks'] ?? const [];
+    section('Tracks', tracks, (JellyfinItem i) => itemRow(tracks, i));
+    section('Folders', local.folders, (Hit<FolderGroup> h) {
+      final folder = h.group;
+      return ListTile(
+        leading: CircleAvatar(
+          backgroundColor: theme.colorScheme.secondaryContainer,
+          child: Icon(Icons.folder_rounded, color: theme.colorScheme.onSecondaryContainer),
+        ),
+        title: HighlightedText(folder.name, query: query),
+        subtitle: inside(h.inside) ?? Text(folder.path, maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
+        onTap: () => _openList(folder.name, folder.path, folder.items),
+      );
+    });
+    final serverPlaylists = bySection['Playlists'] ?? const [];
+    section('Playlists', [...local.playlists, for (final p in serverPlaylists) Hit(p, const <JellyfinItem>[])],
+        (Hit<JellyfinItem> h) {
+      final p = h.group;
+      return ListTile(
+        leading: CircleAvatar(
+          backgroundColor: theme.colorScheme.tertiaryContainer,
+          child: Icon(Icons.queue_music_rounded, color: theme.colorScheme.onTertiaryContainer),
+        ),
+        title: HighlightedText(p.name, query: query),
+        subtitle: inside(h.inside) ?? (p.childCount == null ? null : Text(countLabelOf(p.childCount!, 'item'))),
+        onTap: () => _openPlaylist(p),
+      );
+    });
+    for (final title in const ['Videos', 'Collections', 'Photos', 'Other']) {
+      final list = bySection[title] ?? const [];
+      section(title, list, (JellyfinItem i) => itemRow(list, i));
+    }
+
+    if (rows.isEmpty) {
+      final waiting = _asking || (_index == null && _indexError == null);
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            waiting
+                ? 'Looking…'
+                : f.kind == SearchKind.artists && query.trim().isEmpty
+                    ? 'Type an artist\'s name'
+                    : 'Nothing found. Try fewer letters or filters.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return ListView(padding: const EdgeInsets.only(bottom: 24), children: rows);
+  }
 
   Future<void> _showFilters() async {
     _genres ??= client.genres().onError((e, _) => const <String>[]);

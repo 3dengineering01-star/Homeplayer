@@ -13,14 +13,15 @@ enum SearchKind {
   tracks('Tracks', 'Audio'),
   videos('Videos', 'Video,MusicVideo'),
   photos('Photos', 'Photo'),
-  playlists('Playlists', 'Playlist');
+  playlists('Playlists', 'Playlist'),
+  folders('Folders', null);
 
   const SearchKind(this.label, this.types);
   final String label;
 
-  /// Jellyfin item types for /Items; null for artists, which have a list of their own, and for
-  /// albums, which the app makes from the tracks as the music screen does: the server may have
-  /// no albums for music folders it links to.
+  /// Jellyfin item types for /Items; null for artists, which have a list of their own, for
+  /// albums, which the app makes from the tracks as the music screen does (the server may have
+  /// no albums for music folders it links to), and for folders on the server's disk.
   final String? types;
 }
 
@@ -78,9 +79,6 @@ class SearchFilters {
   /// search does not look at.
   bool get byArtist => text.trim().isNotEmpty && extraFilters == 0 && (kind == SearchKind.all || kind == SearchKind.tracks);
 
-  /// Albums, found among the tracks: all of them on their own tab, by name or artist with All.
-  bool get wantsAlbums =>
-      kind == SearchKind.albums || (kind == SearchKind.all && text.trim().isNotEmpty && extraFilters == 0);
 
   /// Artists are looked for by name only: years, genres and watched marks belong to items.
   bool get wantsArtists =>

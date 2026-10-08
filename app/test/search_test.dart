@@ -136,12 +136,9 @@ void main() {
     expect(const SearchFilters(text: 'x', kind: SearchKind.movies).byArtist, isFalse);
   });
 
-  test('albums come from the tracks: on their own tab always, with All only for words', () {
-    expect(const SearchFilters(kind: SearchKind.albums).wantsAlbums, isTrue);
-    expect(const SearchFilters(kind: SearchKind.albums).isReady, isTrue);
-    expect(const SearchFilters(text: 'bell').wantsAlbums, isTrue);
-    expect(const SearchFilters().wantsAlbums, isFalse);
-    expect(const SearchFilters(kind: SearchKind.tracks, text: 'bell').wantsAlbums, isFalse);
-    expect(SearchKind.all.types, isNot(contains('MusicAlbum')));
+  test('an item knows its file name from its path on the server', () {
+    expect(JellyfinItem({'Id': 'a', 'Path': r'D:\Music\Bell\01-Cluster One.mp3'}).fileName, '01-Cluster One.mp3');
+    expect(JellyfinItem({'Id': 'a', 'Path': '/media/photos/2026-10/PXL_1.jpg'}).fileName, 'PXL_1.jpg');
+    expect(JellyfinItem({'Id': 'a'}).fileName, isNull);
   });
 }

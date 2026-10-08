@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/services/music_index.dart';
+import 'package:homeplay/services/search_index.dart';
 
 JellyfinItem track(String name,
         {String? album, String? albumId, String? albumArtist, List<String> artists = const [], int? n, int? disc, int? year, String? added, int seconds = 200}) =>
@@ -84,12 +85,6 @@ void main() {
     expect(sortAlbums(albums, AlbumSort.artist).first.artist, 'Danheim');
   });
 
-  test('the filter matches every word in the name, artist or album', () {
-    expect(trackMatches(_library.first, 'danheim grip'), isTrue);
-    expect(trackMatches(_library.first, 'mannavegr'), isTrue);
-    expect(trackMatches(_library.first, 'floyd'), isFalse);
-    expect(trackMatches(_library[4], 'pink money'), isTrue);
-  });
 
   test('without a track tag the number at the start of the file name orders the album', () {
     expect(trackNumberFromPath(r'D:\Music\The Division Bell\01-Cluster One.mp3'), 1);
@@ -109,5 +104,30 @@ void main() {
     expect([for (final a in findAlbums(albums, 'bell pink')) a.name], ['The Division Bell']);
     expect(findAlbums(albums, '').length, 3);
     expect([for (final a in findAlbums(albums, '', from: 2018)) a.name], ['Mannavegr']);
+  });
+
+  test('the music search finds artists and albums by name or by a track in them', () {
+    final artists = groupByArtist(_library), albums = groupByAlbum(_library);
+    final vali = findInMusic(artists, albums, _library, 'vali');
+    expect([for (final h in vali.artists) '${h.group.name}:${h.inside.map((t) => t.name).join(',')}'], ['Danheim:Vali']);
+    expect([for (final h in vali.albums) '${h.group.name}:${h.inside.length}'], ['Mannavegr:1']);
+    expect([for (final t in vali.tracks) t.name], ['Vali']);
+    final floyd = findInMusic(artists, albums, _library, 'floyd');
+    expect(floyd.artists.single.inside, isEmpty, reason: 'the artist name itself matches');
+    expect(floyd.tracks.length, 4);
+    final none = findInMusic(artists, albums, _library, '');
+    expect(none.artists.length, artists.length);
+    expect(findInMusic(artists, albums, _library, 'zzz').tracks, isEmpty);
+  });
+
+  test('playlists are found by name or by what is in them', () {
+    final road = JellyfinItem({'Id': 'r', 'Name': 'Road trip', 'Type': 'Playlist'});
+    final calm = JellyfinItem({'Id': 'c', 'Name': 'Calm', 'Type': 'Playlist'});
+    final lists = [(playlist: road, items: [_library[0]]), (playlist: calm, items: [_library[3]])];
+    expect([for (final h in findPlaylists(lists, 'road')) h.group.name], ['Road trip']);
+    final gripir = findPlaylists(lists, 'gripir');
+    expect(gripir.single.group.name, 'Road trip');
+    expect(gripir.single.inside.single.name, 'Gripir');
+    expect(findPlaylists(lists, '').length, 2);
   });
 }
