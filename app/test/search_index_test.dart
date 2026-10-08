@@ -83,4 +83,24 @@ void main() {
     expect([for (final f in folders) '${f.name}:${f.items.length}'], ['Bell:2', 'Mannavegr:1']);
     expect(folders.first.path, r'D:\Music\Bell');
   });
+
+  test('a dashed or dotted piece is looked for whole, not as separate numbers', () {
+    expect(queryWords('2026-10  pxl'), ['2026 10', 'pxl']);
+    final index = SearchIndex([
+      file('a', 'Photo', r'D:\Foto\2026-09\PXL_20260907_101738138.jpg'),
+      file('b', 'Photo', r'D:\Foto\2026-10\PXL_20261006_1.jpg'),
+    ], const []);
+    final hits = index.find('2026-10', SearchKind.all);
+    expect([for (final f in hits.folders) f.group.name], ['2026-10']);
+    expect(hits.items, isEmpty, reason: 'no file name has "2026 10" in it');
+    expect(index.find('pxl_2026', SearchKind.all).items.length, 2);
+  });
+
+  test('an artist is found by name or by a track of theirs', () {
+    final byTrack = _index().find('cluster', SearchKind.all).artists.single;
+    expect(byTrack.group.name, 'Pink Floyd');
+    expect(byTrack.inside.single.name, 'Cluster One');
+    expect(_index().find('floyd', SearchKind.artists).artists.single.inside, isEmpty);
+    expect(_index().find('cluster', SearchKind.tracks).artists, isEmpty);
+  });
 }

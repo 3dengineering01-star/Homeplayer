@@ -62,7 +62,9 @@ void main() {
       expect(find.textContaining('Albums · 1'), findsOneWidget);
       expect(find.textContaining('Folders · 1'), findsOneWidget);
       expect(find.textContaining('Playlists · 1'), findsOneWidget);
-      expect(find.textContaining('Has: Cluster One', findRichText: true), findsNWidgets(3));
+      expect(find.textContaining('Artists · 1'), findsOneWidget);
+      // The artist, the album, the folder and the playlist, each by the track in it.
+      expect(find.textContaining('Has: Cluster One', findRichText: true), findsNWidgets(4));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });

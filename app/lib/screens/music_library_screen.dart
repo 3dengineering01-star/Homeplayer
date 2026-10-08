@@ -39,7 +39,10 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   late final TabController _tabs = TabController(length: 4, vsync: this)
     ..addListener(() {
       // Playlists may have changed from another tab's long press.
-      if (_tabs.index == 3 && !_tabs.indexIsChanging) _playlists = client.playlists();
+      if (_tabs.index == 3 && !_tabs.indexIsChanging) {
+        _playlists = client.playlists();
+        if (_contents != null) _contents = _loadContents();
+      }
       setState(() {});
     });
   late Future<_Music> _music = _load();
@@ -53,6 +56,9 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   /// What is in each playlist, loaded when a search starts, so playlists holding a match show.
   Future<List<PlaylistContents>>? _contents;
 
+  /// The same once it is there, for the count on the Playlists tab.
+  List<PlaylistContents>? _contentsData;
+
   Future<_Music> _load() async {
     final tracks = await client.musicTracks(widget.library.id);
     final m = (tracks: tracks, artists: groupByArtist(tracks), albums: groupByAlbum(tracks));
@@ -62,10 +68,15 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
 
   Future<List<PlaylistContents>> _loadContents() async {
     final lists = await _playlists;
-    return Future.wait([
+    final contents = await Future.wait([
       for (final p in lists)
         client.playlistItems(p.id).then((items) => (playlist: p, items: items)).onError((e, _) => (playlist: p, items: <JellyfinItem>[])),
     ]);
+    if (mounted) {
+      setState(() => _contentsData = contents);
+      _goWhereFound();
+    }
+    return contents;
   }
 
   /// What the typed words find, over the library sorted as chosen.
@@ -79,16 +90,16 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   void _typed() {
     _contents ??= _loadContents();
     setState(() {});
-    // Nothing on this tab but something on another: go there, so a track name typed on the
-    // Artists tab shows the track.
-    final m = _data;
-    if (m == null || _text.isEmpty) return;
-    final hits = _find(m);
-    final counts = [hits.artists.length, hits.albums.length, hits.tracks.length];
-    if (_tabs.index < 3 && counts[_tabs.index] == 0) {
-      final first = counts.indexWhere((c) => c > 0);
-      if (first >= 0) _tabs.animateTo(first);
-    }
+    _goWhereFound();
+  }
+
+  /// Nothing on this tab but something on another: go there, so a track name typed on the
+  /// Artists or Playlists tab shows the track.
+  void _goWhereFound() {
+    final counts = _tabCounts;
+    if (counts == null || _tabs.index >= counts.length || counts[_tabs.index] > 0) return;
+    final first = counts.indexWhere((c) => c > 0);
+    if (first >= 0) _tabs.animateTo(first);
   }
 
   @override
@@ -101,6 +112,12 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
     _playlists = client.playlists();
     if (_contents != null) _contents = _loadContents();
   });
+
+  /// Long press on a track or album may add to or make a playlist: the search should know.
+  Future<void> _actions(List<JellyfinItem> items, JellyfinItem item) async {
+    await itemActions(items, item);
+    if (mounted && _contents != null) _refreshPlaylists();
+  }
 
   @override
   void dispose() {
@@ -197,7 +214,13 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
     final m = _data;
     if (m == null || _text.isEmpty) return null;
     final hits = _find(m);
-    return [hits.artists.length, hits.albums.length, hits.tracks.length];
+    final lists = _contentsData;
+    return [
+      hits.artists.length,
+      hits.albums.length,
+      hits.tracks.length,
+      if (lists != null) findPlaylists(lists, _text).length,
+    ];
   }
 
   Widget _withMusic(Widget Function(_Music) build) => FutureBuilder<_Music>(
@@ -245,7 +268,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
               byAlbum: true,
             ),
           ),
-          onLongPress: () => addToPlaylist(context, client, items: a.tracks),
+          onLongPress: () => addToPlaylist(context, client, items: a.tracks).then((_) => _refreshPlaylists()),
         );
       },
     );
@@ -284,7 +307,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
                 cover: albums[i].cover,
               ),
             ),
-            onLongPress: () => addToPlaylist(context, client, items: albums[i].tracks),
+            onLongPress: () => addToPlaylist(context, client, items: albums[i].tracks).then((_) => _refreshPlaylists()),
           ),
         );
       },
@@ -329,7 +352,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
           item: t,
           query: q,
           onTap: () => openItem(tracks, t),
-          onLongPress: () => itemActions(tracks, t),
+          onLongPress: () => _actions(tracks, t),
         );
       },
     );

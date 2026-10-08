@@ -10,8 +10,12 @@ import 'search_filters.dart';
 /// One character for one, so places found in it are places in the original text.
 String plainText(String s) => s.toLowerCase().replaceAll(RegExp(r'[._\-]'), ' ');
 
-/// The words of a query.
-List<String> queryWords(String query) => plainText(query).split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+/// The words of a query, split at spaces only: "2026-10" stays one piece ("2026 10") that has to
+/// be found as it is, so it does not match a "10" somewhere else in a name.
+List<String> queryWords(String query) => [
+  for (final w in query.split(RegExp(r'\s+')))
+    if (plainText(w).trim() case final piece when piece.isNotEmpty) piece,
+];
 
 bool _hasAll(String text, List<String> words) {
   final t = plainText(text);
@@ -97,27 +101,36 @@ class Hit<T> {
 typedef PlaylistContents = ({JellyfinItem playlist, List<JellyfinItem> items});
 
 class LocalHits {
-  const LocalHits({this.items = const [], this.albums = const [], this.folders = const [], this.playlists = const []});
+  const LocalHits({
+    this.items = const [],
+    this.artists = const [],
+    this.albums = const [],
+    this.folders = const [],
+    this.playlists = const [],
+  });
 
   final List<JellyfinItem> items;
+  final List<Hit<ArtistGroup>> artists;
   final List<Hit<AlbumGroup>> albums;
   final List<Hit<FolderGroup>> folders;
   final List<Hit<JellyfinItem>> playlists;
 
-  bool get isEmpty => items.isEmpty && albums.isEmpty && folders.isEmpty && playlists.isEmpty;
+  bool get isEmpty => items.isEmpty && artists.isEmpty && albums.isEmpty && folders.isEmpty && playlists.isEmpty;
 }
 
 class SearchIndex {
   SearchIndex(this.files, this.playlists)
-      : albums = groupByAlbum(files.where((f) => f.type == 'Audio').toList()).where((a) => !a.loose).toList(),
+      : artists = groupByArtist(files.where((f) => f.type == 'Audio').toList()),
+        albums = groupByAlbum(files.where((f) => f.type == 'Audio').toList()).where((a) => !a.loose).toList(),
         folders = groupByFolder(files);
 
   final List<JellyfinItem> files;
   final List<PlaylistContents> playlists;
+  final List<ArtistGroup> artists;
   final List<AlbumGroup> albums;
   final List<FolderGroup> folders;
 
-  /// What [query] finds of [kind]: the files themselves, and the albums, folders and
+  /// What [query] finds of [kind]: the files themselves, and the artists, albums, folders and
   /// playlists named so or holding a file that is. With no words, a kind of its own (albums,
   /// folders) lists everything.
   LocalHits find(String query, SearchKind kind) {
@@ -141,6 +154,7 @@ class SearchIndex {
 
     return LocalHits(
       items: types == null ? const [] : [for (final f in files) if (matched.contains(f.id) && types.contains(f.type)) f],
+      artists: all || kind == SearchKind.artists ? [for (final a in artists) ?hit(a, a.name, a.tracks)] : const [],
       albums: all || kind == SearchKind.albums
           ? [for (final a in albums) ?hit(a, '${a.name} ${a.artist}', a.tracks)]
           : const [],

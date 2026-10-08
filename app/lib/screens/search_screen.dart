@@ -166,6 +166,9 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final loading = _asking || (_index == null && _indexError == null && _filters.isReady);
+    // The row of kinds grows with the phone's text size; with big letters the chips' labels
+    // were cut at the bottom.
+    final chips = 32 + MediaQuery.textScalerOf(context).scale(20);
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
@@ -202,10 +205,10 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
+          preferredSize: Size.fromHeight(chips + 4),
           child: Column(children: [
             SizedBox(
-              height: 52,
+              height: chips,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -326,10 +329,40 @@ class _SearchScreenState extends State<SearchScreen> with JellyfinActions {
         : HighlightedText('Has: ${found.take(3).map((i) => i.name).join(', ')}${found.length > 3 ? ' and ${found.length - 3} more' : ''}',
             query: query, style: theme.textTheme.bodySmall);
 
-    for (final title in const ['Movies', 'Shows', 'Episodes', 'Artists']) {
+    for (final title in const ['Movies', 'Shows', 'Episodes']) {
       final list = bySection[title] ?? const [];
       section(title, list, (JellyfinItem i) => itemRow(list, i));
     }
+    // Artists found on the phone by name or by a track of theirs, then any others the server knows.
+    final localArtists = {for (final h in local.artists) h.group.name.toLowerCase()};
+    section('Artists', <Object>[
+      ...local.artists,
+      for (final a in bySection['Artists'] ?? const <JellyfinItem>[])
+        if (!localArtists.contains(a.name.toLowerCase())) a,
+    ], (Object o) {
+      if (o is JellyfinItem) return itemRow(const [], o);
+      final h = o as Hit<ArtistGroup>;
+      return ListTile(
+        leading: ArtThumb(url: client.imageUrl(h.group.cover, height: 168), headers: client.headers, icon: Icons.person),
+        title: HighlightedText(h.group.name, query: query),
+        subtitle: inside(h.inside) ??
+            Text('${h.group.trackCount} ${h.group.trackCount == 1 ? 'track' : 'tracks'}', style: theme.textTheme.bodySmall),
+        onTap: () {
+          unawaited(_remember());
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => TrackListScreen(
+              client: client,
+              title: h.group.name,
+              subtitle: 'Artist',
+              load: () async => h.group.tracks,
+              cover: h.group.cover,
+              byAlbum: true,
+            ),
+          ));
+        },
+        onLongPress: () => addToPlaylist(context, client, items: h.group.tracks),
+      );
+    });
     section('Albums', local.albums, (Hit<AlbumGroup> h) {
       final a = h.group;
       return ListTile(
