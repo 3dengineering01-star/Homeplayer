@@ -61,6 +61,9 @@ class JellyfinItem {
         for (final a in (_j['Artists'] as List?) ?? const []) ?_text(a),
       ];
 
+  /// The file's format as the server names it ("mp3", "flac").
+  String? get container => (_j['Container'] as String?)?.split(',').first.trim();
+
   /// Where the file lies on the server, when asked for.
   String? get path => _j['Path'] as String?;
 
@@ -567,6 +570,9 @@ class JellyfinClient {
 
   /// Direct play: the file goes to mpv untouched. Transcoding comes later,
   /// for slow mobile connections. [versionId] picks one of several files; null is the default.
+  /// The original file as it lies on the server, for saving it to the phone.
+  Uri originalFileUrl(JellyfinItem item) => Uri.parse('$_base/Items/${item.id}/Download');
+
   Uri streamUrl(JellyfinItem item, {String? versionId}) =>
       Uri.parse('$_base/${item.isVideo ? 'Videos' : 'Audio'}/${item.id}/stream').replace(queryParameters: {
         'static': 'true',
