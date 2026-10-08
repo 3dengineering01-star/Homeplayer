@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 case "${1:-debug}" in
   debug)   flutter build apk --debug ;;
   # Один файл на все телефоны: человеку не нужно знать, какой у него процессор. x86_64 (эмуляторы,
-  # Chromebook) не входит, чтобы файл был меньше. Без --split-per-abi код версии равен номеру сборки
+  # Chromebook) не входит, чтобы файл был меньше: его библиотеки отсекает и abiFilters в build.gradle.kts. Без --split-per-abi код версии равен номеру сборки
   # из pubspec.yaml: так новый файл всегда ставится поверх старого.
   release) flutter build apk --release --target-platform android-arm,android-arm64 ;;
   apk)
