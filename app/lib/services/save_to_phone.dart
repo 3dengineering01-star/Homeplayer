@@ -30,12 +30,15 @@ class SaveToPhone {
       // Needed only before Android 10; later ones let an app add to Music without asking.
       await FileDownloader().permissions.request(PermissionType.androidSharedStorage);
     }
+    // One notification for all of them, counting files: one per track ran in parallel and
+    // some stayed stuck at a percentage after their file was down.
     FileDownloader().configureNotificationForGroup(
       group,
-      running: const TaskNotification('{displayName}', 'Saving to Music · {progress}'),
-      complete: const TaskNotification('{displayName}', 'Saved to Music'),
-      error: const TaskNotification('{displayName}', 'Not saved'),
+      running: const TaskNotification('Saving to Music', '{numFinished} of {numTotal}'),
+      complete: const TaskNotification('Saved to Music', '{numTotal} in Music/Homeplay'),
+      error: const TaskNotification('Not all saved', '{numFailed} of {numTotal} failed'),
       progressBar: true,
+      groupNotificationId: group,
     );
     var queued = 0;
     for (final t in audio) {
