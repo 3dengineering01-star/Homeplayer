@@ -1,0 +1,13 @@
+# The app opens on the server opened last, with its libraries and the search button.
+appId: dev.homeplay.homeplay
+name: Главная сервера
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Libraries"
+    timeout: 20000
+- assertVisible: "GOODMAN"
+- assertVisible: ".*Музыка.*"
+- assertVisible:
+    text: "Search"

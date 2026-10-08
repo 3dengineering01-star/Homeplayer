@@ -1,0 +1,38 @@
+# A playlist made from a long press shows in the search at once, holds the track, and is
+# deleted again: nothing stays on the server.
+appId: dev.homeplay.homeplay
+name: Плейлист
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Libraries"
+    timeout: 20000
+- tapOn: ".*Музыка.*"
+- extendedWaitUntil:
+    visible: "Tracks.*"
+    timeout: 20000
+- tapOn: "Tracks.*"
+- scrollUntilVisible:
+    element: "Cluster One.*"
+    direction: DOWN
+- longPressOn: "Cluster One.*"
+- tapOn: "Add to playlist"
+- tapOn: "New playlist"
+- inputText: "MaestroTest"
+- tapOn: "Save"
+- extendedWaitUntil:
+    visible: ".*MaestroTest.*"
+    timeout: 10000
+- tapOn: "Search"
+- inputText: "cluster"
+- tapOn: "Playlists.*"
+- assertVisible: "MaestroTest.*"
+- assertVisible: ".*Has: Cluster One.*"
+- tapOn: "MaestroTest.*"
+- assertVisible: "Cluster One.*"
+- tapOn: "More"
+- tapOn: "Delete playlist"
+- tapOn: "Delete"
+- assertNotVisible: "MaestroTest.*"
+- back

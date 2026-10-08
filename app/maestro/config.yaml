@@ -1,0 +1,10 @@
+# Набор сценариев Maestro для Homeplay: `maestro test app/maestro` (из корня репозитория).
+flows:
+  - "*.yaml"
+executionOrder:
+  continueOnFailure: true
+  flowsOrder:
+    - Главная сервера
+    - Общий поиск
+    - Поиск в «Музыке»
+    - Плейлист

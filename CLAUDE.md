@@ -40,6 +40,8 @@ dotnet build server/Jellyfin.Plugin.HomeplayBackup -c Release
 
 Локально (Windows, тулчейн в `D:\APP\tools`) то же через `./app/build.sh test`, `./app/build.sh` и т. д.
 
+Сценарии Maestro (`app/maestro/`, только локально, телефон по USB): `maestro test app/maestro`.
+
 В облаке нет Android SDK и телефона: APK там не собрать и приложение не запустить. Изменения проверяются
 анализатором и тестами, на устройстве — локально.
 
