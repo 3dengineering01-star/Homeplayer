@@ -50,7 +50,10 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('GOODMAN'), findsOneWidget);
       expect(find.text('Jellyfin · anna'), findsOneWidget);
+      // With big letters the card is below the fold.
+      await tester.scrollUntilVisible(find.text('Add a server'), 200);
       expect(find.text('Add a server'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('GOODMAN'), -200);
       await tester.tap(find.byTooltip('More').first);
       await tester.pumpAndSettle();
       expect(find.text('Photo backup'), findsOneWidget);

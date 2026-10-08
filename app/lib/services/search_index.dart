@@ -26,6 +26,9 @@ String itemText(JellyfinItem i) => '${titleText(i)} ${i.fileName ?? ''}';
 
 bool itemMatches(JellyfinItem i, List<String> words) => words.isNotEmpty && _hasAll(itemText(i), words);
 
+/// Whether [text] has every one of [words].
+bool textMatches(String text, List<String> words) => words.isNotEmpty && _hasAll(text, words);
+
 /// Found by [query] only thanks to the file name: then the file name is worth showing.
 bool foundByFileName(JellyfinItem i, String query) {
   final words = queryWords(query);
@@ -147,4 +150,44 @@ class SearchIndex {
           : const [],
     );
   }
+}
+
+/// What a query finds on the music screen, in the order given: artists and albums named so or
+/// holding a matching track, and the tracks themselves (by title, artist, album or file name).
+typedef MusicHits = ({List<Hit<ArtistGroup>> artists, List<Hit<AlbumGroup>> albums, List<JellyfinItem> tracks});
+
+MusicHits findInMusic(List<ArtistGroup> artists, List<AlbumGroup> albums, List<JellyfinItem> tracks, String query) {
+  final words = queryWords(query);
+  if (words.isEmpty) {
+    return (
+      artists: [for (final a in artists) Hit(a, const [])],
+      albums: [for (final a in albums) Hit(a, const [])],
+      tracks: tracks,
+    );
+  }
+  final found = [for (final t in tracks) if (itemMatches(t, words)) t];
+  final ids = {for (final t in found) t.id};
+  Hit<T>? hit<T>(T group, String name, List<JellyfinItem> inside) {
+    if (_hasAll(name, words)) return Hit(group, const []);
+    final has = [for (final t in inside) if (ids.contains(t.id)) t];
+    return has.isEmpty ? null : Hit(group, has);
+  }
+
+  return (
+    artists: [for (final a in artists) ?hit(a, a.name, a.tracks)],
+    albums: [for (final a in albums) ?hit(a, '${a.name} ${a.artist}', a.tracks)],
+    tracks: found,
+  );
+}
+
+/// Playlists named so or holding a matching item; all of them for no words.
+List<Hit<JellyfinItem>> findPlaylists(List<PlaylistContents> playlists, String query) {
+  final words = queryWords(query);
+  return [
+    for (final p in playlists)
+      if (words.isEmpty || _hasAll(p.playlist.name, words))
+        Hit(p.playlist, const [])
+      else if ([for (final i in p.items) if (itemMatches(i, words)) i] case final has when has.isNotEmpty)
+        Hit(p.playlist, has),
+  ];
 }

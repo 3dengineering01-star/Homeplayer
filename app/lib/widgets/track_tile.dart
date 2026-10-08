@@ -2,17 +2,29 @@ import 'package:flutter/material.dart';
 
 import '../api/jellyfin.dart';
 import '../services/playback.dart';
+import '../services/search_index.dart';
+import 'highlighted_text.dart';
 import 'media_cards.dart';
 import 'vinyl_art.dart';
 
 /// A track: its cover (or the theme's note), name and artist, length; the one playing is marked.
 class TrackTile extends StatelessWidget {
-  const TrackTile({super.key, required this.client, required this.item, required this.onTap, required this.onLongPress});
+  const TrackTile({
+    super.key,
+    required this.client,
+    required this.item,
+    required this.onTap,
+    required this.onLongPress,
+    this.query = '',
+  });
 
   final JellyfinClient client;
   final JellyfinItem item;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+
+  /// Words being searched for, marked in the name and the line under it.
+  final String query;
 
   @override
   Widget build(BuildContext context) {
@@ -35,9 +47,12 @@ class TrackTile extends StatelessWidget {
               child: url == null ? const NoteTile() : NetImage(url: url, headers: client.headers, icon: Icons.music_note),
             ),
           ),
-          title: Text(item.name,
-              maxLines: 1, overflow: TextOverflow.ellipsis, style: now ? const TextStyle(fontWeight: FontWeight.w700) : null),
-          subtitle: item.subtitle == null ? null : Text(item.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis),
+          title: HighlightedText(item.name,
+              query: query, style: now ? const TextStyle(fontWeight: FontWeight.w700) : null),
+          subtitle: switch (foundByFileName(item, query) ? 'File: ${item.fileName}' : item.subtitle) {
+            null => null,
+            final sub => HighlightedText(sub, query: query),
+          },
           trailing: now
               ? StreamBuilder<bool>(
                   stream: pb!.player.stream.playing,

@@ -90,4 +90,31 @@ void main() {
       expect(find.text('Other tracks'), findsOneWidget);
     });
   }
+
+  testWidgets('a track name typed on the Artists tab finds its artist, album and the track', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: MusicLibraryScreen(
+        client: _server(),
+        library: JellyfinItem({'Id': 'lib', 'Name': 'Музыка', 'Type': 'CollectionFolder', 'CollectionType': 'music'}),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Search'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'gripir');
+    await tester.pumpAndSettle();
+    expect(find.text('Artists · 1'), findsOneWidget);
+    expect(find.text('Albums · 1'), findsOneWidget);
+    expect(find.text('Tracks · 1'), findsOneWidget);
+    expect(find.textContaining('Has: Gripir', findRichText: true), findsOneWidget);
+    // Nothing among the artists: the screen moves to the tab that has it.
+    await tester.enterText(find.byType(TextField), 'money with');
+    await tester.pumpAndSettle();
+    expect(find.text('Tracks · 1'), findsOneWidget);
+    expect(find.text('Artists · 1'), findsOneWidget, reason: 'Pink Floyd holds it');
+    expect(tester.takeException(), isNull);
+  });
 }

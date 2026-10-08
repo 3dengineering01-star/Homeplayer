@@ -13,7 +13,8 @@ class HighlightedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = style ?? DefaultTextStyle.of(context).style;
+    // Over the style around it (a list tile's title), so a bare weight or size is enough.
+    final base = DefaultTextStyle.of(context).style.merge(style);
     final mark = base.copyWith(fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary);
     final spans = <TextSpan>[];
     var at = 0;

@@ -177,12 +177,6 @@ List<ArtistGroup> sortArtists(List<ArtistGroup> artists, ArtistSort by) => [...a
     },
   );
 
-/// Whether a track has all of [query]'s words in its name, artists or album.
-bool trackMatches(JellyfinItem t, String query) {
-  final words = query.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
-  final hay = [t.name, ...t.artists, t.albumArtist ?? '', t.album ?? ''].join(' ').toLowerCase();
-  return words.every(hay.contains);
-}
 
 int _then(int first, int Function() next) => first != 0 ? first : next();
 
