@@ -116,6 +116,7 @@ class _TrackListScreenState extends State<TrackListScreen> with JellyfinActions 
         actions: [
           if (widget.playlist != null)
             PopupMenuButton<VoidCallback>(
+              tooltip: 'More',
               onSelected: (a) => a(),
               itemBuilder: (_) => [
                 PopupMenuItem(

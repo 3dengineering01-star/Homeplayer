@@ -1,0 +1,31 @@
+# The search answers with every letter: a track, its artist, album, folder; a dashed piece
+# whole; a file name.
+appId: dev.homeplay.homeplay
+name: Общий поиск
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Libraries"
+    timeout: 20000
+- tapOn: "Search"
+- inputText: "clus"
+- extendedWaitUntil:
+    visible: "Tracks · 1"
+    timeout: 15000
+- assertVisible: "Artists · 1"
+- assertVisible: "Albums · 1"
+- assertVisible: "Folders · 1"
+- assertVisible: ".*Has: Cluster One.*"
+- eraseText: 10
+- inputText: "01-cluster"
+- assertVisible: "Tracks · 1"
+- eraseText: 12
+- inputText: "2026-10"
+- assertVisible: "Folders · 1"
+- assertNotVisible: "2026-09"
+- eraseText: 10
+- inputText: "vessels.mp4"
+- assertVisible: "Movies · 1"
+- back
+- back

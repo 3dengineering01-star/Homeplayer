@@ -1,0 +1,27 @@
+# In the music library a track name typed on the Artists tab finds the artist, album and
+# track, with counts on the tabs.
+appId: dev.homeplay.homeplay
+name: Поиск в «Музыке»
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Libraries"
+    timeout: 20000
+- tapOn: ".*Музыка.*"
+- extendedWaitUntil:
+    visible: "Artists"
+    timeout: 20000
+- tapOn: "Search"
+- inputText: "gripir"
+- extendedWaitUntil:
+    visible: "Artists · 1"
+    timeout: 10000
+- assertVisible: "Albums · 1"
+- assertVisible: "Tracks · \\d+"
+- assertVisible: ".*Has: Gripir.*"
+- tapOn: "Tracks · \\d+"
+- assertVisible: "Gripir"
+- tapOn: "Close search"
+- assertVisible: "Tracks"
+- back
