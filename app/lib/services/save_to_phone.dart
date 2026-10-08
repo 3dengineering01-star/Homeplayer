@@ -74,16 +74,18 @@ class SaveToPhone {
     return (queued: queued, already: already);
   }
 
-  /// Whether Music already has [folder]/[name]. From Android 10 the phone's media library is
-  /// asked (it knows the files this app put there); before, the library is not involved and
-  /// the place is only worked out, so the file itself is looked for.
+  /// Whether Music already has [folder]/[name]. The phone's media library is asked (from
+  /// Android 10 it knows the files this app put there), then the file itself is looked for:
+  /// the library may remember one deleted behind its back, and before Android 10 it only works
+  /// out the place. Android 10 alone does not let an app see the file, so there the library's
+  /// word is taken.
   static Future<bool> _inMusic(String folder, String name) async {
     if (!Platform.isAndroid) return false;
     try {
       final found = await FileDownloader().pathInSharedStorage(name, SharedStorage.audio, directory: folder);
       if (!isSavedAt(found, folder, name)) return false;
       final sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
-      return sdk >= 29 || await File(found!).exists();
+      return sdk == 29 || await File(found!).exists();
     } catch (e) {
       debugPrint('homeplay save to phone: could not look for $name in Music: $e');
       return false;
