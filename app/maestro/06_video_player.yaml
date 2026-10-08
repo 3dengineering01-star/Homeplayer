@@ -1,0 +1,53 @@
+# The video player: a movie's page, Play, the controls (pause, 10 s forward, the audio and
+# subtitles sheet), Back ends the video. The movie is a test file on the server.
+appId: dev.homeplay.homeplay
+name: Видеоплеер
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: "Libraries"
+    timeout: 20000
+- tapOn: ".*Фильмы.*"
+- extendedWaitUntil:
+    visible: ".*Vessels.*"
+    timeout: 20000
+- tapOn: ".*Vessels.*"
+- extendedWaitUntil:
+    visible: "(Play|Resume).*"
+    timeout: 15000
+- tapOn: "(Play|Resume).*"
+# A started movie asks where to begin.
+- runFlow:
+    when:
+      visible: "Start over"
+    commands:
+      - tapOn: "Start over"
+# The controls hide a few seconds after the picture starts: a tap brings them back.
+- extendedWaitUntil:
+    visible: "Back"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible: "Pause"
+    commands:
+      - tapOn:
+          point: "50%,50%"
+- tapOn: "Pause"
+- assertVisible: "Play"
+- tapOn: "10 seconds forward"
+- tapOn: "Audio, subtitles and quality"
+- assertVisible: ".*Audio.*"
+- back
+- runFlow:
+    when:
+      notVisible: "Back"
+    commands:
+      - tapOn:
+          point: "50%,50%"
+- tapOn: "Back"
+- extendedWaitUntil:
+    visible: ".*Vessels.*"
+    timeout: 10000
+- assertNotVisible: "Stop"
+- back
