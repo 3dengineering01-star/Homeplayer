@@ -37,7 +37,20 @@ function Get-AuthHeader {
     @{ Authorization = $value }
 }
 
+# While Jellyfin starts it answers 503 for a while: such calls are tried again.
 function Invoke-Jellyfin([string] $Method, [string] $Path, $Body = $null) {
+    for ($try = 1; ; $try++) {
+        try {
+            return Invoke-JellyfinOnce $Method $Path $Body
+        } catch {
+            $status = $_.Exception.Response.StatusCode.value__
+            if ($status -ne 503 -or $try -ge 40) { throw }
+            Start-Sleep -Seconds 3
+        }
+    }
+}
+
+function Invoke-JellyfinOnce([string] $Method, [string] $Path, $Body) {
     $params = @{
         Method      = $Method
         Uri         = $Server + $Path
@@ -86,9 +99,17 @@ function Open-Firewall([bool] $HomeNetwork) {
     }
 }
 
-function Add-Library([string] $Name, [string] $Kind, [string] $Folder) {
+# Jellyfin's service runs as Network Service, which may not read the person's own folders
+# (Videos, Music under C:\Users\...): it is let in, to read, and for photos also to write.
+function Grant-Server([string] $Folder, [string] $Rights) {
+    & icacls.exe $Folder /grant "*S-1-5-20:(OI)(CI)$Rights" /C /Q | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Log "icacls exit code $LASTEXITCODE for $Folder" }
+}
+
+function Add-Library([string] $Name, [string] $Kind, [string] $Folder, [string] $Rights = 'RX') {
     if (-not $Folder) { return }
     New-Item -ItemType Directory -Force -Path $Folder | Out-Null
+    Grant-Server $Folder $Rights
     $query = 'name={0}&collectionType={1}&paths={2}&refreshLibrary=false' -f `
         [uri]::EscapeDataString($Name), $Kind, [uri]::EscapeDataString($Folder)
     Invoke-Jellyfin POST "/Library/VirtualFolders?$query" @{ LibraryOptions = @{ Enabled = $true } } | Out-Null
@@ -126,7 +147,7 @@ try {
     Invoke-Jellyfin GET '/Startup/User' | Out-Null
     Invoke-Jellyfin POST '/Startup/User' @{ Name = $cfg.Name; Password = $cfg.Password } | Out-Null
     try {
-        Invoke-Jellyfin POST '/Startup/RemoteAccess' @{ EnableRemoteAccess = $true; EnableAutomaticPortMapping = $false } | Out-Null
+        Invoke-Jellyfin POST '/Startup/RemoteAccess' @{ EnableRemoteAccess = $true } | Out-Null
     } catch {
         Write-Log 'No remote access step in this Jellyfin: skipped'
     }
@@ -139,7 +160,7 @@ try {
     Add-Library 'Movies' 'movies' $cfg.Movies
     Add-Library 'Shows' 'tvshows' $cfg.Shows
     Add-Library 'Music' 'music' $cfg.Music
-    Add-Library 'Photos' 'homevideos' $cfg.Photos
+    Add-Library 'Photos' 'homevideos' $cfg.Photos 'M'
 
     if ($cfg.Photos) {
         $plugin = Invoke-Jellyfin GET "/Plugins/$PluginId/Configuration"
