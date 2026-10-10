@@ -20,6 +20,7 @@ Flutter + media_kit (libmpv), direct play без транскодировани�
 - `landing/index.html` — лендинг с листом ожидания (Formspree).
 - `docs/validation.md` — план проверки спроса.
 - `tools/phone.sh` — управление телефоном через adb (только локально).
+- `tools/make_icons.py` — иконки приложения (Android, Google Play, установщик) из `docs/brand/ownmedia-icon-source.jpg`.
 
 ## Команды
 

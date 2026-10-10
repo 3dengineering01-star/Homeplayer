@@ -41,7 +41,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'dev.homeplay.playback',
         androidNotificationChannelName: 'Playback',
-        androidNotificationIcon: 'drawable/ic_launcher_foreground',
+        androidNotificationIcon: 'drawable/ic_notification',
         // Paused: the notification stays but can be swiped away. Stopped: it goes. With the
         // defaults it stayed after Stop, detached from the service and impossible to dismiss.
         androidNotificationOngoing: false,
