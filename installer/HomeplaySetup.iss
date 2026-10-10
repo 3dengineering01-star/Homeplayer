@@ -185,24 +185,25 @@ end;
 function JsonString(S: String): String;
 var
   I: Integer;
-  C: Char;
+  C: Integer;
 begin
+  // Character codes, not #-literals: a line starting with # is a preprocessor directive.
   Result := '"';
   for I := 1 to Length(S) do begin
-    C := S[I];
+    C := Ord(S[I]);
     case C of
-      '"': Result := Result + '\"';
-      '\': Result := Result + '\\';
-      #8: Result := Result + '\b';
-      #9: Result := Result + '\t';
-      #10: Result := Result + '\n';
-      #12: Result := Result + '\f';
-      #13: Result := Result + '\r';
+      34: Result := Result + '\"';
+      92: Result := Result + '\\';
+      8: Result := Result + '\b';
+      9: Result := Result + '\t';
+      10: Result := Result + '\n';
+      12: Result := Result + '\f';
+      13: Result := Result + '\r';
     else
-      if Ord(C) < 32 then
-        Result := Result + Format('\u%.4x', [Ord(C)])
+      if C < 32 then
+        Result := Result + Format('\u%.4x', [C])
       else
-        Result := Result + C;
+        Result := Result + S[I];
     end;
   end;
   Result := Result + '"';
