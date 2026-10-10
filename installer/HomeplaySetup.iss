@@ -276,12 +276,18 @@ begin
   end;
 end;
 
+// A silent install that could not set the server up says so in its exit code.
+function GetCustomSetupExitCode: Integer;
+begin
+  if SetupFailed <> '' then Result := 2 else Result := 0;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then begin
     SetUpServer;
     if SetupFailed <> '' then
-      MsgBox(SetupFailed + #13#10#13#10 + 'What happened is written in ' +
-        ExpandConstant('{commonappdata}\Homeplay\setup.log') + '.', mbError, MB_OK);
+      SuppressibleMsgBox(SetupFailed + #13#10#13#10 + 'What happened is written in ' +
+        ExpandConstant('{commonappdata}\Homeplay\setup.log') + '.', mbError, MB_OK, IDOK);
   end;
 end;

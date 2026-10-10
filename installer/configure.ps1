@@ -205,7 +205,10 @@ try {
 
     $culture = Get-Culture
     $country = try { (New-Object Globalization.RegionInfo $culture.Name).TwoLetterISORegionName } catch { 'US' }
+    # The name phones show when they find the server; Windows' own computer name
+    # ("DESKTOP-4F2K9QX") would say nothing to the person.
     Invoke-Jellyfin POST '/Startup/Configuration' @{
+        ServerName                = "$($cfg.Name)'s Homeplay"
         UICulture                 = 'en-US'
         MetadataCountryCode       = $country
         PreferredMetadataLanguage = $culture.TwoLetterISOLanguageName
@@ -230,8 +233,11 @@ try {
     Add-Library 'Photos' 'homevideos' $cfg.Photos 'M'
 
     if ($cfg.Photos) {
+        # Jellyfin answers with the base settings type, so the plugin's own fields may be missing
+        # from what comes back: the field is added rather than set.
         $plugin = Invoke-Jellyfin GET "/Plugins/$PluginId/Configuration"
-        $plugin.BackupFolder = $cfg.Photos
+        if ($plugin -isnot [Management.Automation.PSCustomObject]) { $plugin = [pscustomobject]@{} }
+        $plugin | Add-Member -NotePropertyName BackupFolder -NotePropertyValue $cfg.Photos -Force
         Invoke-Jellyfin POST "/Plugins/$PluginId/Configuration" $plugin | Out-Null
         Write-Log "Photos from phones go to $($cfg.Photos)"
     }
