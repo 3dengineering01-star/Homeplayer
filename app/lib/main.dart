@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 
 import 'screens/accounts_screen.dart';
+import 'screens/join_screen.dart';
 import 'screens/player_screen.dart';
+import 'services/app_links.dart';
 import 'services/appearance.dart';
 import 'services/backup.dart';
 import 'services/downloads.dart';
+import 'services/invite_link.dart';
 import 'services/pip.dart';
 import 'services/playback.dart';
 import 'widgets/backdrop.dart';
@@ -32,6 +35,20 @@ Future<void> main() async {
     ?..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(text), duration: const Duration(seconds: 6))));
   runApp(const HomeplayApp());
+  // A friend's invite opens the app: its page comes up over whatever is on screen.
+  AppLinks.listen(_openLink);
+}
+
+void _openLink(String link) {
+  final invite = parseInvite(link);
+  if (invite == null) return;
+  final nav = navigatorKey.currentState;
+  if (nav == null) {
+    // Started by the link: the first screen is not there yet.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openLink(link));
+    return;
+  }
+  nav.push(MaterialPageRoute(builder: (_) => JoinScreen(invite: invite)));
 }
 
 class HomeplayApp extends StatelessWidget {

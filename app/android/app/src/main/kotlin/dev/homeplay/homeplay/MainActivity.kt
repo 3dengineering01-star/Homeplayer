@@ -3,6 +3,7 @@ package dev.homeplay.homeplay
 import android.app.NotificationManager
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.AudioManager
@@ -22,6 +23,10 @@ import io.flutter.plugin.common.MethodChannel
 // audio_service keeps the Flutter engine alive for background playback.
 class MainActivity : AudioServiceActivity() {
     private var pip: MethodChannel? = null
+    private var links: MethodChannel? = null
+
+    // The link the app was opened with, handed to Flutter once.
+    private var startLink: String? = null
 
     // Picture-in-picture when the user leaves the app: on while a video plays.
     private var autoPip = false
@@ -37,6 +42,16 @@ class MainActivity : AudioServiceActivity() {
             }
         }
         applyWallpaper(showsWallpaper())
+        if (savedInstanceState == null) startLink = linkOf(intent)
+    }
+
+    private fun linkOf(intent: Intent?): String? =
+        if (intent?.action == Intent.ACTION_VIEW) intent.dataString else null
+
+    // Already open (singleTop): the link comes here and goes straight to Flutter.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        linkOf(intent)?.let { links?.invokeMethod("open", it) }
     }
 
     override fun onResume() {
@@ -76,6 +91,26 @@ class MainActivity : AudioServiceActivity() {
                 }
                 "keepControls" -> result.success(keepControls())
                 else -> result.notImplemented()
+            }
+        }
+        links = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/links").apply {
+            setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "start" -> {
+                        result.success(startLink)
+                        startLink = null
+                    }
+                    // Android's share sheet: messengers, mail, copy.
+                    "share" -> {
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, call.argument<String>("text"))
+                        }
+                        startActivity(Intent.createChooser(send, call.argument<String>("title")))
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
             }
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/window").setMethodCallHandler { call, result ->

@@ -177,6 +177,8 @@ class Backup {
           throw const _BackupStop('The Homeplay Backup plugin is not installed on the server.');
         case BackupServerStatus.notConfigured:
           throw const _BackupStop('The server has no backup folder yet. Set it in Jellyfin: Dashboard → Plugins → Homeplay Backup.');
+        case BackupServerStatus.shared:
+          throw const _BackupStop("This server is a friend's, shared with you: photos go to your own server only.");
         case BackupServerStatus.ready:
       }
 
