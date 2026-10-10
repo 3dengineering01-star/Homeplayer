@@ -89,13 +89,26 @@ public sealed class SharingTests : IDisposable
     [Fact]
     public void TheJoinPageOpensTheAppOrDownloadsIt()
     {
-        var page = JoinPage.Html(InviteState.Waiting, "Anna's <Homeplay>", ["Movies", "Music"], "https://pc.ts.net", "ABC");
+        var page = JoinPage.Html(InviteState.Waiting, "Anna's <Homeplay>", ["Movies", "Music"], "https://pc.ts.net", "ABC", "https://pc.ts.net/Homeplay/App");
         Assert.Contains("Anna&#39;s &lt;Homeplay&gt;", page, StringComparison.Ordinal);
         Assert.Contains("Movies, Music", page, StringComparison.Ordinal);
         Assert.Contains("intent://join?server=https%3A%2F%2Fpc.ts.net&amp;code=ABC#Intent;scheme=homeplay;package=dev.homeplay.homeplay;S.browser_fallback_url=https%3A%2F%2Fpc.ts.net%2FHomeplay%2FApp;end", page, StringComparison.Ordinal);
         Assert.Contains("homeplay://join?server=https%3A%2F%2Fpc.ts.net&amp;code=ABC", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("Open in Homeplay", JoinPage.Html(InviteState.Joined, "PC", [], "https://pc.ts.net", "ABC"), StringComparison.Ordinal);
-        Assert.Contains("expired", JoinPage.Html(InviteState.Expired, "PC", [], "https://pc.ts.net", "ABC"), StringComparison.Ordinal);
+        Assert.Contains("Download Homeplay for Android", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("Open in Homeplay", JoinPage.Html(InviteState.Joined, "PC", [], "https://pc.ts.net", "ABC", "x"), StringComparison.Ordinal);
+        Assert.Contains("expired", JoinPage.Html(InviteState.Expired, "PC", [], "https://pc.ts.net", "ABC", "x"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WithoutAnAppFileTheInviteSendsToGooglePlay()
+    {
+        Assert.Equal("https://pc.ts.net/Homeplay/App", Phone.PhoneLink.AppUrl("https://pc.ts.net/", true));
+        var store = Phone.PhoneLink.AppUrl("https://pc.ts.net", false);
+        Assert.Equal(Phone.PhoneLink.PlayStoreUrl, store);
+        var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", store);
+        Assert.Contains("Get Homeplay on Google Play", page, StringComparison.Ordinal);
+        Assert.Contains("opens it in Google Play", page, StringComparison.Ordinal);
+        Assert.Contains("S.browser_fallback_url=https%3A%2F%2Fplay.google.com", page, StringComparison.Ordinal);
     }
 }
 

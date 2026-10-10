@@ -333,7 +333,9 @@ class _NewInviteState extends State<_NewInvite> {
               ),
             Text(
               'They can watch and listen, and cannot delete anything or invite others. '
-              'The link works once, for 7 days.',
+              'The link works once, for 7 days.\n'
+              'Share only what you have the right to share: your own videos, photos and music, '
+              'or what its owners allow you to share.',
               style: theme.textTheme.bodySmall,
             ),
             if (_error != null) ...[

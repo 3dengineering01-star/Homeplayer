@@ -48,6 +48,9 @@ Source: "configure.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "homeplay.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PluginBin}\Jellyfin.Plugin.HomeplayBackup.dll"; DestDir: "{app}\plugin"; Flags: ignoreversion
 Source: "{#PluginBin}\QRCoder.dll"; DestDir: "{app}\plugin"; Flags: ignoreversion
+; The plugin is GPL; its source is public. The notices go with it.
+Source: "..\server\LICENSE"; DestDir: "{app}\plugin"; DestName: "LICENSE.txt"; Flags: ignoreversion
+Source: "..\server\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}\plugin"; Flags: ignoreversion
 Source: "..\app\dist\Homeplay-{#AppVersion}.apk"; DestDir: "{app}\plugin"; DestName: "Homeplay.apk"; Flags: ignoreversion
 
 [INI]

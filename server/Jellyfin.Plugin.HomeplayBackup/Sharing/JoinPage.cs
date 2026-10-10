@@ -39,19 +39,20 @@ public static class JoinPage
     /// <param name="libraries">The names of the libraries the invite opens.</param>
     /// <param name="server">The server's internet address.</param>
     /// <param name="code">The invite's code.</param>
+    /// <param name="appUrl">Where the app comes from: the file on the server, or Google Play.</param>
     /// <returns>The HTML page.</returns>
-    public static string Html(InviteState state, string serverName, IReadOnlyList<string> libraries, string server, string code)
+    public static string Html(InviteState state, string serverName, IReadOnlyList<string> libraries, string server, string code, string appUrl)
     {
         var name = WebUtility.HtmlEncode(serverName);
-        var appUrl = server.TrimEnd('/') + "/Homeplay/App";
+        var store = appUrl.Contains("play.google.com", StringComparison.Ordinal);
         var body = state switch
         {
             InviteState.Waiting => $"""
                 <h1>{name}</h1>
                 <p class="lead">You are invited to watch and listen: {WebUtility.HtmlEncode(string.Join(", ", libraries))}.</p>
                 <a class="button" href="{WebUtility.HtmlEncode(IntentLink(server, code, appUrl))}">Open in Homeplay</a>
-                <p class="small">No Homeplay on this phone yet? The button downloads it. Install it, then come back to this page and tap the button again.</p>
-                <p class="small"><a href="{WebUtility.HtmlEncode(AppLink(server, code))}">Open in Homeplay</a> (if the button does nothing) · <a href="{WebUtility.HtmlEncode(appUrl)}">Download Homeplay for Android</a></p>
+                <p class="small">No Homeplay on this phone yet? The button {(store ? "opens it in Google Play" : "downloads it")}. Install it, then come back to this page and tap the button again.</p>
+                <p class="small"><a href="{WebUtility.HtmlEncode(AppLink(server, code))}">Open in Homeplay</a> (if the button does nothing) · <a href="{WebUtility.HtmlEncode(appUrl)}">{(store ? "Get Homeplay on Google Play" : "Download Homeplay for Android")}</a></p>
                 <p class="small">Or in Homeplay: Add your server → Have an invite link? → paste this page's address.</p>
                 """,
             InviteState.Joined => $"""

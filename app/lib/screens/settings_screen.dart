@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/quality.dart';
 import '../widgets/appearance_picker.dart';
 
-/// App settings: how the app looks, and video quality for Wi-Fi and for mobile data.
+/// App settings: how the app looks, video quality for Wi-Fi and for mobile data, and the
+/// open-source software inside the app.
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -95,6 +97,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: theme.textTheme.bodySmall,
                 ),
               ),
+              ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('Open-source licenses'),
+                subtitle: const Text('The free software Homeplay is built with'),
+                onTap: () async {
+                  final info = await PackageInfo.fromPlatform();
+                  if (!context.mounted) return;
+                  showLicensePage(
+                    context: context,
+                    applicationName: 'Homeplay',
+                    applicationVersion: info.version,
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
             ]),
     );
   }

@@ -19,6 +19,20 @@ public static class PhoneLink
     public const string ApkName = "Homeplay.apk";
 
     /// <summary>
+    /// The app in Google Play: where phones get it when no app file came with the plugin (a
+    /// plugin from the store era ships without one).
+    /// </summary>
+    public const string PlayStoreUrl = "https://play.google.com/store/apps/details?id=dev.homeplay.homeplay";
+
+    /// <summary>
+    /// Where a phone gets the app: the file on this server when it has one, else Google Play.
+    /// </summary>
+    /// <param name="server">The server's address as the phone reaches it.</param>
+    /// <param name="hasApk">Whether the app file lies next to the plugin.</param>
+    /// <returns>The address.</returns>
+    public static string AppUrl(string server, bool hasApk) => hasApk ? $"{server.TrimEnd('/')}/Homeplay/App" : PlayStoreUrl;
+
+    /// <summary>
     /// The address of this computer in the home network: on an adapter with a router (not a
     /// virtual machine's), 192.168.x.x first, then 10.x.x.x, then 172.16–31.x.x. Not loopback,
     /// not link-local (169.254), not Tailscale or carrier addresses (100.64/10), and not IPv6,
@@ -91,7 +105,7 @@ public static class PhoneLink
         var name = WebUtility.HtmlEncode(serverName);
         var url = WebUtility.HtmlEncode(serverUrl);
         var qr = qrPng is null
-            ? "<p class=\"warn\">The phone app is not on this computer. Ask whoever set up Homeplay for the file Homeplay.apk.</p>"
+            ? "<p class=\"warn\">No QR code could be made. Get Homeplay from Google Play on the phone.</p>"
             : $"<img class=\"qr\" alt=\"QR code: the Homeplay app for Android\" src=\"data:image/png;base64,{Convert.ToBase64String(qrPng)}\">";
         return $$"""
             <!doctype html>

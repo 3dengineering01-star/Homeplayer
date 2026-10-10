@@ -48,9 +48,8 @@ public class PhoneController : ControllerBase
         }
 
         var server = PhoneLink.ServerUrl(host, Request.Host.Port ?? HttpContext.Connection.LocalPort);
-        var png = PhoneLink.FindApk(PluginFolder) is null
-            ? null
-            : PngByteQRCodeHelper.GetQRCode($"{server}/Homeplay/App", QRCodeGenerator.ECCLevel.M, 10);
+        var appUrl = PhoneLink.AppUrl(server, PhoneLink.FindApk(PluginFolder) is not null);
+        var png = PngByteQRCodeHelper.GetQRCode(appUrl, QRCodeGenerator.ECCLevel.M, 10);
         return Content(PhoneLink.Page(_host.FriendlyName, server, png), "text/html; charset=utf-8");
     }
 

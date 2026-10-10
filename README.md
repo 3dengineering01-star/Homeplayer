@@ -162,3 +162,12 @@ adb logcat -v time | grep -iE "flutter|homeplay|mpv|AndroidRuntime"
 ```
 
 `adb` лежит в `D:\APP\tools\sdk\platform-tools`.
+
+## Лицензии
+
+- Плагин сервера (`server/`) — GPL-2.0 или новее (`server/LICENSE`), как и сам Jellyfin, в который он
+  встраивается; сторонние части — `server/THIRD-PARTY-NOTICES.txt`. Установщик кладёт оба файла рядом с плагином.
+- Приложение использует открытые библиотеки (media_kit, libmpv, Flutter и другие); их лицензии в приложении:
+  Настройки → «Open-source licenses».
+- Лицензию самого приложения выбирает автор; пока она не указана, все права на код приложения за автором.
+- Что важно для Google Play: `docs/play/README.md`, раздел 5а.

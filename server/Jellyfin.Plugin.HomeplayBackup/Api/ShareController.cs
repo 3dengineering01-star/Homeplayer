@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.HomeplayBackup.Phone;
 using Jellyfin.Plugin.HomeplayBackup.Sharing;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Library;
@@ -195,7 +196,8 @@ public class ShareController : ControllerBase
         var libraries = Libraries();
         var names = invite?.Libraries.Select(id => libraries.FirstOrDefault(l => l.Id == id)?.Name).OfType<string>().ToList() ?? [];
         var server = state.PublicUrl.Length > 0 ? state.PublicUrl : $"{Request.Scheme}://{Request.Host}";
-        var page = JoinPage.Html(SharingStore.StateOf(invite, DateTime.UtcNow), _host.FriendlyName, names, server, invite?.Code ?? code);
+        var appUrl = PhoneLink.AppUrl(server, PhoneLink.FindApk(System.IO.Path.GetDirectoryName(typeof(ShareController).Assembly.Location) ?? ".") is not null);
+        var page = JoinPage.Html(SharingStore.StateOf(invite, DateTime.UtcNow), _host.FriendlyName, names, server, invite?.Code ?? code, appUrl);
         return Content(page, "text/html; charset=utf-8");
     }
 
