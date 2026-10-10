@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Jellyfin.Plugin.HomeplayBackup.Configuration;
+using Jellyfin.Plugin.HomeplayBackup.Sharing;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
@@ -38,6 +40,11 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// Gets the current plugin instance.
     /// </summary>
     public static Plugin? Instance { get; private set; }
+
+    /// <summary>
+    /// Gets the owner's sharing with friends: the internet address and the invites.
+    /// </summary>
+    public SharingStore Sharing => new(Path.Combine(DataFolderPath, "sharing.json"));
 
     /// <inheritdoc />
     public IEnumerable<PluginPageInfo> GetPages()
