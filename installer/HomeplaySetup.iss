@@ -11,7 +11,7 @@
 ; Built with Inno Setup 6 (installer/build.sh). Needs, built first: the plugin in
 ; server/Jellyfin.Plugin.HomeplayBackup/bin/Release/net10.0 and app/dist/Homeplay-<AppVersion>.apk.
 
-#define AppVersion "0.2.0"
+#define AppVersion "0.2.1"
 ; Jellyfin's installer is downloaded during setup and checked against this hash: the file is not
 ; signed, so the hash is what says it is the real one. Version 12.1, the one the plugin is built for.
 #define JellyfinUrl "https://repo.jellyfin.org/files/server/windows/stable/v12.1/amd64/jellyfin_12.1_windows-x64.exe"
