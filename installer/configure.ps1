@@ -233,12 +233,9 @@ try {
     Add-Library 'Photos' 'homevideos' $cfg.Photos 'M'
 
     if ($cfg.Photos) {
-        # Jellyfin answers with the base settings type, so the plugin's own fields may be missing
-        # from what comes back: the field is added rather than set.
-        $plugin = Invoke-Jellyfin GET "/Plugins/$PluginId/Configuration"
-        if ($plugin -isnot [Management.Automation.PSCustomObject]) { $plugin = [pscustomobject]@{} }
-        $plugin | Add-Member -NotePropertyName BackupFolder -NotePropertyValue $cfg.Photos -Force
-        Invoke-Jellyfin POST "/Plugins/$PluginId/Configuration" $plugin | Out-Null
+        # The plugin has this one setting, so it is sent whole rather than read and changed: in
+        # Windows PowerShell the settings read back right after setup came as an empty string.
+        Invoke-Jellyfin POST "/Plugins/$PluginId/Configuration" @{ BackupFolder = $cfg.Photos } | Out-Null
         Write-Log "Photos from phones go to $($cfg.Photos)"
     }
 
