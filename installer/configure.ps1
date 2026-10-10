@@ -1,18 +1,22 @@
-# Sets up a freshly installed Jellyfin for Homeplay, run by HomeplaySetup.exe as administrator:
-# finishes Jellyfin's first-run wizard with the person's name and password, adds the libraries
+# Sets up Jellyfin for Homeplay, run by HomeplaySetup.exe as administrator: puts the Homeplay
+# plugin (with the phone app) into Jellyfin's plugin folder, and on a fresh Jellyfin finishes its
+# first-run wizard with the person's name and password, adds the libraries
 # (movies, shows, music, photos), points the Homeplay plugin at the photo folder and lets phones
 # on the home network in. Windows PowerShell 5.1, nothing to install.
 #
-#   powershell -ExecutionPolicy Bypass -File configure.ps1 -Settings C:\...\settings.json
+#   powershell -ExecutionPolicy Bypass -File configure.ps1 -Settings C:\...\settings.json -Plugin C:\...\plugin
 #
 # settings.json: { "Name", "Password", "Movies", "Shows", "Music", "Photos", "HomeNetwork": true }.
 # The file holds the password: the installer deletes it as soon as this script ends. The log
 # (C:\ProgramData\Homeplay\setup.log) never has it.
 #
+# -Plugin is a folder with Jellyfin.Plugin.HomeplayBackup.dll, QRCoder.dll and Homeplay.apk.
+#
 # Exit codes: 0 done, 1 the server did not start, 2 setting it up failed (see the log).
 
 param(
     [Parameter(Mandatory = $true)] [string] $Settings,
+    [Parameter(Mandatory = $true)] [string] $Plugin,
     [string] $Server = 'http://localhost:8096'
 )
 
@@ -106,18 +110,81 @@ function Grant-Server([string] $Folder, [string] $Rights) {
     if ($LASTEXITCODE -ne 0) { Write-Log "icacls exit code $LASTEXITCODE for $Folder" }
 }
 
+# Jellyfin's data folder, as its installer recorded it.
+function Get-DataFolder {
+    foreach ($key in 'HKLM:\SOFTWARE\WOW6432Node\Jellyfin\Server', 'HKLM:\SOFTWARE\Jellyfin\Server') {
+        $value = (Get-ItemProperty -Path $key -Name DataFolder -ErrorAction SilentlyContinue).DataFolder
+        if ($value) { return $value }
+    }
+    Join-Path $env:ProgramData 'Jellyfin\Server'
+}
+
+# The plugin goes to plugins\Homeplay Backup_<version>; older versions of it are taken away.
+# Returns whether anything changed, i.e. Jellyfin has to start again to load it.
+function Install-Plugin {
+    $dll = Join-Path $Plugin 'Jellyfin.Plugin.HomeplayBackup.dll'
+    $version = (Get-Item $dll).VersionInfo.FileVersion
+    $plugins = Join-Path (Get-DataFolder) 'plugins'
+    $target = Join-Path $plugins "Homeplay Backup_$version"
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
+    $changed = $false
+    Get-ChildItem -Path $plugins -Directory -Filter 'Homeplay Backup_*' |
+        Where-Object { $_.FullName -ne $target } |
+        ForEach-Object {
+            Write-Log "Removing old plugin $($_.Name)"
+            Remove-Item -Recurse -Force $_.FullName
+            $changed = $true
+        }
+    foreach ($file in Get-ChildItem -Path $Plugin -File) {
+        $to = Join-Path $target $file.Name
+        if (-not (Test-Path $to) -or (Get-FileHash $to).Hash -ne (Get-FileHash $file.FullName).Hash) {
+            Copy-Item -Force $file.FullName $to
+            $changed = $true
+        }
+    }
+    Write-Log "Plugin $version in $target$(if ($changed) { ' (new)' })"
+    $changed
+}
+
+# Jellyfin loads plugins when it starts: the service (or the tray app) starts again.
+function Restart-Jellyfin {
+    $service = Get-Service -Name JellyfinServer -ErrorAction SilentlyContinue
+    if ($service) {
+        Write-Log 'Restarting the Jellyfin service'
+        Restart-Service -Name JellyfinServer -Force
+        return
+    }
+    $running = Get-Process -Name jellyfin -ErrorAction SilentlyContinue
+    if ($running) {
+        Write-Log 'Restarting Jellyfin'
+        $exe = $running[0].Path
+        $running | Stop-Process -Force
+        Start-Sleep -Seconds 3
+        $tray = Join-Path (Split-Path $exe) 'jellyfin-windows-tray\Jellyfin.Windows.Tray.exe'
+        if (Test-Path $tray) { Start-Process $tray } else { Start-Process $exe -WindowStyle Hidden }
+    }
+}
+
 function Add-Library([string] $Name, [string] $Kind, [string] $Folder, [string] $Rights = 'RX') {
     if (-not $Folder) { return }
     New-Item -ItemType Directory -Force -Path $Folder | Out-Null
     Grant-Server $Folder $Rights
     $query = 'name={0}&collectionType={1}&paths={2}&refreshLibrary=false' -f `
         [uri]::EscapeDataString($Name), $Kind, [uri]::EscapeDataString($Folder)
-    Invoke-Jellyfin POST "/Library/VirtualFolders?$query" @{ LibraryOptions = @{ Enabled = $true } } | Out-Null
+    # Watched for changes: a movie copied into the folder shows up without a manual scan.
+    Invoke-Jellyfin POST "/Library/VirtualFolders?$query" @{ LibraryOptions = @{ Enabled = $true; EnableRealtimeMonitor = $true; EnablePhotos = $true } } | Out-Null
     Write-Log "Library '$Name' ($Kind): $Folder"
 }
 
 $cfg = Get-Content -Raw -Encoding UTF8 -Path $Settings | ConvertFrom-Json
 Write-Log "Setting up Jellyfin at $Server"
+
+try {
+    if (Install-Plugin) { Restart-Jellyfin }
+} catch {
+    Write-Log "Could not put the plugin in place: $($_.Exception.Message)"
+    exit 2
+}
 
 $info = Wait-Server
 if (-not $info) {
