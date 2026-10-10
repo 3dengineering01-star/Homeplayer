@@ -20,6 +20,14 @@
 - `PUT /HomeplayBackup/Upload?device=&id=&name=&size=&takenAt=&offset=`, тело — байты куска (до 64 МБ).
   Ответ `{ Id, Done, Offset }`. Если кусок начинается не там, где кончается копия на сервере, ответ 409 с правильным `Offset`.
 
+## Телефон (с версии 1.2, без входа)
+
+- `GET /Homeplay/Phone` — страница для компьютера после установки: QR-код со ссылкой на приложение и что делать
+  дальше. Открытая на самом компьютере (`localhost`), она подставляет в код адрес компьютера в домашней сети.
+- `GET /Homeplay/App` — приложение для Android. Файл `Homeplay.apk` (или другой `*.apk`) кладётся рядом с dll
+  плагина; без него страница просит взять файл у того, кто ставил Homeplay.
+- QR-код рисует QRCoder (MIT): `QRCoder.dll` лежит в папке плагина рядом с его dll.
+
 ## Сборка и тесты
 
 ```bash
@@ -29,7 +37,7 @@ dotnet build server/Jellyfin.Plugin.HomeplayBackup -c Release
 
 ## Установка вручную
 
-1. Скопировать `Jellyfin.Plugin.HomeplayBackup.dll` из `bin/Release/net10.0` в
+1. Скопировать `Jellyfin.Plugin.HomeplayBackup.dll` и `QRCoder.dll` из `bin/Release/net10.0` в
    `C:\ProgramData\Jellyfin\Server\plugins\Homeplay Backup_1.0.0.0\`.
 2. Перезапустить Jellyfin.
 3. Панель управления → Плагины → Homeplay Backup: указать папку для фото.
