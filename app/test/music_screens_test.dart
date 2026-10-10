@@ -8,6 +8,7 @@ import 'package:homeplay/screens/music_library_screen.dart';
 import 'package:homeplay/screens/track_list_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _account = Account(
     id: 'a', kind: ServerKind.jellyfin, baseUrl: 'http://nas:8096', username: 'u', serverName: 'NAS', token: 't', userId: 'me');
@@ -24,6 +25,7 @@ final _tracks = [
       'Artists': i < 3 ? ['Danheim'] : ['Pink Floyd'],
       'IndexNumber': i + 1,
       'RunTimeTicks': 2000000000,
+      'Path': i < 3 ? 'D:\\Music\\Folk\\Danheim\\Mannavegr\\0$i $name.flac' : 'D:\\Music\\Rock\\Pink Floyd\\$name.mp3',
     },
 ];
 
@@ -44,6 +46,8 @@ JellyfinClient _server() => JellyfinClient(
     );
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   for (final scale in [1.0, 1.5]) {
     testWidgets('the music screen draws every tab at text size $scale', (tester) async {
       tester.view.physicalSize = const Size(1080, 2400);
@@ -62,10 +66,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Danheim'), findsWidgets);
       expect(find.text('Pink Floyd'), findsOneWidget);
-      for (final tab in ['Albums', 'Tracks', 'Playlists']) {
+      for (final tab in ['Albums', 'Tracks', 'Folders', 'Playlists']) {
+        // With big letters the tabs scroll: the last ones are off to the side.
+        await tester.ensureVisible(find.text(tab));
+        await tester.pumpAndSettle();
         await tester.tap(find.text(tab));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: tab);
+        if (tab == 'Folders') {
+          expect(find.text('Folk'), findsOneWidget);
+          expect(find.text('Rock'), findsOneWidget);
+        }
       }
       expect(find.text('Road'), findsOneWidget);
       expect(find.text('New playlist'), findsOneWidget);
