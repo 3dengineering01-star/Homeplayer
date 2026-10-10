@@ -83,15 +83,13 @@ function Wait-Server {
 
 # Phones find the server and connect over the home network: Jellyfin's port and its discovery
 # port, for private networks only, so a laptop on a café's Wi-Fi stays closed.
-function Open-Firewall([bool] $HomeNetwork) {
-    if ($HomeNetwork) {
-        # Windows often files a new Wi-Fi as public, where the rules below do not apply.
-        Get-NetConnectionProfile | Where-Object { $_.NetworkCategory -eq 'Public' -and $_.IPv4Connectivity -ne 'Disconnected' } |
-            ForEach-Object {
-                Write-Log "Network '$($_.Name)' set to private"
-                Set-NetConnectionProfile -InterfaceIndex $_.InterfaceIndex -NetworkCategory Private
-            }
-    }
+function Open-Firewall {
+    # Windows often files a new Wi-Fi as public, where the rules below do not apply.
+    Get-NetConnectionProfile | Where-Object { $_.NetworkCategory -eq 'Public' -and $_.IPv4Connectivity -ne 'Disconnected' } |
+        ForEach-Object {
+            Write-Log "Network '$($_.Name)' set to private"
+            Set-NetConnectionProfile -InterfaceIndex $_.InterfaceIndex -NetworkCategory Private
+        }
     $rules = @(
         @{ Name = 'Homeplay-Jellyfin-TCP'; DisplayName = 'Homeplay: Jellyfin server (TCP 8096)'; Protocol = 'TCP'; LocalPort = 8096 },
         @{ Name = 'Homeplay-Jellyfin-Discovery'; DisplayName = 'Homeplay: Jellyfin discovery (UDP 7359)'; Protocol = 'UDP'; LocalPort = 7359 }
@@ -194,7 +192,9 @@ if (-not $info) {
 Write-Log "Jellyfin $($info.Version), '$($info.ServerName)'"
 
 try {
-    Open-Firewall ([bool] $cfg.HomeNetwork)
+    # Unticked ("not at home", or an update on a server set up by hand): Windows' network and
+    # firewall settings stay exactly as they are.
+    if ([bool] $cfg.HomeNetwork) { Open-Firewall } else { Write-Log 'Network and firewall left as they are' }
 
     if ($info.StartupWizardCompleted) {
         # Jellyfin was here before: its users and libraries stay as they are. The plugin and the
