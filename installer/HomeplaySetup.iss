@@ -4,6 +4,10 @@
 ; the QR code for the phone. On a computer that has Jellyfin already, only the plugin and the app
 ; are put in; its users and libraries stay as they are.
 ;
+; Silent, for tests (e.g. in Windows Sandbox), the answers come from the command line:
+;   HomeplaySetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NAME=Test /PASSWORD=test1234 [/MOVIES=... /SHOWS=...
+;   /MUSIC=... /PHOTOS=... /HOMENETWORK=0] /LOG=C:\setup.log
+;
 ; Built with Inno Setup 6 (installer/build.sh). Needs, built first: the plugin in
 ; server/Jellyfin.Plugin.HomeplayBackup/bin/Release/net10.0 and app/dist/Homeplay-<AppVersion>.apk.
 
@@ -92,10 +96,10 @@ begin
   FoldersPage.Add('TV shows (a folder for each show):');
   FoldersPage.Add('Music:');
   FoldersPage.Add('Photos:');
-  FoldersPage.Values[0] := Home + '\Videos\Movies';
-  FoldersPage.Values[1] := Home + '\Videos\Shows';
-  FoldersPage.Values[2] := Home + '\Music';
-  FoldersPage.Values[3] := Home + '\Pictures\Homeplay';
+  FoldersPage.Values[0] := ExpandConstant('{param:MOVIES|' + Home + '\Videos\Movies}');
+  FoldersPage.Values[1] := ExpandConstant('{param:SHOWS|' + Home + '\Videos\Shows}');
+  FoldersPage.Values[2] := ExpandConstant('{param:MUSIC|' + Home + '\Music}');
+  FoldersPage.Values[3] := ExpandConstant('{param:PHOTOS|' + Home + '\Pictures\Homeplay}');
 
   AccountPage := CreateInputQueryPage(FoldersPage.ID,
     'Your name and password',
@@ -104,7 +108,9 @@ begin
   AccountPage.Add('Name:', False);
   AccountPage.Add('Password:', True);
   AccountPage.Add('Password again:', True);
-  AccountPage.Values[0] := GetUserNameString;
+  AccountPage.Values[0] := ExpandConstant('{param:NAME|' + GetUserNameString + '}');
+  AccountPage.Values[1] := ExpandConstant('{param:PASSWORD|}');
+  AccountPage.Values[2] := AccountPage.Values[1];
 
   HomeNetwork := TNewCheckBox.Create(AccountPage);
   HomeNetwork.Parent := AccountPage.Surface;
@@ -112,7 +118,7 @@ begin
   HomeNetwork.Width := AccountPage.SurfaceWidth;
   HomeNetwork.Height := ScaleY(34);
   HomeNetwork.Caption := 'This computer is at home: let phones on this Wi-Fi connect to it';
-  HomeNetwork.Checked := True;
+  HomeNetwork.Checked := ExpandConstant('{param:HOMENETWORK|1}') <> '0';
 
   DownloadPage := CreateDownloadPage('Downloading Jellyfin',
     'Jellyfin is the free media server Homeplay plays from.', nil);
@@ -211,6 +217,18 @@ procedure Status(Text: String);
 begin
   WizardForm.StatusLabel.Caption := Text;
   WizardForm.FilenameLabel.Caption := '';
+end;
+
+// A silent install never clicks Next on the Ready page: Jellyfin is fetched here instead.
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  if not HasJellyfin and not FileExists(ExpandConstant('{tmp}\{#JellyfinFile}')) then
+    try
+      DownloadTemporaryFile('{#JellyfinUrl}', '{#JellyfinFile}', '{#JellyfinSha256}', nil);
+    except
+      Result := 'Jellyfin could not be downloaded: ' + GetExceptionMessage;
+    end;
 end;
 
 procedure SetUpServer;
