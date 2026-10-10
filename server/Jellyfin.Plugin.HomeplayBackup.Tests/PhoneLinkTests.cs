@@ -56,6 +56,16 @@ public sealed class PhoneLinkTests : IDisposable
     }
 
     [Fact]
+    public void TheServerInstallerIsFoundNextToThePlugin()
+    {
+        Assert.Null(PhoneLink.FindSetup(_folder));
+        Directory.CreateDirectory(_folder);
+        Assert.Null(PhoneLink.FindSetup(_folder));
+        File.WriteAllText(Path.Combine(_folder, PhoneLink.SetupName), "x");
+        Assert.EndsWith(PhoneLink.SetupName, PhoneLink.FindSetup(_folder), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ThePageShowsTheCodeTheServerAndNoMarkupFromTheName()
     {
         var png = PngByteQRCodeHelper.GetQRCode("http://192.168.1.108:8096/Homeplay/App", QRCodeGenerator.ECCLevel.M, 10);

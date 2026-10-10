@@ -54,6 +54,21 @@ public class PhoneController : ControllerBase
     }
 
     /// <summary>
+    /// The server installer for Windows, for a friend who wants a Homeplay server of their own.
+    /// </summary>
+    /// <returns>HomeplaySetup.exe.</returns>
+    [HttpGet("Setup")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public ActionResult Setup()
+    {
+        var setup = PhoneLink.FindSetup(PluginFolder);
+        return setup is null
+            ? NotFound("The Homeplay installer is not on this server.")
+            : PhysicalFile(setup, "application/vnd.microsoft.portable-executable", PhoneLink.SetupName);
+    }
+
+    /// <summary>
     /// The Homeplay app for Android.
     /// </summary>
     /// <returns>The APK file.</returns>

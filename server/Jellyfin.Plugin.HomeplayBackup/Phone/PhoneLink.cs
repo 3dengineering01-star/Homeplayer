@@ -19,6 +19,23 @@ public static class PhoneLink
     public const string ApkName = "Homeplay.apk";
 
     /// <summary>
+    /// The server installer for Windows, kept next to the plugin by the installer itself, so a
+    /// friend can make a server of their own from here.
+    /// </summary>
+    public const string SetupName = "HomeplaySetup.exe";
+
+    /// <summary>
+    /// The server installer next to the plugin.
+    /// </summary>
+    /// <param name="folder">The plugin's folder.</param>
+    /// <returns>Its path, or null when it is not there.</returns>
+    public static string? FindSetup(string folder)
+    {
+        var path = Path.Combine(folder, SetupName);
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>
     /// The app in Google Play: where phones get it when no app file came with the plugin (a
     /// plugin from the store era ships without one).
     /// </summary>

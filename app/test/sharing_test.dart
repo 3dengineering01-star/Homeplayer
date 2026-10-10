@@ -66,6 +66,8 @@ void main() {
     expect(account.userId, 'u1');
     expect(account.serverName, "Anna's Homeplay");
     expect(account.username, 'Petr');
+    expect(account.shared, isTrue);
+    expect(Account.fromJson(account.toJson()).shared, isTrue);
   });
 
   test("a used invite says so in the server's words", () async {

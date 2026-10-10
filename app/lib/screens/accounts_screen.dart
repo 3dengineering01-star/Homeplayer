@@ -5,9 +5,11 @@ import '../api/jellyfin.dart';
 import '../api/subsonic.dart';
 import '../models/account.dart';
 import '../services/account_store.dart';
+import '../services/own_server.dart';
 import '../services/server_status.dart';
 import '../widgets/appearance_picker.dart';
 import '../widgets/library_tiles.dart';
+import '../widgets/own_server_guide.dart';
 import '../widgets/pressable.dart';
 import 'add_account_screen.dart';
 import 'backup_screen.dart';
@@ -145,7 +147,18 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 ),
               ),
               if (accounts.isEmpty)
-                SliverToBoxAdapter(child: _Welcome(onAdd: _add))
+                SliverToBoxAdapter(
+                  child: _Welcome(
+                    onAdd: _add,
+                    onOwn: () => push(OwnServerScreen(
+                      servers: const [],
+                      onAdd: () {
+                        Navigator.pop(context);
+                        _add();
+                      },
+                    )),
+                  ),
+                )
               else
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -167,6 +180,19 @@ class _AccountsScreenState extends State<AccountsScreen> {
                         ),
                       ),
                     _AddCard(onTap: _add),
+                    if (needsOwnServer(accounts))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 14),
+                        child: _OwnServerCard(
+                          onTap: () => push(OwnServerScreen(
+                            servers: sharedServers(accounts),
+                            onAdd: () {
+                              Navigator.pop(context);
+                              _add();
+                            },
+                          )),
+                        ),
+                      ),
                   ]),
                 ),
               const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
@@ -388,11 +414,57 @@ class _AddCard extends StatelessWidget {
   }
 }
 
+/// Only friends' servers on this phone: how to make one's own.
+class _OwnServerCard extends StatelessWidget {
+  const _OwnServerCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Pressable(
+      child: Material(
+        color: scheme.secondaryContainer,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: scheme.surface,
+                child: Icon(Icons.computer_rounded, color: scheme.onSurface),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Your own Homeplay',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: scheme.onSecondaryContainer)),
+                  Text('Your movies and music from your computer, in a few clicks',
+                      style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSecondaryContainer)),
+                ]),
+              ),
+              Icon(Icons.chevron_right_rounded, color: scheme.onSecondaryContainer),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// No server yet: a friendly start.
 class _Welcome extends StatelessWidget {
-  const _Welcome({required this.onAdd});
+  const _Welcome({required this.onAdd, required this.onOwn});
 
   final VoidCallback onAdd;
+
+  /// How to make a server, for someone who has none.
+  final VoidCallback onOwn;
 
   @override
   Widget build(BuildContext context) {
@@ -422,6 +494,8 @@ class _Welcome extends StatelessWidget {
             textAlign: TextAlign.center, style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: 24),
         FilledButton.icon(onPressed: onAdd, icon: const Icon(Icons.add), label: const Text('Add your server')),
+        const SizedBox(height: 8),
+        TextButton(onPressed: onOwn, child: const Text('No server yet? Make your own')),
       ]),
     );
   }
