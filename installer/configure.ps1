@@ -69,14 +69,21 @@ function Invoke-JellyfinOnce([string] $Method, [string] $Path, $Body) {
     Invoke-RestMethod @params
 }
 
-function Wait-Server {
-    $deadline = (Get-Date).AddMinutes(5)
+# Waits for Jellyfin itself and returns its public info. While Jellyfin starts (and updates its
+# database), a stand-in on the same port answers /System/Info/Public too, in camelCase and with
+# "startupWizardCompleted": false even on a server set up long ago. Jellyfin's own answer is in
+# PascalCase. PowerShell reads property names whatever their case, so the raw text tells them apart.
+function Wait-Server([int] $Minutes = 5) {
+    $deadline = (Get-Date).AddMinutes($Minutes)
     while ((Get-Date) -lt $deadline) {
         try {
-            return Invoke-RestMethod -Uri "$Server/System/Info/Public" -TimeoutSec 5
+            $r = Invoke-WebRequest -Uri "$Server/System/Info/Public" -UseBasicParsing -TimeoutSec 5
+            $text = if ($r.Content -is [byte[]]) { [Text.Encoding]::UTF8.GetString($r.Content) } else { [string] $r.Content }
+            if ($text -cmatch '"StartupWizardCompleted"') { return $text | ConvertFrom-Json }
         } catch {
-            Start-Sleep -Seconds 3
+            # Not up yet.
         }
+        Start-Sleep -Seconds 2
     }
     return $null
 }
@@ -187,11 +194,13 @@ function Install-Plugin {
         return
     }
 
-    # A Jellyfin just installed is in its very first start, making its database: stopped in the
-    # middle of it, it stayed at "starting" (503) for good. So it is let finish starting first.
+    # A Jellyfin just installed (or just updated) is starting and updating its database: stopped
+    # in the middle of that, it hangs at the same step on every start after. So it is let finish
+    # starting first: until Jellyfin itself answers, not the stand-in it shows meanwhile.
     if ((Get-Service -Name JellyfinServer -ErrorAction SilentlyContinue).Status -eq 'Running' -or
         (Get-Process -Name jellyfin -ErrorAction SilentlyContinue)) {
-        if (-not (Wait-Server)) { Write-Log 'Jellyfin did not finish starting; stopping it anyway' }
+        Write-Log 'Waiting for Jellyfin to finish starting'
+        if (-not (Wait-Server 15)) { Write-Log 'Jellyfin did not finish starting; stopping it anyway' }
     }
     $how = Stop-Jellyfin
     try {
@@ -231,9 +240,10 @@ try {
     exit 2
 }
 
-$info = Wait-Server
+# The first start after an update of Jellyfin may spend minutes updating its database.
+$info = Wait-Server 15
 if (-not $info) {
-    Write-Log 'Jellyfin did not answer within 5 minutes'
+    Write-Log 'Jellyfin did not answer within 15 minutes'
     exit 1
 }
 Write-Log "Jellyfin $($info.Version), '$($info.ServerName)'"
