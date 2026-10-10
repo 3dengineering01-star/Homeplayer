@@ -465,6 +465,21 @@ class PlaylistList extends StatelessWidget {
                 title: const Text('New playlist'),
                 onTap: () => _create(context),
               ),
+            if (query.isEmpty)
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
+                  child: Icon(Icons.favorite, color: Theme.of(context).colorScheme.onTertiaryContainer),
+                ),
+                title: const Text('Favorites'),
+                subtitle: const Text('Tracks you marked with ♥, gathered here by themselves'),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => TrackListScreen.favorites(client: client)),
+                  );
+                  onChanged();
+                },
+              ),
             for (final p in list)
               ListTile(
                 leading: ClipRRect(

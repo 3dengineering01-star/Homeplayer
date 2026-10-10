@@ -37,6 +37,7 @@ class JellyfinItem {
 
   Map<String, dynamic> get _user => (_j['UserData'] as Map<String, dynamic>?) ?? const {};
   bool get played => (_user['Played'] as bool?) ?? false;
+  bool get isFavorite => (_user['IsFavorite'] as bool?) ?? false;
 
   /// Where playback stopped last time; zero when there is nothing to resume.
   Duration get resumePosition => Duration(microseconds: ((_user['PlaybackPositionTicks'] as num?) ?? 0).toInt() ~/ 10);
@@ -381,6 +382,30 @@ class JellyfinClient {
   /// A music artist's tracks, by the server's artist id (from the search).
   Future<List<JellyfinItem>> artistTracks(String artistId) =>
       _allPages({'artistIds': artistId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
+
+  /// The tracks marked as favorites, the ones marked last first.
+  Future<List<JellyfinItem>> favoriteTracks() => _allPages({
+        'recursive': 'true',
+        'includeItemTypes': 'Audio',
+        'filters': 'IsFavorite',
+        'sortBy': 'DatePlayed,SortName',
+        'sortOrder': 'Descending,Ascending',
+      });
+
+  /// Hearts set or taken off while the app runs, by server, user and item: a list loaded before
+  /// still shows the old state, and the player and the long-press menu agree with each other.
+  static final Map<String, bool> _favorites = {};
+
+  String _favoriteKey(String itemId) => '${account.baseUrl}|${account.userId}|$itemId';
+
+  /// Whether [item] is a favorite, counting hearts set since it was loaded.
+  bool isFavorite(JellyfinItem item) => _favorites[_favoriteKey(item.id)] ?? item.isFavorite;
+
+  /// Marks or unmarks [itemId] as a favorite of this user.
+  Future<void> setFavorite(String itemId, bool on) async {
+    await _send(on ? 'POST' : 'DELETE', '/UserFavoriteItems/$itemId', query: {'userId': account.userId!});
+    _favorites[_favoriteKey(itemId)] = on;
+  }
 
   /// An album's tracks, in disc and track order.
   Future<List<JellyfinItem>> albumTracks(String albumId) => _allPages({
@@ -910,6 +935,7 @@ class JellyfinClient {
         isVideo: item.isVideo,
         headers: headers,
         reporter: _reporter(item, versionId, null, 'DirectPlay'),
+        favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
       );
 }
 

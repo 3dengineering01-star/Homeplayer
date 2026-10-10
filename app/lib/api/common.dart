@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../services/quality.dart';
 
 class ApiException implements Exception {
@@ -35,6 +36,7 @@ class PlayItem {
     this.convertedTo,
     this.withQuality,
     this.subtitles = const [],
+    this.favorite,
   });
 
   final String title;
@@ -65,6 +67,10 @@ class PlayItem {
   /// server cannot convert (music, Subsonic).
   final Future<PlayItem> Function(VideoQuality quality)? withQuality;
 
+  /// The track's mark in the server's favorites; null where it cannot be marked (videos,
+  /// downloads played without the server).
+  final ItemFavorite? favorite;
+
   PlayItem copyWith({
     Uri? url,
     String? audioTrackId,
@@ -87,7 +93,40 @@ class PlayItem {
         convertedTo: convertedTo ?? this.convertedTo,
         withQuality: withQuality ?? this.withQuality,
         subtitles: subtitles ?? this.subtitles,
+        favorite: favorite,
       );
+}
+
+/// A track's heart: marked as a favorite on its server. [marked] changes at once when tapped and
+/// goes back if the server refuses.
+abstract class ItemFavorite {
+  ValueNotifier<bool> get marked;
+
+  Future<void> set(bool on);
+
+  Future<void> toggle() => set(!marked.value);
+}
+
+/// [ItemFavorite] over one call that tells the server; the heart shows the new state at once.
+class ServerFavorite extends ItemFavorite {
+  ServerFavorite(bool marked, this._send) : marked = ValueNotifier(marked);
+
+  @override
+  final ValueNotifier<bool> marked;
+
+  final Future<void> Function(bool on) _send;
+
+  @override
+  Future<void> set(bool on) async {
+    final before = marked.value;
+    marked.value = on;
+    try {
+      await _send(on);
+    } catch (e) {
+      marked.value = before;
+      rethrow;
+    }
+  }
 }
 
 /// Playback events for the server: Jellyfin keeps the resume point and the played mark from

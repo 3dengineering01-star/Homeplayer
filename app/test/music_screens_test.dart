@@ -80,6 +80,7 @@ void main() {
       }
       expect(find.text('Road'), findsOneWidget);
       expect(find.text('New playlist'), findsOneWidget);
+      expect(find.text('Favorites'), findsOneWidget);
     });
 
     testWidgets('an album page draws its header and tracks at text size $scale', (tester) async {
