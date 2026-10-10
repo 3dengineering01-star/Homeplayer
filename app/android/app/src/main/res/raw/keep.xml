@@ -3,4 +3,4 @@
      cannot see and would remove: audio_service's notification buttons, without which no media
      notification or session comes up, and the notification icon set in playback.dart. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/audio_service_*,@drawable/ic_launcher_foreground" />
+    tools:keep="@drawable/audio_service_*,@drawable/ic_notification" />
