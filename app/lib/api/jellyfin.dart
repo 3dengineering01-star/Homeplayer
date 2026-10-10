@@ -574,6 +574,18 @@ class JellyfinClient {
   /// The name a server goes by, before signing in; null when it does not answer.
   static Future<String?> publicName(String baseUrl) => _serverName(baseUrl);
 
+  /// The id a server goes by, asked without signing in; null when it does not answer. Tells
+  /// whether two addresses lead to the same server.
+  static Future<String?> publicId(String baseUrl, {http.Client? client}) async {
+    try {
+      final res = await (client ?? http.Client()).get(Uri.parse('$baseUrl/System/Info/Public')).timeout(_timeout);
+      if (res.statusCode != 200) return null;
+      return (jsonDecode(res.body) as Map)['Id'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> _send(String method, String path, {Map<String, String>? query, Object? body}) async {
     final req = http.Request(method, Uri.parse('$_base$path').replace(queryParameters: query))
       ..headers.addAll({...headers, 'Content-Type': 'application/json'});

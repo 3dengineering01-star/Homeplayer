@@ -81,6 +81,15 @@ void main() {
     );
   });
 
+  test('the internet address as typed becomes a site address', () {
+    expect(normalizeAddress('goodman.tail1234.ts.net'), 'https://goodman.tail1234.ts.net');
+    expect(normalizeAddress(' https://goodman.tail1234.ts.net/ '), 'https://goodman.tail1234.ts.net');
+    expect(normalizeAddress('http://192.168.1.108:8096'), 'http://192.168.1.108:8096');
+    expect(normalizeAddress(''), isNull);
+    expect(normalizeAddress('goodman'), isNull);
+    expect(normalizeAddress('ftp://x.y'), isNull);
+  });
+
   test('server messages come out of text, JSON strings and problem objects', () {
     expect(serverMessage('plain'), 'plain');
     expect(serverMessage('"quoted"'), 'quoted');
@@ -113,6 +122,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('First: your server on the internet'), findsOneWidget);
     expect(find.text('Invite a friend'), findsNothing);
+  });
+
+  testWidgets('an empty address is not saved: the example is only an example', (tester) async {
+    final seen = <http.Request>[];
+    await tester.pumpWidget(MaterialApp(
+      home: ShareScreen(client: server({'PublicUrl': '', 'Libraries': _libraries, 'Invites': []}, seen: seen)),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Enter the address'));
+    await tester.pumpAndSettle();
+    expect(find.text('For example https://goodman.tail1234.ts.net'), findsOneWidget);
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Type the address Tailscale showed'), findsOneWidget);
+    expect(seen.where((r) => r.method == 'POST'), isEmpty);
   });
 
   testWidgets('invites show who joined, and the owner can invite more', (tester) async {

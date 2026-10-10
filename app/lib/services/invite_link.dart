@@ -32,3 +32,14 @@ String _trimSlash(String s) => s.endsWith('/') ? s.substring(0, s.length - 1) : 
 String inviteMessage(String serverName, String link) =>
     '$serverName: I share my movies and music with you in Homeplay. '
     'Open this link on your Android phone: $link';
+
+/// The server's internet address as typed, made into a site address: https:// added when
+/// missing, no trailing slash. Null when it is not one (empty, no dot in the name).
+String? normalizeAddress(String typed) {
+  var text = typed.trim();
+  if (text.isEmpty) return null;
+  if (!text.contains('://')) text = 'https://$text';
+  final uri = Uri.tryParse(text);
+  if (uri == null || !(uri.scheme == 'https' || uri.scheme == 'http') || !uri.host.contains('.')) return null;
+  return _trimSlash('${uri.scheme}://${uri.authority}${uri.path}');
+}

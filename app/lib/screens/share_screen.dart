@@ -28,32 +28,15 @@ class _ShareScreenState extends State<ShareScreen> {
   void _say(String text) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _setAddress(String current) async {
-    final field = TextEditingController(text: current);
-    final text = await showDialog<String>(
+    final saved = await showDialog<bool>(
       context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Internet address'),
-        content: TextField(
-          controller: field,
-          autofocus: true,
-          keyboardType: TextInputType.url,
-          autocorrect: false,
-          decoration: const InputDecoration(hintText: 'https://your-pc.tail1234.ts.net'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(c, field.text), child: const Text('Save')),
-        ],
-      ),
+      builder: (_) => _AddressDialog(client: _client, current: current),
     );
-    field.dispose();
-    if (text == null) return;
-    try {
-      await _client.setPublicUrl(text.trim());
-      _reload();
-    } catch (e) {
-      if (mounted) _say(describeError(e));
-    }
+    if (saved != true || !mounted) return;
+    _reload();
+    // The address was all that was missing: on to the first invite.
+    final info = await _sharing.then<SharingInfo?>((i) => i, onError: (_) => null);
+    if (info != null && info.publicUrl.isNotEmpty && info.invites.isEmpty && mounted) await _invite(info);
   }
 
   Future<void> _invite(SharingInfo info) async {
@@ -136,13 +119,21 @@ class _ShareScreenState extends State<ShareScreen> {
                   ),
                   const SizedBox(height: 16),
                   if (info.invites.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'Nobody yet. Tap "Invite a friend": you get a link to send them. '
-                        'It works once, and you can take it back any time.',
-                        textAlign: TextAlign.center,
-                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(children: [
+                        const Text(
+                          'Nobody yet. Invite a friend: you get a link to send them. '
+                          'It works once, and you can take it back any time.',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: () => _invite(info),
+                          icon: const Icon(Icons.person_add),
+                          label: const Text('Invite a friend'),
+                        ),
+                      ]),
                     ),
                   for (final i in info.invites.reversed)
                     _InviteTile(
@@ -351,6 +342,113 @@ class _NewInviteState extends State<_NewInvite> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The server's internet address: checked before it is kept, so a friend's link works. The
+/// example under the field is only an example; an empty field is not saved.
+class _AddressDialog extends StatefulWidget {
+  const _AddressDialog({required this.client, required this.current});
+
+  final JellyfinClient client;
+  final String current;
+
+  @override
+  State<_AddressDialog> createState() => _AddressDialogState();
+}
+
+class _AddressDialogState extends State<_AddressDialog> {
+  late final _field = TextEditingController(text: widget.current);
+  bool _busy = false;
+  String? _error;
+
+  /// The address answered, but not as this server, or did not answer: saving is still allowed.
+  String? _unchecked;
+
+  @override
+  void dispose() {
+    _field.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save({bool anyway = false}) async {
+    final address = normalizeAddress(_field.text);
+    if (address == null) {
+      setState(() => _error = _field.text.trim().isEmpty
+          ? 'Type the address Tailscale showed, like https://goodman.tail1234.ts.net'
+          : 'That is not a web address. It looks like https://goodman.tail1234.ts.net');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final nav = Navigator.of(context);
+    try {
+      if (!anyway) {
+        final (here, there) = await (
+          JellyfinClient.publicId(widget.client.account.baseUrl),
+          JellyfinClient.publicId(address),
+        ).wait;
+        if (there == null || (here != null && here != there)) {
+          setState(() {
+            _unchecked = address;
+            _error = there == null
+                ? 'Your server does not answer at this address. On the server computer, open Command Prompt '
+                      'as administrator and run: tailscale funnel --bg 8096. Then try again.'
+                : 'This address leads to another server, not to this one.';
+          });
+          return;
+        }
+      }
+      await widget.client.setPublicUrl(address);
+      nav.pop(true);
+    } catch (e) {
+      if (mounted) setState(() => _error = describeError(e));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: const Text('Internet address'),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        TextField(
+          controller: _field,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          autocorrect: false,
+          enabled: !_busy,
+          onChanged: (_) => setState(() => _unchecked = null),
+          onSubmitted: (_) => _save(),
+          decoration: const InputDecoration(
+            labelText: 'Address from Tailscale',
+            helperText: 'For example https://goodman.tail1234.ts.net',
+          ),
+        ),
+        if (_busy) ...[
+          const SizedBox(height: 16),
+          const Row(children: [
+            SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+            SizedBox(width: 12),
+            Expanded(child: Text('Checking that friends can reach your server…')),
+          ]),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 16),
+          Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
+        ],
+      ]),
+      actions: [
+        TextButton(onPressed: _busy ? null : () => Navigator.pop(context), child: const Text('Cancel')),
+        if (_unchecked != null && _unchecked == normalizeAddress(_field.text))
+          TextButton(onPressed: _busy ? null : () => _save(anyway: true), child: const Text('Save anyway')),
+        FilledButton(onPressed: _busy ? null : _save, child: const Text('Save')),
+      ],
     );
   }
 }
