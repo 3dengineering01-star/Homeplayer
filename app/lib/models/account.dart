@@ -12,6 +12,7 @@ class Account {
     this.token,
     this.userId,
     this.salt,
+    this.shared = false,
   });
 
   final String id;
@@ -29,6 +30,10 @@ class Account {
   /// Subsonic only.
   final String? salt;
 
+  /// Someone else's server, added from their invite: the phone's owner has no server of their own
+  /// (yet), so the app shows how to make one.
+  final bool shared;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'kind': kind.name,
@@ -38,6 +43,7 @@ class Account {
         'token': token,
         'userId': userId,
         'salt': salt,
+        if (shared) 'shared': true,
       };
 
   factory Account.fromJson(Map<String, dynamic> j) => Account(
@@ -49,5 +55,6 @@ class Account {
         token: j['token'] as String?,
         userId: j['userId'] as String?,
         salt: j['salt'] as String?,
+        shared: j['shared'] as bool? ?? false,
       );
 }

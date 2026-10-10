@@ -568,6 +568,7 @@ class JellyfinClient {
       serverName: j['ServerName'] as String? ?? Uri.parse(server).host,
       token: j['AccessToken'] as String,
       userId: userId,
+      shared: true,
     );
   }
 

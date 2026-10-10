@@ -32,6 +32,30 @@ public static class JoinPage
         $"#Intent;scheme=homeplay;package=dev.homeplay.homeplay;S.browser_fallback_url={Uri.EscapeDataString(appUrl)};end";
 
     /// <summary>
+    /// How to make a server of one's own: three steps, with the installer from this server when
+    /// it has one.
+    /// </summary>
+    /// <param name="setupUrl">Where the installer downloads from, or null.</param>
+    /// <returns>An HTML card.</returns>
+    public static string OwnServer(string? setupUrl)
+    {
+        var download = setupUrl is null
+            ? "Ask whoever sent you this link for the file <b>HomeplaySetup.exe</b> and run it on your Windows computer."
+            : $"On your Windows computer, open this page and <a href=\"{WebUtility.HtmlEncode(setupUrl)}\">download HomeplaySetup</a>. Run it.";
+        return $"""
+            <div class="card own">
+            <h2>Your own Homeplay</h2>
+            <p class="lead">Your movies, music and photos from your computer on your phone. Free, and nothing goes to the cloud.</p>
+            <ol>
+              <li>{download}</li>
+              <li>Choose the folders with your movies, music and photos, a name and a password. It sets everything up by itself.</li>
+              <li>At the end it shows a QR code: point your phone's camera at it. Or in Homeplay tap <b>Add your server</b>: it finds your computer on your Wi-Fi.</li>
+            </ol>
+            </div>
+            """;
+    }
+
+    /// <summary>
     /// The page for <paramref name="state"/>.
     /// </summary>
     /// <param name="state">Where the invite stands.</param>
@@ -40,8 +64,9 @@ public static class JoinPage
     /// <param name="server">The server's internet address.</param>
     /// <param name="code">The invite's code.</param>
     /// <param name="appUrl">Where the app comes from: the file on the server, or Google Play.</param>
+    /// <param name="setupUrl">Where the server installer downloads from; null when this server has none.</param>
     /// <returns>The HTML page.</returns>
-    public static string Html(InviteState state, string serverName, IReadOnlyList<string> libraries, string server, string code, string appUrl)
+    public static string Html(InviteState state, string serverName, IReadOnlyList<string> libraries, string server, string code, string appUrl, string? setupUrl = null)
     {
         var name = WebUtility.HtmlEncode(serverName);
         var store = appUrl.Contains("play.google.com", StringComparison.Ordinal);
@@ -86,13 +111,19 @@ public static class JoinPage
               .lead { color: var(--muted); margin: 0 0 24px; }
               .button { display: block; text-align: center; background: var(--accent); color: var(--on-accent); text-decoration: none; font-weight: 600; padding: 16px; border-radius: 999px; font-size: 19px; }
               .small { color: var(--muted); font-size: 15px; margin: 16px 0 0; }
+              .own { margin-top: 16px; }
+              h2 { font-size: 22px; margin: 0 0 8px; }
+              ol { margin: 0; padding-left: 22px; }
+              li { margin: 0 0 10px; }
               a { color: var(--accent); }
             </style>
             </head>
             <body>
             <main><div class="card">
             {{body}}
-            </div></main>
+            </div>
+            {{OwnServer(setupUrl)}}
+            </main>
             </body>
             </html>
             """;

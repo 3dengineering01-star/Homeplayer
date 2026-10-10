@@ -110,6 +110,21 @@ public sealed class SharingTests : IDisposable
         Assert.Contains("opens it in Google Play", page, StringComparison.Ordinal);
         Assert.Contains("S.browser_fallback_url=https%3A%2F%2Fplay.google.com", page, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void TheJoinPageTellsHowToMakeAServerOfOnesOwn()
+    {
+        var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", "x", "https://pc.ts.net/Homeplay/Setup");
+        Assert.Contains("Your own Homeplay", page, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://pc.ts.net/Homeplay/Setup\"", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("Ask whoever sent you this link for the file", page, StringComparison.Ordinal);
+
+        // A server without the installer next to the plugin: the friend asks for the file.
+        var without = JoinPage.Html(InviteState.Expired, "PC", [], "https://pc.ts.net", "ABC", "x");
+        Assert.Contains("Your own Homeplay", without, StringComparison.Ordinal);
+        Assert.Contains("Ask whoever sent you this link for the file", without, StringComparison.Ordinal);
+        Assert.DoesNotContain("/Homeplay/Setup", without, StringComparison.Ordinal);
+    }
 }
 
 public sealed class SharingAccessTests

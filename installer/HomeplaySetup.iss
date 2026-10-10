@@ -11,7 +11,7 @@
 ; Built with Inno Setup 6 (installer/build.sh). Needs, built first: the plugin in
 ; server/Jellyfin.Plugin.HomeplayBackup/bin/Release/net10.0 and app/dist/Homeplay-<AppVersion>.apk.
 
-#define AppVersion "0.3.2"
+#define AppVersion "0.3.3"
 ; Jellyfin's installer is downloaded during setup and checked against this hash: the file is not
 ; signed, so the hash is what says it is the real one. Version 12.1, the one the plugin is built for.
 #define JellyfinUrl "https://repo.jellyfin.org/files/server/windows/stable/v12.1/amd64/jellyfin_12.1_windows-x64.exe"
@@ -61,6 +61,7 @@ Filename: "{autoprograms}\Homeplay - connect a phone.url"; Section: "InternetSho
 
 [UninstallDelete]
 Type: files; Name: "{autoprograms}\Homeplay - connect a phone.url"
+Type: files; Name: "{app}\plugin\HomeplaySetup.exe"
 
 [Run]
 Filename: "{#PhonePage}"; Description: "Show how to connect your phone"; Flags: postinstall shellexec nowait
@@ -250,6 +251,10 @@ begin
   end;
 
   Status('Setting up the server. This takes a minute or two...');
+  // A copy of this very installer goes next to the plugin: friends invited to this server
+  // download it from the invite page to make a server of their own.
+  if not FileCopy(ExpandConstant('{srcexe}'), ExpandConstant('{app}\plugin\HomeplaySetup.exe'), False) then
+    Log('Could not copy the installer next to the plugin');
   // The password goes to the script in a file in Setup's own temporary folder, deleted right after.
   Settings := ExpandConstant('{tmp}\settings.json');
   SetArrayLength(Lines, 1);

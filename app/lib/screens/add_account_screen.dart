@@ -8,6 +8,8 @@ import '../api/subsonic.dart';
 import '../models/account.dart';
 import '../services/account_store.dart';
 import '../services/invite_link.dart';
+import '../services/own_server.dart';
+import '../widgets/own_server_guide.dart';
 import 'join_screen.dart';
 
 class AddAccountScreen extends StatefulWidget {
@@ -115,6 +117,15 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => JoinScreen(invite: invite)));
   }
 
+  /// How to make a server: for someone who has none, or only a friend's.
+  Future<void> _ownServer() async {
+    final servers = sharedServers(await AccountStore.load());
+    if (!mounted) return;
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (c) => OwnServerScreen(servers: servers, onAdd: () => Navigator.pop(c)),
+    ));
+  }
+
   Widget _discoveryRow(BuildContext context) {
     if (_searching) {
       return const Padding(
@@ -202,6 +213,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
             const SizedBox(height: 16),
             Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ],
+          const SizedBox(height: 24),
+          TextButton.icon(
+            onPressed: _ownServer,
+            icon: const Icon(Icons.computer_outlined),
+            label: const Text('No server yet? Make your own on your computer'),
+          ),
         ],
       ),
     );
