@@ -253,7 +253,7 @@ begin
   Status('Setting up the server. This takes a minute or two...');
   // A copy of this very installer goes next to the plugin: friends invited to this server
   // download it from the invite page to make a server of their own.
-  if not FileCopy(ExpandConstant('{srcexe}'), ExpandConstant('{app}\plugin\HomeplaySetup.exe'), False) then
+  if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{app}\plugin\HomeplaySetup.exe'), False) then
     Log('Could not copy the installer next to the plugin');
   // The password goes to the script in a file in Setup's own temporary folder, deleted right after.
   Settings := ExpandConstant('{tmp}\settings.json');

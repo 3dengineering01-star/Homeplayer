@@ -187,6 +187,12 @@ function Install-Plugin {
         return
     }
 
+    # A Jellyfin just installed is in its very first start, making its database: stopped in the
+    # middle of it, it stayed at "starting" (503) for good. So it is let finish starting first.
+    if ((Get-Service -Name JellyfinServer -ErrorAction SilentlyContinue).Status -eq 'Running' -or
+        (Get-Process -Name jellyfin -ErrorAction SilentlyContinue)) {
+        if (-not (Wait-Server)) { Write-Log 'Jellyfin did not finish starting; stopping it anyway' }
+    }
     $how = Stop-Jellyfin
     try {
         foreach ($dir in $old) {
