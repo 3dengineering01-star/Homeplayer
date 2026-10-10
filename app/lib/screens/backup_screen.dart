@@ -146,6 +146,10 @@ class _BackupScreenState extends State<BackupScreen> {
           Icons.folder_off,
           'The plugin is installed, but has no folder yet. Set it in Jellyfin: Dashboard → Plugins → Homeplay Backup.'
         ),
+      (BackupServerStatus.shared, _) => (
+          Icons.group_outlined,
+          "This server is shared with you by a friend: photos are backed up only to your own server."
+        ),
       (BackupServerStatus.ready, _) => (Icons.cloud_done, 'The server is ready to take photos.'),
     };
     return ListTile(leading: Icon(icon, color: theme.colorScheme.primary), title: Text(text));

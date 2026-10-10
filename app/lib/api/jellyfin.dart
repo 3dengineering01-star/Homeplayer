@@ -7,6 +7,7 @@ import '../models/account.dart';
 import '../services/quality.dart';
 import '../services/search_filters.dart';
 import 'common.dart';
+import 'sharing.dart';
 
 const _appVersion = '0.1.0';
 const _timeout = Duration(seconds: 15);
@@ -36,6 +37,7 @@ class JellyfinItem {
 
   Map<String, dynamic> get _user => (_j['UserData'] as Map<String, dynamic>?) ?? const {};
   bool get played => (_user['Played'] as bool?) ?? false;
+  bool get isFavorite => (_user['IsFavorite'] as bool?) ?? false;
 
   /// Where playback stopped last time; zero when there is nothing to resume.
   Duration get resumePosition => Duration(microseconds: ((_user['PlaybackPositionTicks'] as num?) ?? 0).toInt() ~/ 10);
@@ -381,6 +383,30 @@ class JellyfinClient {
   Future<List<JellyfinItem>> artistTracks(String artistId) =>
       _allPages({'artistIds': artistId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
 
+  /// The tracks marked as favorites, the ones marked last first.
+  Future<List<JellyfinItem>> favoriteTracks() => _allPages({
+        'recursive': 'true',
+        'includeItemTypes': 'Audio',
+        'filters': 'IsFavorite',
+        'sortBy': 'DatePlayed,SortName',
+        'sortOrder': 'Descending,Ascending',
+      });
+
+  /// Hearts set or taken off while the app runs, by server, user and item: a list loaded before
+  /// still shows the old state, and the player and the long-press menu agree with each other.
+  static final Map<String, bool> _favorites = {};
+
+  String _favoriteKey(String itemId) => '${account.baseUrl}|${account.userId}|$itemId';
+
+  /// Whether [item] is a favorite, counting hearts set since it was loaded.
+  bool isFavorite(JellyfinItem item) => _favorites[_favoriteKey(item.id)] ?? item.isFavorite;
+
+  /// Marks or unmarks [itemId] as a favorite of this user.
+  Future<void> setFavorite(String itemId, bool on) async {
+    await _send(on ? 'POST' : 'DELETE', '/UserFavoriteItems/$itemId', query: {'userId': account.userId!});
+    _favorites[_favoriteKey(itemId)] = on;
+  }
+
   /// An album's tracks, in disc and track order.
   Future<List<JellyfinItem>> albumTracks(String albumId) => _allPages({
         'parentId': albumId,
@@ -471,6 +497,95 @@ class JellyfinClient {
       ];
 
   /// A request that changes something on the server; the answer, when there is one.
+  // --- Sharing with friends (Homeplay plugin 1.3) ---
+
+  /// Whether this sign-in is the server's owner (an administrator): only they share it.
+  Future<bool> isAdmin() async {
+    final j = await _get('/Users/${account.userId}');
+    return (j['Policy'] as Map?)?['IsAdministrator'] == true;
+  }
+
+  Future<http.Response> _sharingCall(String method, String path, [Object? body]) async {
+    final req = http.Request(method, Uri.parse('$_base$path'))..headers.addAll({...headers, 'Content-Type': 'application/json'});
+    if (body != null) req.body = jsonEncode(body);
+    final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
+    if (res.statusCode < 300) return res;
+    throw ApiException(switch (res.statusCode) {
+      401 => 'Session expired. Remove the server and sign in again.',
+      403 => "Only the server's owner can share it.",
+      404 when path == '/Homeplay/Sharing' =>
+        'Sharing needs the newer Homeplay on the server computer. Run the new HomeplaySetup there.',
+      _ => serverMessage(res.body) ?? 'Server answered ${res.statusCode}',
+    });
+  }
+
+  Future<SharingInfo> sharing() async =>
+      SharingInfo(jsonDecode((await _sharingCall('GET', '/Homeplay/Sharing')).body) as Map<String, dynamic>);
+
+  /// Keeps the address friends reach the server at; returns it as the server keeps it.
+  Future<String> setPublicUrl(String url) async =>
+      jsonDecode((await _sharingCall('POST', '/Homeplay/Sharing', {'PublicUrl': url})).body) as String;
+
+  Future<ShareInvite> createInvite({required String friend, required List<String> libraryIds, int days = 7}) async =>
+      ShareInvite(jsonDecode((await _sharingCall('POST', '/Homeplay/Invites', {
+        'Friend': friend,
+        'Libraries': libraryIds,
+        'Days': days,
+      })).body) as Map<String, dynamic>);
+
+  /// Takes the invite back; a friend who joined loses access.
+  Future<void> deleteInvite(String code) => _sharingCall('DELETE', '/Homeplay/Invites/${Uri.encodeComponent(code)}');
+
+  /// Uses a friend's invite: the server makes a sign-in for this phone and gives its token.
+  static Future<Account> join({
+    required String server,
+    required String code,
+    required String deviceId,
+    required String deviceName,
+    http.Client? client,
+  }) async {
+    final h = client ?? http.Client();
+    final res = await h
+        .post(
+          Uri.parse('$server/Homeplay/Join'),
+          headers: {'Authorization': _authHeader(deviceId), 'Content-Type': 'application/json'},
+          body: jsonEncode({'Code': code, 'DeviceId': deviceId, 'DeviceName': deviceName}),
+        )
+        .timeout(_timeout);
+    if (res.statusCode != 200) {
+      throw ApiException(switch (res.statusCode) {
+        404 when serverMessage(res.body) == null => 'This server does not take invites. Is the link right?',
+        _ => serverMessage(res.body) ?? 'Server answered ${res.statusCode}',
+      });
+    }
+    final j = jsonDecode(res.body) as Map<String, dynamic>;
+    final userId = j['UserId'] as String;
+    return Account(
+      id: 'jf:$server:$userId',
+      kind: ServerKind.jellyfin,
+      baseUrl: server,
+      username: j['UserName'] as String,
+      serverName: j['ServerName'] as String? ?? Uri.parse(server).host,
+      token: j['AccessToken'] as String,
+      userId: userId,
+    );
+  }
+
+  /// The name a server goes by, before signing in; null when it does not answer.
+  static Future<String?> publicName(String baseUrl) => _serverName(baseUrl);
+
+  /// The id a server goes by, asked without signing in; null when it does not answer. Tells
+  /// whether two addresses lead to the same server.
+  static Future<String?> publicId(String baseUrl, {http.Client? client}) async {
+    try {
+      final res = await (client ?? http.Client()).get(Uri.parse('$baseUrl/System/Info/Public')).timeout(_timeout);
+      if (res.statusCode != 200) return null;
+      return (jsonDecode(res.body) as Map)['Id'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> _send(String method, String path, {Map<String, String>? query, Object? body}) async {
     final req = http.Request(method, Uri.parse('$_base$path').replace(queryParameters: query))
       ..headers.addAll({...headers, 'Content-Type': 'application/json'});
@@ -832,6 +947,7 @@ class JellyfinClient {
         isVideo: item.isVideo,
         headers: headers,
         reporter: _reporter(item, versionId, null, 'DirectPlay'),
+        favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
       );
 }
 

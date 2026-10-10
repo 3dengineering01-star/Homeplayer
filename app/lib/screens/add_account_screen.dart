@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../api/common.dart';
 import '../api/discovery.dart';
@@ -6,6 +7,8 @@ import '../api/jellyfin.dart';
 import '../api/subsonic.dart';
 import '../models/account.dart';
 import '../services/account_store.dart';
+import '../services/invite_link.dart';
+import 'join_screen.dart';
 
 class AddAccountScreen extends StatefulWidget {
   const AddAccountScreen({super.key});
@@ -79,6 +82,39 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
     }
   }
 
+  /// A friend's invite link pasted in: its page adds the server.
+  Future<void> _invite() async {
+    final field = TextEditingController(text: (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '');
+    if (!mounted) return;
+    final text = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Invite link'),
+        content: TextField(
+          controller: field,
+          autofocus: true,
+          maxLines: 3,
+          minLines: 1,
+          decoration: const InputDecoration(hintText: 'https://…/Homeplay/Join/…'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(c, field.text), child: const Text('Continue')),
+        ],
+      ),
+    );
+    field.dispose();
+    if (text == null || !mounted) return;
+    final invite = parseInvite(text);
+    if (invite == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('That is not an invite link. It looks like https://…/Homeplay/Join/…')),
+      );
+      return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => JoinScreen(invite: invite)));
+  }
+
   Widget _discoveryRow(BuildContext context) {
     if (_searching) {
       return const Padding(
@@ -116,6 +152,12 @@ class _AddAccountScreenState extends State<AddAccountScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          OutlinedButton.icon(
+            onPressed: _invite,
+            icon: const Icon(Icons.link),
+            label: const Text('Have an invite link? Paste it'),
+          ),
+          const SizedBox(height: 16),
           SegmentedButton<ServerKind>(
             segments: const [
               ButtonSegment(value: ServerKind.jellyfin, label: Text('Jellyfin'), icon: Icon(Icons.video_library)),

@@ -44,7 +44,8 @@ public class BackupController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult<BackupInfo> GetInfo() => new BackupInfo(
         typeof(BackupController).Assembly.GetName().Version?.ToString() ?? "0",
-        Store() is not null);
+        Store() is not null,
+        IsFriend());
 
     /// <summary>
     /// Which of the phone's photos the server already has, and how far partial uploads got.
@@ -56,6 +57,11 @@ public class BackupController : ControllerBase
     [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
     public ActionResult<IReadOnlyList<AssetState>> Check([FromBody] CheckRequest request)
     {
+        if (IsFriend())
+        {
+            return FriendRefused();
+        }
+
         var store = Store();
         if (store is null)
         {
@@ -103,6 +109,11 @@ public class BackupController : ControllerBase
         [FromQuery] long offset,
         CancellationToken cancellationToken)
     {
+        if (IsFriend())
+        {
+            return FriendRefused();
+        }
+
         var store = Store();
         if (store is null)
         {
@@ -160,6 +171,15 @@ public class BackupController : ControllerBase
         StatusCode(StatusCodes.Status503ServiceUnavailable, "The server admin has not set a backup folder for Homeplay Backup yet.");
 
     private string UserName() => User.FindFirstValue(ClaimTypes.Name) ?? "user";
+
+    // Friends the server is shared with watch and listen; their photos do not go to the owner's computer.
+    private bool IsFriend() =>
+        Guid.TryParse(User.FindFirstValue("Jellyfin-UserId"), out var id)
+        && Plugin.Instance is { } plugin
+        && Sharing.SharingStore.IsFriend(plugin.Sharing.Load(), id);
+
+    private ObjectResult FriendRefused() =>
+        StatusCode(StatusCodes.Status403Forbidden, "Photo backup is for the server's own people, not for friends it is shared with.");
 }
 
 /// <summary>
@@ -167,7 +187,8 @@ public class BackupController : ControllerBase
 /// </summary>
 /// <param name="Version">Plugin version.</param>
 /// <param name="Configured">A backup folder is set.</param>
-public sealed record BackupInfo(string Version, bool Configured);
+/// <param name="Friend">The user is a friend the server is shared with: backups are not for them.</param>
+public sealed record BackupInfo(string Version, bool Configured, bool Friend);
 
 /// <summary>
 /// Which photos to look up.

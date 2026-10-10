@@ -39,6 +39,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- A friend's invite: homeplay://join?server=...&code=... from the invite page. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="homeplay" android:host="join"/>
+            </intent-filter>
+            <!-- The app reads links itself (homeplay/links); Flutter must not treat them as routes. -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>
         </activity>
         <!-- Background playback: media notification, lock screen and headset buttons. -->
         <service

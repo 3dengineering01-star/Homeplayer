@@ -11,12 +11,22 @@ import 'common.dart';
 const _timeout = Duration(seconds: 15);
 
 class SubsonicEntry {
-  const SubsonicEntry({required this.id, required this.title, this.subtitle, this.coverArt, this.duration});
+  const SubsonicEntry({
+    required this.id,
+    required this.title,
+    this.subtitle,
+    this.coverArt,
+    this.duration,
+    this.starred = false,
+  });
   final String id;
   final String title;
   final String? subtitle;
   final String? coverArt;
   final Duration? duration;
+
+  /// Marked as a favorite ("starred") on the server.
+  final bool starred;
 }
 
 /// Subsonic API with token auth (Navidrome, Gonic, Airsonic and others).
@@ -122,6 +132,7 @@ class SubsonicClient {
           subtitle: (s['artist'] as String?)?.trim(),
           coverArt: s['coverArt'] as String?,
           duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
+          starred: s['starred'] != null,
         ),
     ];
   }
@@ -138,6 +149,7 @@ class SubsonicClient {
           subtitle: (s['artist'] as String?)?.trim(),
           coverArt: s['coverArt'] as String?,
           duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
+          starred: s['starred'] != null,
         ),
     ];
   }
@@ -152,6 +164,7 @@ class SubsonicClient {
         artwork: coverUrl(song.coverArt, size: 600),
         isVideo: false,
         reporter: _Scrobbler(this, song),
+        favorite: ServerFavorite(song.starred, (on) => _call(on ? 'star' : 'unstar', {'id': song.id})),
       );
 
   Future<void> _scrobble(String id, {required bool submission}) async {

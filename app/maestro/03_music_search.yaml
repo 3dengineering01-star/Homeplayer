@@ -12,6 +12,8 @@ name: Поиск в «Музыке»
 - extendedWaitUntil:
     visible: "Artists.*"
     timeout: 20000
+# The screen opens on the tab used last.
+- tapOn: "Artists.*"
 - tapOn: "Search"
 - inputText: "gripir"
 - extendedWaitUntil:

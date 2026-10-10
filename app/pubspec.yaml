@@ -4,7 +4,7 @@ publish_to: 'none'
 # The build number is the Android version code. Earlier test builds were split per processor and got
 # 2000 + 1 on arm64 phones; one file for all phones uses the number as it is, so it starts above that
 # to install over them. Raise it with every APK given out.
-version: 0.2.0+2002
+version: 0.3.2+2006
 
 environment:
   sdk: ^3.13.4
@@ -25,6 +25,7 @@ dependencies:
   media_kit: ^1.2.6
   media_kit_libs_video: ^1.0.7
   media_kit_video: ^2.0.1
+  package_info_plus: ^10.2.1
   path_provider: ^2.1.6
   photo_manager: ^3.12.0
   screen_brightness: ^2.1.11

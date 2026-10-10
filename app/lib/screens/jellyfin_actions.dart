@@ -178,6 +178,12 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
           ListTile(title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
           for (final (i, e) in extra.indexed)
             ListTile(leading: Icon(e.icon), title: Text(e.label), onTap: () => Navigator.pop(context, 'extra$i')),
+          if (item.type == 'Audio')
+            ListTile(
+              leading: Icon(client.isFavorite(item) ? Icons.favorite : Icons.favorite_border),
+              title: Text(client.isFavorite(item) ? 'Remove from favorites' : 'Add to favorites'),
+              onTap: () => Navigator.pop(context, 'favorite'),
+            ),
           if (item.isPlayable || item.type == 'MusicAlbum')
             ListTile(
               leading: const Icon(Icons.queue_music),
@@ -237,6 +243,15 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
     final messenger = ScaffoldMessenger.of(context);
     if (action.startsWith('extra')) return extra[int.parse(action.substring(5))].run();
     switch (action) {
+      case 'favorite':
+        final on = !client.isFavorite(item);
+        try {
+          await client.setFavorite(item.id, on);
+          messenger.showSnackBar(SnackBar(content: Text(on ? 'Added to favorites' : 'Removed from favorites')));
+          refresh();
+        } catch (e) {
+          messenger.showSnackBar(SnackBar(content: Text(describeError(e))));
+        }
       case 'phone':
         final List<JellyfinItem> tracks;
         try {

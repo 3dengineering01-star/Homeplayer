@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
+import '../services/music_folders.dart';
 import '../services/music_index.dart';
 import '../services/search_index.dart';
 import '../widgets/highlighted_text.dart';
@@ -9,7 +11,7 @@ import '../widgets/media_cards.dart';
 import '../widgets/track_tile.dart';
 import '../widgets/vinyl_art.dart';
 import 'jellyfin_actions.dart';
-import 'jellyfin_browser.dart';
+import 'music_folder_view.dart';
 import 'playlist_picker.dart';
 import 'track_list_screen.dart';
 
@@ -18,8 +20,8 @@ ArtistSort _artistSort = ArtistSort.name;
 AlbumSort _albumSort = AlbumSort.name;
 TrackSort _trackSort = TrackSort.title;
 
-/// A music library by artists, albums, tracks and playlists, each sorted as the user picks and
-/// filtered by what is typed in the search field.
+/// A music library by artists, albums, tracks, its folders on disk and playlists, each sorted as
+/// the user picks and filtered by what is typed in the search field. It opens on the tab used last.
 class MusicLibraryScreen extends StatefulWidget {
   const MusicLibraryScreen({super.key, required this.client, required this.library});
 
@@ -30,21 +32,43 @@ class MusicLibraryScreen extends StatefulWidget {
   State<MusicLibraryScreen> createState() => _MusicLibraryScreenState();
 }
 
-typedef _Music = ({List<JellyfinItem> tracks, List<ArtistGroup> artists, List<AlbumGroup> albums});
+typedef _Music = ({
+  List<JellyfinItem> tracks,
+  List<ArtistGroup> artists,
+  List<AlbumGroup> albums,
+  MusicFolder folders,
+});
+
+const _tabNames = ['Artists', 'Albums', 'Tracks', 'Folders', 'Playlists'];
+const _playlistsTab = 4;
+const _tabKey = 'music.tab';
 
 class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinActions, SingleTickerProviderStateMixin {
   @override
   JellyfinClient get client => widget.client;
 
-  late final TabController _tabs = TabController(length: 4, vsync: this)
+  late final TabController _tabs = TabController(length: _tabNames.length, vsync: this)
     ..addListener(() {
-      // Playlists may have changed from another tab's long press.
-      if (_tabs.index == 3 && !_tabs.indexIsChanging) {
-        _playlists = client.playlists();
-        if (_contents != null) _contents = _loadContents();
+      if (!_tabs.indexIsChanging) {
+        // Playlists may have changed from another tab's long press.
+        if (_tabs.index == _playlistsTab) {
+          _playlists = client.playlists();
+          if (_contents != null) _contents = _loadContents();
+        }
+        // The tab the person chose, not one a search jumped to.
+        if (!_searching) SharedPreferences.getInstance().then((p) => p.setInt(_tabKey, _tabs.index));
       }
       setState(() {});
     });
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      final last = p.getInt(_tabKey);
+      if (mounted && last != null && last >= 0 && last < _tabNames.length) _tabs.index = last;
+    });
+  }
   late Future<_Music> _music = _load();
   late Future<List<JellyfinItem>> _playlists = client.playlists();
   final _query = TextEditingController();
@@ -61,7 +85,12 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
 
   Future<_Music> _load() async {
     final tracks = await client.musicTracks(widget.library.id);
-    final m = (tracks: tracks, artists: groupByArtist(tracks), albums: groupByAlbum(tracks));
+    final m = (
+      tracks: tracks,
+      artists: groupByArtist(tracks),
+      albums: groupByAlbum(tracks),
+      folders: buildMusicFolders(tracks),
+    );
     if (mounted) setState(() => _data = m);
     return m;
   }
@@ -167,21 +196,6 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
             }),
           ),
           _sortButton(),
-          PopupMenuButton<VoidCallback>(
-            tooltip: 'More',
-            onSelected: (a) => a(),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        JellyfinBrowser(client: client, title: widget.library.name, parentId: widget.library.id),
-                  ),
-                ),
-                child: const ListTile(leading: Icon(Icons.folder_outlined), title: Text('Folders')),
-              ),
-            ],
-          ),
         ],
         bottom: TabBar(
           controller: _tabs,
@@ -189,7 +203,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
           isScrollable: MediaQuery.textScalerOf(context).scale(1) > 1.2,
           tabAlignment: MediaQuery.textScalerOf(context).scale(1) > 1.2 ? TabAlignment.start : null,
           tabs: [
-            for (final (i, name) in const ['Artists', 'Albums', 'Tracks', 'Playlists'].indexed)
+            for (final (i, name) in _tabNames.indexed)
               Tab(text: switch (_tabCounts) {
                 final counts? when i < counts.length => '$name · ${counts[i]}',
                 _ => name,
@@ -203,6 +217,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
           _withMusic((m) => _artistList(m)),
           _withMusic((m) => _albumGrid(m)),
           _withMusic((m) => _trackList(m)),
+          _withMusic((m) => _folders(m)),
           _playlistList(),
         ],
       ),
@@ -219,6 +234,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
       hits.artists.length,
       hits.albums.length,
       hits.tracks.length,
+      findFolders(m.folders, _text).length,
       if (lists != null) findPlaylists(lists, _text).length,
     ];
   }
@@ -358,6 +374,13 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
     );
   }
 
+  Widget _folders(_Music m) {
+    final q = _text;
+    if (q.isEmpty) return MusicFolderView(client: client, folder: m.folders);
+    final hits = findFolders(m.folders, q);
+    return hits.isEmpty ? _Empty(query: q) : MusicFolderHits(client: client, hits: hits, query: q);
+  }
+
   Widget _playlistList() => PlaylistList(
     client: client,
     playlists: _playlists,
@@ -441,6 +464,21 @@ class PlaylistList extends StatelessWidget {
                 ),
                 title: const Text('New playlist'),
                 onTap: () => _create(context),
+              ),
+            if (query.isEmpty)
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
+                  child: Icon(Icons.favorite, color: Theme.of(context).colorScheme.onTertiaryContainer),
+                ),
+                title: const Text('Favorites'),
+                subtitle: const Text('Tracks you marked with ♥, gathered here by themselves'),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => TrackListScreen.favorites(client: client)),
+                  );
+                  onChanged();
+                },
               ),
             for (final p in list)
               ListTile(

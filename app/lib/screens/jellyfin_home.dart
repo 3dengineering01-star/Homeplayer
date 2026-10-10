@@ -11,6 +11,7 @@ import 'jellyfin_actions.dart';
 import 'jellyfin_browser.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
+import 'share_screen.dart';
 
 /// A Jellyfin server's front page: its libraries. What is being watched is inside the movie and
 /// show libraries.
@@ -32,6 +33,18 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
 
   /// "124 movies" by library id, filled in after the page shows.
   final Map<String, String> _counts = {};
+
+  /// Whether this sign-in owns the server: only the owner shares it. A friend never sees the
+  /// menu item, and the server refuses them anyway.
+  bool _owner = false;
+
+  @override
+  void initState() {
+    super.initState();
+    client.isAdmin().then((admin) {
+      if (mounted) setState(() => _owner = admin);
+    }, onError: (Object e) => debugPrint('homeplay owner check failed: $e'));
+  }
 
   @override
   void refresh() => setState(() => _libraries = _load());
@@ -97,6 +110,11 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
                 value: () => _push(const DownloadsScreen()),
                 child: const ListTile(leading: Icon(Icons.download_for_offline_outlined), title: Text('Downloads')),
               ),
+              if (_owner)
+                PopupMenuItem(
+                  value: () => _push(ShareScreen(client: client)),
+                  child: const ListTile(leading: Icon(Icons.group_add_outlined), title: Text('Share with friends')),
+                ),
               PopupMenuItem(
                 value: () => _push(BackupScreen(account: client.account)),
                 child: const ListTile(leading: Icon(Icons.backup_outlined), title: Text('Photo backup')),

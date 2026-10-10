@@ -32,6 +32,9 @@ enum BackupServerStatus {
 
   /// Installed, but the admin has not chosen a folder yet.
   notConfigured,
+
+  /// The server is a friend's, shared with this user: photos do not go to it.
+  shared,
   ready,
 }
 
@@ -57,6 +60,7 @@ class BackupApi {
     _checkAuth(res);
     if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for backup info');
     final j = jsonDecode(res.body) as Map<String, dynamic>;
+    if (j['Friend'] == true) return BackupServerStatus.shared;
     return ((j['Configured'] ?? j['configured']) as bool? ?? false)
         ? BackupServerStatus.ready
         : BackupServerStatus.notConfigured;

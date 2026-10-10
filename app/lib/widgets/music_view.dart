@@ -242,6 +242,7 @@ class _Controls extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+          if (item.favorite case final fav?) FavoriteButton(favorite: fav, color: on),
           ValueListenableBuilder(
             valueListenable: pb.sound,
             builder: (context, s, _) => IconButton(
@@ -402,4 +403,31 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
       ),
     );
   }
+}
+
+/// The heart: the track goes to (or out of) the favorites on its server, and from there into the
+/// Favorites playlist.
+class FavoriteButton extends StatelessWidget {
+  const FavoriteButton({super.key, required this.favorite, this.color});
+
+  final ItemFavorite favorite;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: favorite.marked,
+    builder: (context, on, _) => IconButton(
+      tooltip: on ? 'Remove from favorites' : 'Add to favorites',
+      color: on ? color : null,
+      icon: Icon(on ? Icons.favorite : Icons.favorite_border),
+      onPressed: () async {
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        try {
+          await favorite.toggle();
+        } catch (e) {
+          messenger?.showSnackBar(SnackBar(content: Text(describeError(e))));
+        }
+      },
+    ),
+  );
 }

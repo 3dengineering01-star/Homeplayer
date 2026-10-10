@@ -20,6 +20,7 @@ class TrackListScreen extends StatefulWidget {
     this.cover,
     this.byAlbum = false,
     this.playlist,
+    this.emptyText = 'Nothing here',
   });
 
   /// An album from the server.
@@ -29,7 +30,8 @@ class TrackListScreen extends StatefulWidget {
       load = (() => client.albumTracks(album.id)),
       cover = album,
       byAlbum = false,
-      playlist = null;
+      playlist = null,
+      emptyText = 'Nothing here';
 
   /// An artist from the server's search, with their tracks album by album.
   TrackListScreen.artist({super.key, required this.client, required JellyfinItem artist})
@@ -38,7 +40,8 @@ class TrackListScreen extends StatefulWidget {
       load = (() async => [for (final a in groupByArtist(await client.artistTracks(artist.id))) ...a.tracks]),
       cover = artist,
       byAlbum = true,
-      playlist = null;
+      playlist = null,
+      emptyText = 'Nothing here';
 
   /// A playlist: tracks can be taken out, and the playlist deleted.
   TrackListScreen.playlist({super.key, required this.client, required JellyfinItem this.playlist})
@@ -46,7 +49,18 @@ class TrackListScreen extends StatefulWidget {
       subtitle = 'Playlist',
       load = (() => client.playlistItems(playlist.id)),
       cover = playlist,
-      byAlbum = false;
+      byAlbum = false,
+      emptyText = 'Empty. Long-press a track or an album and choose "Add to playlist".';
+
+  /// The tracks marked with a heart: a playlist that fills itself.
+  TrackListScreen.favorites({super.key, required this.client})
+    : title = 'Favorites',
+      subtitle = 'Tracks you marked with ♥',
+      load = client.favoriteTracks,
+      cover = null,
+      byAlbum = false,
+      playlist = null,
+      emptyText = 'No favorites yet. Tap ♥ in the player, or long-press a track and choose "Add to favorites".';
 
   final JellyfinClient client;
   final String title;
@@ -59,6 +73,9 @@ class TrackListScreen extends StatefulWidget {
   /// A heading over each album's tracks, for an artist.
   final bool byAlbum;
   final JellyfinItem? playlist;
+
+  /// What the page says when there are no tracks.
+  final String emptyText;
 
   @override
   State<TrackListScreen> createState() => _TrackListScreenState();
@@ -166,11 +183,7 @@ class _TrackListScreenState extends State<TrackListScreen> with JellyfinActions 
               Padding(
                 padding: const EdgeInsets.all(32),
                 child: Center(
-                  child: Text(
-                    widget.playlist != null
-                        ? 'Empty. Long-press a track or an album and choose "Add to playlist".'
-                        : 'Nothing here',
-                  ),
+                  child: Text(widget.emptyText, textAlign: TextAlign.center),
                 ),
               ),
           ];
