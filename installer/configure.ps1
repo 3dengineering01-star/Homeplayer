@@ -117,49 +117,90 @@ function Get-DataFolder {
     Join-Path $env:ProgramData 'Jellyfin\Server'
 }
 
+# Jellyfin keeps the plugin's dll open while it runs, so Windows lets nobody replace or delete
+# it: Jellyfin is stopped first, the folders changed, then Jellyfin started again.
+# Stops Jellyfin; returns how to start it again ('service', the exe of the tray app or of
+# Jellyfin itself) or $null when it was not running.
+function Stop-Jellyfin {
+    $service = Get-Service -Name JellyfinServer -ErrorAction SilentlyContinue
+    if ($service -and $service.Status -ne 'Stopped') {
+        Write-Log 'Stopping the Jellyfin service'
+        Stop-Service -Name JellyfinServer -Force
+        $service.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(60))
+        Wait-Exit
+        return 'service'
+    }
+    $running = Get-Process -Name jellyfin -ErrorAction SilentlyContinue
+    if ($running) {
+        Write-Log 'Stopping Jellyfin'
+        $exe = $running[0].Path
+        $tray = Join-Path (Split-Path $exe) 'jellyfin-windows-tray\Jellyfin.Windows.Tray.exe'
+        Get-Process -Name 'Jellyfin.Windows.Tray' -ErrorAction SilentlyContinue | Stop-Process -Force
+        $running | Stop-Process -Force
+        Wait-Exit
+        if (Test-Path $tray) { return $tray }
+        return $exe
+    }
+    if ($service) { return 'service' }
+    return $null
+}
+
+# The process may linger a moment after the service says it stopped.
+function Wait-Exit {
+    for ($i = 0; $i -lt 30 -and (Get-Process -Name jellyfin -ErrorAction SilentlyContinue); $i++) {
+        Start-Sleep -Seconds 1
+    }
+}
+
+function Start-Jellyfin($how) {
+    if ($how -eq 'service') {
+        Write-Log 'Starting the Jellyfin service'
+        Start-Service -Name JellyfinServer
+    } elseif ($how) {
+        Write-Log 'Starting Jellyfin'
+        Start-Process $how -WindowStyle Hidden
+    }
+}
+
+# Tries [action] a few times: a file just let go of may still be locked for a second.
+function Retry([scriptblock] $action) {
+    for ($try = 1; ; $try++) {
+        try { & $action; return } catch { if ($try -ge 10) { throw } ; Start-Sleep -Seconds 1 }
+    }
+}
+
 # The plugin goes to plugins\Homeplay Backup_<version>; older versions of it are taken away.
-# Returns whether anything changed, i.e. Jellyfin has to start again to load it.
+# Nothing is touched, and Jellyfin keeps running, when the plugin is there already.
 function Install-Plugin {
     $dll = Join-Path $Plugin 'Jellyfin.Plugin.HomeplayBackup.dll'
     $version = (Get-Item $dll).VersionInfo.FileVersion
     $plugins = Join-Path (Get-DataFolder) 'plugins'
     $target = Join-Path $plugins "Homeplay Backup_$version"
-    New-Item -ItemType Directory -Force -Path $target | Out-Null
-    $changed = $false
-    Get-ChildItem -Path $plugins -Directory -Filter 'Homeplay Backup_*' |
-        Where-Object { $_.FullName -ne $target } |
-        ForEach-Object {
-            Write-Log "Removing old plugin $($_.Name)"
-            Remove-Item -Recurse -Force $_.FullName
-            $changed = $true
-        }
-    foreach ($file in Get-ChildItem -Path $Plugin -File) {
-        $to = Join-Path $target $file.Name
-        if (-not (Test-Path $to) -or (Get-FileHash $to).Hash -ne (Get-FileHash $file.FullName).Hash) {
-            Copy-Item -Force $file.FullName $to
-            $changed = $true
-        }
-    }
-    Write-Log "Plugin $version in $target$(if ($changed) { ' (new)' })"
-    $changed
-}
-
-# Jellyfin loads plugins when it starts: the service (or the tray app) starts again.
-function Restart-Jellyfin {
-    $service = Get-Service -Name JellyfinServer -ErrorAction SilentlyContinue
-    if ($service) {
-        Write-Log 'Restarting the Jellyfin service'
-        Restart-Service -Name JellyfinServer -Force
+    $old = @(Get-ChildItem -Path $plugins -Directory -Filter 'Homeplay Backup_*' -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -ne $target })
+    $files = @(Get-ChildItem -Path $Plugin -File | Where-Object {
+        $to = Join-Path $target $_.Name
+        -not (Test-Path $to) -or (Get-FileHash $to).Hash -ne (Get-FileHash $_.FullName).Hash
+    })
+    if ($old.Count -eq 0 -and $files.Count -eq 0) {
+        Write-Log "Plugin $version in $target, up to date"
         return
     }
-    $running = Get-Process -Name jellyfin -ErrorAction SilentlyContinue
-    if ($running) {
-        Write-Log 'Restarting Jellyfin'
-        $exe = $running[0].Path
-        $running | Stop-Process -Force
-        Start-Sleep -Seconds 3
-        $tray = Join-Path (Split-Path $exe) 'jellyfin-windows-tray\Jellyfin.Windows.Tray.exe'
-        if (Test-Path $tray) { Start-Process $tray } else { Start-Process $exe -WindowStyle Hidden }
+
+    $how = Stop-Jellyfin
+    try {
+        foreach ($dir in $old) {
+            Write-Log "Removing old plugin $($dir.Name)"
+            Retry { Remove-Item -Recurse -Force $dir.FullName }
+        }
+        New-Item -ItemType Directory -Force -Path $target | Out-Null
+        foreach ($file in $files) {
+            Retry { Copy-Item -Force $file.FullName (Join-Path $target $file.Name) }
+        }
+        Write-Log "Plugin $version in $target (new)"
+    } finally {
+        # Whatever happened, the server runs again: on the new plugin, or on the old one.
+        Start-Jellyfin $how
     }
 }
 
@@ -178,7 +219,7 @@ $cfg = Get-Content -Raw -Encoding UTF8 -Path $Settings | ConvertFrom-Json
 Write-Log "Setting up Jellyfin at $Server"
 
 try {
-    if (Install-Plugin) { Restart-Jellyfin }
+    Install-Plugin
 } catch {
     Write-Log "Could not put the plugin in place: $($_.Exception.Message)"
     exit 2
