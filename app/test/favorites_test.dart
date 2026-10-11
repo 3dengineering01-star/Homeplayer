@@ -47,6 +47,34 @@ void main() {
     expect(fav.marked.value, isFalse);
   });
 
+  // Jellyfin 12.1 writes the user data it held when playback began back with every report, so
+  // a heart set while the track plays was lost on the server. It is sent again after each report.
+  test('a heart set during playback is sent again after each playback report', () async {
+    final seen = <String>[];
+    final c = JellyfinClient(_jf, 'dev', client: MockClient((r) async {
+      seen.add('${r.method} ${r.url.path}');
+      return http.Response('', 204);
+    }));
+    final item = c.toPlayItem(_track('t2'));
+    await item.reporter!.started(Duration.zero);
+    expect(seen, ['POST /Sessions/Playing'], reason: 'no heart set yet: nothing more is sent');
+    await item.favorite!.toggle();
+    seen.clear();
+    await item.reporter!.progress(const Duration(seconds: 10), paused: false);
+    await item.reporter!.stopped(const Duration(seconds: 20));
+    expect(seen, [
+      'POST /Sessions/Playing/Progress',
+      'POST /UserFavoriteItems/t2',
+      'POST /Sessions/Playing/Stopped',
+      'POST /UserFavoriteItems/t2',
+    ]);
+    // Taken off: taken off again after the reports.
+    await item.favorite!.toggle();
+    seen.clear();
+    await c.toPlayItem(_track('t2')).reporter!.progress(Duration.zero, paused: true);
+    expect(seen, ['POST /Sessions/Playing/Progress', 'DELETE /UserFavoriteItems/t2']);
+  });
+
   test('videos have no heart; favorites are asked for as tracks marked so', () async {
     final seen = <http.Request>[];
     final c = JellyfinClient(_jf, 'dev', client: MockClient((r) async {
