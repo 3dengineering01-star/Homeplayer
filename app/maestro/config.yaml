@@ -1,4 +1,4 @@
-# Набор сценариев Maestro для Homeplay: `maestro test app/maestro` (из корня репозитория).
+# Набор сценариев Maestro для OwnMedia: `maestro test app/maestro` (из корня репозитория).
 flows:
   - "*.yaml"
 executionOrder:

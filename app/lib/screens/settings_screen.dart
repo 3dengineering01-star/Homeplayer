@@ -100,13 +100,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ListTile(
                 leading: const Icon(Icons.description_outlined),
                 title: const Text('Open-source licenses'),
-                subtitle: const Text('The free software Homeplay is built with'),
+                subtitle: const Text('The free software OwnMedia is built with'),
                 onTap: () async {
                   final info = await PackageInfo.fromPlatform();
                   if (!context.mounted) return;
                   showLicensePage(
                     context: context,
-                    applicationName: 'Homeplay',
+                    applicationName: 'OwnMedia',
                     applicationVersion: info.version,
                   );
                 },

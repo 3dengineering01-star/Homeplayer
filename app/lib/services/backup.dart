@@ -169,7 +169,7 @@ class Backup {
         return 0;
       }
       if (!background && !(await PhotoManager.getPermissionState(requestOption: permission)).hasAccess) {
-        throw const _BackupStop('No access to photos. Open the backup settings in Homeplay to allow it.');
+        throw const _BackupStop('No access to photos. Open the backup settings in OwnMedia to allow it.');
       }
       final api = BackupApi(JellyfinClient(account, await AccountStore.deviceId()));
       switch (await api.status()) {

@@ -122,7 +122,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(
-                      'Homeplay',
+                      'OwnMedia',
                       style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.5),
                     ),
                     const SizedBox(height: 4),
@@ -442,7 +442,7 @@ class _OwnServerCard extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Your own Homeplay',
+                  Text('Your own OwnMedia',
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: scheme.onSecondaryContainer)),
                   Text('Your movies and music from your computer, in a few clicks',
                       style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSecondaryContainer)),

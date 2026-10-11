@@ -217,7 +217,7 @@ class JellyfinClient {
   String get _base => account.baseUrl;
 
   static String _authHeader(String deviceId, [String? token]) =>
-      'MediaBrowser Client="Homeplay", Device="Android", DeviceId="$deviceId", Version="$_appVersion"'
+      'MediaBrowser Client="OwnMedia", Device="Android", DeviceId="$deviceId", Version="$_appVersion"'
       '${token != null ? ', Token="$token"' : ''}';
 
   Map<String, String> get headers => {'Authorization': _authHeader(deviceId, account.token)};
@@ -526,7 +526,7 @@ class JellyfinClient {
       401 => 'Session expired. Remove the server and sign in again.',
       403 => "Only the server's owner can share it.",
       404 when path == '/Homeplay/Sharing' =>
-        'Sharing needs the newer Homeplay on the server computer. Run the new HomeplaySetup there.',
+        'Sharing needs the newer OwnMedia on the server computer. Run the new OwnMediaSetup there.',
       _ => serverMessage(res.body) ?? 'Server answered ${res.statusCode}',
     });
   }
@@ -709,7 +709,7 @@ class JellyfinClient {
 
   /// What this phone can play, so the server knows when it has to convert something.
   static final Map<String, dynamic> _deviceProfile = {
-    'Name': 'Homeplay',
+    'Name': 'OwnMedia',
     'MaxStreamingBitrate': 200000000,
     'DirectPlayProfiles': [
       {

@@ -140,7 +140,7 @@ String describeBackupError(Object e) {
   if (e is SocketException) return 'No connection to the server';
   // Android's answer when photo access was taken away in the system settings.
   if (e.toString().contains('SecurityException')) {
-    return 'No access to photos. Open the backup settings in Homeplay to allow it.';
+    return 'No access to photos. Open the backup settings in OwnMedia to allow it.';
   }
   return describeError(e);
 }

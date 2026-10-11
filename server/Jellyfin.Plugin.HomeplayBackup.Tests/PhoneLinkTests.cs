@@ -51,7 +51,7 @@ public sealed class PhoneLinkTests : IDisposable
         Assert.Null(PhoneLink.FindApk(_folder));
         File.WriteAllText(Path.Combine(_folder, "Homeplay-0.2.0.apk"), "x");
         Assert.EndsWith("Homeplay-0.2.0.apk", PhoneLink.FindApk(_folder), StringComparison.Ordinal);
-        File.WriteAllText(Path.Combine(_folder, "Homeplay.apk"), "x");
+        File.WriteAllText(Path.Combine(_folder, PhoneLink.ApkName), "x");
         Assert.EndsWith(PhoneLink.ApkName, PhoneLink.FindApk(_folder), StringComparison.Ordinal);
     }
 
@@ -61,6 +61,9 @@ public sealed class PhoneLinkTests : IDisposable
         Assert.Null(PhoneLink.FindSetup(_folder));
         Directory.CreateDirectory(_folder);
         Assert.Null(PhoneLink.FindSetup(_folder));
+        // Left by a setup from before the name OwnMedia.
+        File.WriteAllText(Path.Combine(_folder, PhoneLink.OldSetupName), "x");
+        Assert.EndsWith(PhoneLink.OldSetupName, PhoneLink.FindSetup(_folder), StringComparison.Ordinal);
         File.WriteAllText(Path.Combine(_folder, PhoneLink.SetupName), "x");
         Assert.EndsWith(PhoneLink.SetupName, PhoneLink.FindSetup(_folder), StringComparison.Ordinal);
     }

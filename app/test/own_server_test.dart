@@ -62,7 +62,7 @@ void main() {
   testWidgets('the guide offers to send the installer link to the computer', (tester) async {
     var added = false;
     await pumpGuide(tester, 'https://anna.ts.net/Homeplay/Setup', () => added = true);
-    expect(find.text('Your own Homeplay'), findsOneWidget);
+    expect(find.text('Your own OwnMedia'), findsOneWidget);
     expect(find.text('Send the link to my computer'), findsOneWidget);
     expect(find.textContaining('Ask whoever'), findsNothing);
     await tester.ensureVisible(find.text('Add your server'));
@@ -74,7 +74,7 @@ void main() {
   testWidgets('without the installer on the server the guide says whom to ask', (tester) async {
     await pumpGuide(tester, null, () {});
     expect(find.text('Send the link to my computer'), findsNothing);
-    expect(find.textContaining('HomeplaySetup.exe'), findsOneWidget);
+    expect(find.textContaining('OwnMediaSetup.exe'), findsOneWidget);
   });
 
   testWidgets('the server list shows the way to one\'s own server when all servers are friends\'', (tester) async {
@@ -86,8 +86,8 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: AccountsScreen()));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Your own Homeplay'), 200);
-    expect(find.text('Your own Homeplay'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Your own OwnMedia'), 200);
+    expect(find.text('Your own OwnMedia'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -97,6 +97,6 @@ void main() {
     });
     await tester.pumpWidget(const MaterialApp(home: AccountsScreen()));
     await tester.pumpAndSettle();
-    expect(find.text('Your own Homeplay'), findsNothing);
+    expect(find.text('Your own OwnMedia'), findsNothing);
   });
 }

@@ -69,7 +69,7 @@ class _BackupScreenState extends State<BackupScreen> {
         context: context,
         builder: (c) => AlertDialog(
           title: const Text('No access to photos'),
-          content: const Text('Homeplay needs access to your photos and videos to back them up.'),
+          content: const Text('OwnMedia needs access to your photos and videos to back them up.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
             FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Open settings')),

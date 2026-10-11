@@ -34,7 +34,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     public override Guid Id => Guid.Parse("ca1d038a-d3f7-4ef4-9839-1e93a8105618");
 
     /// <inheritdoc />
-    public override string Description => "Backs up photos and videos from the Homeplay app to a folder on this server.";
+    public override string Description => "Backs up photos and videos from the OwnMedia app to a folder on this server.";
 
     /// <summary>
     /// Gets the current plugin instance.

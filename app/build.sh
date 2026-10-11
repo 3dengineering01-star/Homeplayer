@@ -3,7 +3,7 @@
 #   ./build.sh            debug-APK
 #   ./build.sh release    release-APK (один файл для телефонов arm и arm64)
 #   ./build.sh apk        APK для установки людям: release с ключом из android/key.properties,
-#                         копия в app/dist/Homeplay-<версия>.apk
+#                         копия в app/dist/OwnMedia-<версия>.apk
 #   ./build.sh run        собрать и запустить на подключённом телефоне
 #   ./build.sh test       юнит-тесты
 #   ./build.sh bundle     App Bundle для Google Play (нужен android/key.properties, см. docs/play/README.md)
@@ -29,8 +29,8 @@ case "${1:-debug}" in
     flutter build apk --release --target-platform android-arm,android-arm64 || exit 1
     version=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
     mkdir -p dist
-    cp build/app/outputs/flutter-apk/app-release.apk "dist/Homeplay-$version.apk"
-    echo "Готово: app/dist/Homeplay-$version.apk"
+    cp build/app/outputs/flutter-apk/app-release.apk "dist/OwnMedia-$version.apk"
+    echo "Готово: app/dist/OwnMedia-$version.apk"
     ;;
   run)     flutter run ;;
   test)    flutter test ;;

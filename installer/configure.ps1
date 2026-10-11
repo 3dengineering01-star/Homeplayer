@@ -1,4 +1,4 @@
-# Sets up Jellyfin for Homeplay, run by HomeplaySetup.exe as administrator: puts the Homeplay
+# Sets up Jellyfin for OwnMedia, run by OwnMediaSetup.exe as administrator: puts the Homeplay
 # plugin (with the phone app) into Jellyfin's plugin folder, and on a fresh Jellyfin finishes its
 # first-run wizard with the person's name and password, adds the libraries
 # (movies, shows, music, photos), points the Homeplay plugin at the photo folder and lets phones
@@ -10,7 +10,7 @@
 # The file holds the password: the installer deletes it as soon as this script ends. The log
 # (C:\ProgramData\Homeplay\setup.log) never has it.
 #
-# -Plugin is a folder with Jellyfin.Plugin.HomeplayBackup.dll, QRCoder.dll and Homeplay.apk.
+# -Plugin is a folder with Jellyfin.Plugin.HomeplayBackup.dll, QRCoder.dll and OwnMedia.apk.
 #
 # Exit codes: 0 done, 1 the server did not start, 2 setting it up failed (see the log).
 
@@ -98,8 +98,8 @@ function Open-Firewall {
             Set-NetConnectionProfile -InterfaceIndex $_.InterfaceIndex -NetworkCategory Private
         }
     $rules = @(
-        @{ Name = 'Homeplay-Jellyfin-TCP'; DisplayName = 'Homeplay: Jellyfin server (TCP 8096)'; Protocol = 'TCP'; LocalPort = 8096 },
-        @{ Name = 'Homeplay-Jellyfin-Discovery'; DisplayName = 'Homeplay: Jellyfin discovery (UDP 7359)'; Protocol = 'UDP'; LocalPort = 7359 }
+        @{ Name = 'Homeplay-Jellyfin-TCP'; DisplayName = 'OwnMedia: Jellyfin server (TCP 8096)'; Protocol = 'TCP'; LocalPort = 8096 },
+        @{ Name = 'Homeplay-Jellyfin-Discovery'; DisplayName = 'OwnMedia: Jellyfin discovery (UDP 7359)'; Protocol = 'UDP'; LocalPort = 7359 }
     )
     foreach ($r in $rules) {
         Remove-NetFirewallRule -Name $r.Name -ErrorAction SilentlyContinue
@@ -265,7 +265,7 @@ try {
     # The name phones show when they find the server; Windows' own computer name
     # ("DESKTOP-4F2K9QX") would say nothing to the person.
     Invoke-Jellyfin POST '/Startup/Configuration' @{
-        ServerName                = "$($cfg.Name)'s Homeplay"
+        ServerName                = "$($cfg.Name)'s OwnMedia"
         UICulture                 = 'en-US'
         MetadataCountryCode       = $country
         PreferredMetadataLanguage = $culture.TwoLetterISOLanguageName

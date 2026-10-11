@@ -256,7 +256,7 @@ public class ShareController : ControllerBase
             {
                 Username = name,
                 Password = password,
-                App = "Homeplay",
+                App = "OwnMedia",
                 AppVersion = "1.0",
                 DeviceId = string.IsNullOrWhiteSpace(request.DeviceId) ? Guid.NewGuid().ToString("N") : request.DeviceId,
                 DeviceName = string.IsNullOrWhiteSpace(request.DeviceName) ? "Phone" : request.DeviceName,

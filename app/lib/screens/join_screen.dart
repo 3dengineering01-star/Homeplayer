@@ -129,7 +129,7 @@ class _JoinScreenState extends State<JoinScreen> {
             icon: _busy
                 ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.add),
-            label: const Text('Add to Homeplay'),
+            label: const Text('Add to OwnMedia'),
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
           ),
           if (_error != null) ...[
