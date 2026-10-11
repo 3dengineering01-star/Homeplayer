@@ -1,4 +1,9 @@
-# Homeplay
+# OwnMedia
+
+Приложение называется OwnMedia (раньше Homeplay). Внутренние имена остались прежними и не меняются, иначе
+сломаются обновления и старые ссылки: пакет `dev.homeplay.homeplay`, Dart-пакет `homeplay`, ссылки
+`homeplay://`, адреса API `/Homeplay/...` и `/HomeplayBackup/...`, плагин «Homeplay Backup» и его папка,
+папка `Music/Homeplay` на телефоне, `C:\ProgramData\Homeplay`, префикс логов `homeplay`.
 
 Android-плеер музыки и видео с домашнего сервера: Jellyfin (видео и музыка) и Navidrome/Subsonic (музыка).
 Flutter + media_kit (libmpv), direct play без транскодирования. Подробности и список возможностей в `README.md`.

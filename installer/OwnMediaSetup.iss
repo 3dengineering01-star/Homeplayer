@@ -1,17 +1,17 @@
-; HomeplaySetup.exe: a home media server in a few clicks. Asks where the movies, shows, music
+; OwnMediaSetup.exe: a home media server in a few clicks. Asks where the movies, shows, music
 ; and photos are and for a name and password, downloads and installs Jellyfin, puts in the
-; Homeplay plugin with the phone app, sets the server up (configure.ps1) and opens the page with
+; Homeplay Backup plugin with the OwnMedia phone app, sets the server up (configure.ps1) and opens the page with
 ; the QR code for the phone. On a computer that has Jellyfin already, only the plugin and the app
 ; are put in; its users and libraries stay as they are.
 ;
 ; Silent, for tests (e.g. in Windows Sandbox), the answers come from the command line:
-;   HomeplaySetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NAME=Test /PASSWORD=test1234 [/MOVIES=... /SHOWS=...
+;   OwnMediaSetup.exe /VERYSILENT /SUPPRESSMSGBOXES /NAME=Test /PASSWORD=test1234 [/MOVIES=... /SHOWS=...
 ;   /MUSIC=... /PHOTOS=... /HOMENETWORK=0] /LOG=C:\setup.log
 ;
 ; Built with Inno Setup 6 (installer/build.sh). Needs, built first: the plugin in
-; server/Jellyfin.Plugin.HomeplayBackup/bin/Release/net10.0 and app/dist/Homeplay-<AppVersion>.apk.
+; server/Jellyfin.Plugin.HomeplayBackup/bin/Release/net10.0 and app/dist/OwnMedia-<AppVersion>.apk.
 
-#define AppVersion "0.3.4"
+#define AppVersion "0.3.5"
 ; Jellyfin's installer is downloaded during setup and checked against this hash: the file is not
 ; signed, so the hash is what says it is the real one. Version 12.1, the one the plugin is built for.
 #define JellyfinUrl "https://repo.jellyfin.org/files/server/windows/stable/v12.1/amd64/jellyfin_12.1_windows-x64.exe"
@@ -22,11 +22,13 @@
 
 [Setup]
 AppId={{6F1C2E0A-7B4D-4C55-9A3E-2D8B1F0C9E41}
-AppName=Homeplay Server
+AppName=OwnMedia Server
 AppVersion={#AppVersion}
-AppPublisher=Homeplay
-AppVerName=Homeplay Server {#AppVersion}
-DefaultDirName={autopf}\Homeplay
+AppPublisher=OwnMedia
+AppVerName=OwnMedia Server {#AppVersion}
+; A server set up before the name OwnMedia keeps its folder: Setup reuses the folder of the
+; install it updates.
+DefaultDirName={autopf}\OwnMedia
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 DisableReadyPage=no
@@ -37,9 +39,9 @@ MinVersion=10.0
 WizardStyle=modern
 SetupIconFile=homeplay.ico
 UninstallDisplayIcon={app}\homeplay.ico
-UninstallDisplayName=Homeplay Server
+UninstallDisplayName=OwnMedia Server
 OutputDir=dist
-OutputBaseFilename=HomeplaySetup
+OutputBaseFilename=OwnMediaSetup
 Compression=lzma2
 SolidCompression=yes
 
@@ -51,17 +53,23 @@ Source: "{#PluginBin}\QRCoder.dll"; DestDir: "{app}\plugin"; Flags: ignoreversio
 ; The plugin is GPL; its source is public. The notices go with it.
 Source: "..\server\LICENSE"; DestDir: "{app}\plugin"; DestName: "LICENSE.txt"; Flags: ignoreversion
 Source: "..\server\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}\plugin"; Flags: ignoreversion
-Source: "..\app\dist\Homeplay-{#AppVersion}.apk"; DestDir: "{app}\plugin"; DestName: "Homeplay.apk"; Flags: ignoreversion
+Source: "..\app\dist\OwnMedia-{#AppVersion}.apk"; DestDir: "{app}\plugin"; DestName: "OwnMedia.apk"; Flags: ignoreversion
 
 [INI]
 ; A Start menu link back to the phone page, for the next phone.
-Filename: "{autoprograms}\Homeplay - connect a phone.url"; Section: "InternetShortcut"; Key: "URL"; String: "{#PhonePage}"
-Filename: "{autoprograms}\Homeplay - connect a phone.url"; Section: "InternetShortcut"; Key: "IconFile"; String: "{app}\homeplay.ico"
-Filename: "{autoprograms}\Homeplay - connect a phone.url"; Section: "InternetShortcut"; Key: "IconIndex"; String: "0"
+Filename: "{autoprograms}\OwnMedia - connect a phone.url"; Section: "InternetShortcut"; Key: "URL"; String: "{#PhonePage}"
+Filename: "{autoprograms}\OwnMedia - connect a phone.url"; Section: "InternetShortcut"; Key: "IconFile"; String: "{app}\homeplay.ico"
+Filename: "{autoprograms}\OwnMedia - connect a phone.url"; Section: "InternetShortcut"; Key: "IconIndex"; String: "0"
+
+[InstallDelete]
+; Left by a setup from before the name OwnMedia: they would be copied to the server again.
+Type: files; Name: "{app}\plugin\Homeplay.apk"
+Type: files; Name: "{app}\plugin\HomeplaySetup.exe"
+Type: files; Name: "{autoprograms}\Homeplay - connect a phone.url"
 
 [UninstallDelete]
-Type: files; Name: "{autoprograms}\Homeplay - connect a phone.url"
-Type: files; Name: "{app}\plugin\HomeplaySetup.exe"
+Type: files; Name: "{autoprograms}\OwnMedia - connect a phone.url"
+Type: files; Name: "{app}\plugin\OwnMediaSetup.exe"
 
 [Run]
 Filename: "{#PhonePage}"; Description: "Show how to connect your phone"; Flags: postinstall shellexec nowait
@@ -92,7 +100,7 @@ begin
 
   FoldersPage := CreateInputDirPage(wpWelcome,
     'Your movies, shows, music and photos',
-    'Homeplay shows on your phone what is in these folders.',
+    'OwnMedia shows on your phone what is in these folders.',
     'Put new movies and music into them any time: they show up by themselves. ' +
     'Photos from your phone are saved into the last one. Leave a line empty to skip it.',
     False, '');
@@ -103,11 +111,11 @@ begin
   FoldersPage.Values[0] := ExpandConstant('{param:MOVIES|' + Home + '\Videos\Movies}');
   FoldersPage.Values[1] := ExpandConstant('{param:SHOWS|' + Home + '\Videos\Shows}');
   FoldersPage.Values[2] := ExpandConstant('{param:MUSIC|' + Home + '\Music}');
-  FoldersPage.Values[3] := ExpandConstant('{param:PHOTOS|' + Home + '\Pictures\Homeplay}');
+  FoldersPage.Values[3] := ExpandConstant('{param:PHOTOS|' + Home + '\Pictures\OwnMedia}');
 
   AccountPage := CreateInputQueryPage(FoldersPage.ID,
     'Your name and password',
-    'You sign in with them in the Homeplay app on your phone.',
+    'You sign in with them in the OwnMedia app on your phone.',
     'Choose a password you will remember.');
   AccountPage.Add('Name:', False);
   AccountPage.Add('Password:', True);
@@ -125,7 +133,7 @@ begin
   HomeNetwork.Checked := ExpandConstant('{param:HOMENETWORK|1}') <> '0';
 
   DownloadPage := CreateDownloadPage('Downloading Jellyfin',
-    'Jellyfin is the free media server Homeplay plays from.', nil);
+    'Jellyfin is the free media server OwnMedia plays from.', nil);
 end;
 
 // With Jellyfin already there, its users and libraries stay: nothing to ask.
@@ -175,7 +183,7 @@ function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo, MemoType
   MemoComponentsInfo, MemoGroupInfo, MemoTasksInfo: String): String;
 begin
   if HasJellyfin then
-    Result := 'Jellyfin is already on this computer. Setup adds Homeplay to it; ' +
+    Result := 'Jellyfin is already on this computer. Setup adds OwnMedia to it; ' +
       'its users and libraries stay as they are.'
   else
     Result := 'Setup downloads and installs Jellyfin (about 200 MB), then sets it up:' + NewLine +
@@ -253,7 +261,7 @@ begin
   Status('Setting up the server. This takes a minute or two...');
   // A copy of this very installer goes next to the plugin: friends invited to this server
   // download it from the invite page to make a server of their own.
-  if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{app}\plugin\HomeplaySetup.exe'), False) then
+  if not CopyFile(ExpandConstant('{srcexe}'), ExpandConstant('{app}\plugin\OwnMediaSetup.exe'), False) then
     Log('Could not copy the installer next to the plugin');
   // The password goes to the script in a file in Setup's own temporary folder, deleted right after.
   Settings := ExpandConstant('{tmp}\settings.json');

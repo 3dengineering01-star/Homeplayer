@@ -94,8 +94,8 @@ public sealed class SharingTests : IDisposable
         Assert.Contains("Movies, Music", page, StringComparison.Ordinal);
         Assert.Contains("intent://join?server=https%3A%2F%2Fpc.ts.net&amp;code=ABC#Intent;scheme=homeplay;package=dev.homeplay.homeplay;S.browser_fallback_url=https%3A%2F%2Fpc.ts.net%2FHomeplay%2FApp;end", page, StringComparison.Ordinal);
         Assert.Contains("homeplay://join?server=https%3A%2F%2Fpc.ts.net&amp;code=ABC", page, StringComparison.Ordinal);
-        Assert.Contains("Download Homeplay for Android", page, StringComparison.Ordinal);
-        Assert.DoesNotContain("Open in Homeplay", JoinPage.Html(InviteState.Joined, "PC", [], "https://pc.ts.net", "ABC", "x"), StringComparison.Ordinal);
+        Assert.Contains("Download OwnMedia for Android", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("Open in OwnMedia", JoinPage.Html(InviteState.Joined, "PC", [], "https://pc.ts.net", "ABC", "x"), StringComparison.Ordinal);
         Assert.Contains("expired", JoinPage.Html(InviteState.Expired, "PC", [], "https://pc.ts.net", "ABC", "x"), StringComparison.Ordinal);
     }
 
@@ -106,7 +106,7 @@ public sealed class SharingTests : IDisposable
         var store = Phone.PhoneLink.AppUrl("https://pc.ts.net", false);
         Assert.Equal(Phone.PhoneLink.PlayStoreUrl, store);
         var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", store);
-        Assert.Contains("Get Homeplay on Google Play", page, StringComparison.Ordinal);
+        Assert.Contains("Get OwnMedia on Google Play", page, StringComparison.Ordinal);
         Assert.Contains("opens it in Google Play", page, StringComparison.Ordinal);
         Assert.Contains("S.browser_fallback_url=https%3A%2F%2Fplay.google.com", page, StringComparison.Ordinal);
     }
@@ -115,13 +115,13 @@ public sealed class SharingTests : IDisposable
     public void TheJoinPageTellsHowToMakeAServerOfOnesOwn()
     {
         var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", "x", "https://pc.ts.net/Homeplay/Setup");
-        Assert.Contains("Your own Homeplay", page, StringComparison.Ordinal);
+        Assert.Contains("Your own OwnMedia", page, StringComparison.Ordinal);
         Assert.Contains("href=\"https://pc.ts.net/Homeplay/Setup\"", page, StringComparison.Ordinal);
         Assert.DoesNotContain("Ask whoever sent you this link for the file", page, StringComparison.Ordinal);
 
         // A server without the installer next to the plugin: the friend asks for the file.
         var without = JoinPage.Html(InviteState.Expired, "PC", [], "https://pc.ts.net", "ABC", "x");
-        Assert.Contains("Your own Homeplay", without, StringComparison.Ordinal);
+        Assert.Contains("Your own OwnMedia", without, StringComparison.Ordinal);
         Assert.Contains("Ask whoever sent you this link for the file", without, StringComparison.Ordinal);
         Assert.DoesNotContain("/Homeplay/Setup", without, StringComparison.Ordinal);
     }

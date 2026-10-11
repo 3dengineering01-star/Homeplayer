@@ -7,14 +7,14 @@
 
 ## English (en-US)
 
-**App name** (27): `Homeplay: home media player`
+**App name** (27): `OwnMedia: home media player`
 
 **Short description** (67): `Music, movies and photos from your own Jellyfin or Navidrome server`
 
 **Full description:**
 
 ```
-Homeplay plays the music and movies on your own server: Jellyfin for movies, shows and music, Navidrome or any Subsonic server for music. One app instead of two or three.
+OwnMedia plays the music and movies on your own server: Jellyfin for movies, shows and music, Navidrome or any Subsonic server for music. One app instead of two or three.
 
 PLAYS EVERYTHING
 • Built on mpv: MKV, HEVC, AV1, VP9, DTS, Dolby audio, FLAC, ASS subtitles with all their styling.
@@ -40,21 +40,21 @@ IN THE CAR
 NO STRINGS
 • No account, no ads, no analytics, no tracking. The app talks only to your servers.
 
-Homeplay is an independent app, not affiliated with Jellyfin, Navidrome or Tailscale.
+OwnMedia is an independent app, not affiliated with Jellyfin, Navidrome or Tailscale.
 ```
 
 **Category:** Music & Audio (or Video Players & Editors). **Tags:** media player, music player, video player.
 
 ## Русский (ru-RU)
 
-**Название** (29): `Homeplay: домашний медиаплеер`
+**Название** (29): `OwnMedia: домашний медиаплеер`
 
 **Краткое описание** (61): `Музыка, фильмы и фото с вашего сервера Jellyfin или Navidrome`
 
 **Полное описание:**
 
 ```
-Homeplay играет музыку и фильмы с вашего собственного сервера: Jellyfin для фильмов, сериалов и музыки, Navidrome или любой Subsonic-сервер для музыки. Одно приложение вместо двух-трёх.
+OwnMedia играет музыку и фильмы с вашего собственного сервера: Jellyfin для фильмов, сериалов и музыки, Navidrome или любой Subsonic-сервер для музыки. Одно приложение вместо двух-трёх.
 
 ИГРАЕТ ВСЁ
 • Основан на mpv: MKV, HEVC, AV1, VP9, DTS, звук Dolby, FLAC, субтитры ASS со всем оформлением.
@@ -80,7 +80,7 @@ Homeplay играет музыку и фильмы с вашего собств�
 БЕЗ ЛИШНЕГО
 • Без учётной записи, рекламы, аналитики и слежки. Приложение общается только с вашими серверами.
 
-Homeplay — независимое приложение, не связанное с Jellyfin, Navidrome и Tailscale.
+OwnMedia — независимое приложение, не связанное с Jellyfin, Navidrome и Tailscale.
 ```
 
 ## Картинки

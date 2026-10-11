@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../services/app_links.dart';
 import '../services/own_server.dart';
 
-/// How to make a Homeplay server of one's own, in three steps: the installer on the computer,
+/// How to make an OwnMedia server of one's own, in three steps: the installer on the computer,
 /// running it, adding the server on this phone. For someone who only has a friend's server.
 class OwnServerGuide extends StatefulWidget {
   const OwnServerGuide({super.key, required this.servers, required this.onAdd, this.findLink = findSetupLink});
@@ -61,11 +61,11 @@ class _OwnServerGuideState extends State<OwnServerGuide> {
       ]);
     }
     if (_link == null) {
-      return const Text('Ask whoever told you about Homeplay for the file HomeplaySetup.exe and copy it to your computer.');
+      return const Text('Ask whoever told you about OwnMedia for the file OwnMediaSetup.exe and copy it to your computer.');
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('Send yourself the link, for example in a messenger or by email. '
-          'Open it on the computer: HomeplaySetup downloads.'),
+          'Open it on the computer: OwnMediaSetup downloads.'),
       const SizedBox(height: 12),
       Wrap(spacing: 8, runSpacing: 8, children: [
         FilledButton.tonalIcon(
@@ -87,7 +87,7 @@ class _OwnServerGuideState extends State<OwnServerGuide> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Your own Homeplay', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+          Text('Your own OwnMedia', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text(
             'Movies, music and photos from your own computer on this phone. '
@@ -98,7 +98,7 @@ class _OwnServerGuideState extends State<OwnServerGuide> {
           _Step(number: 1, title: 'Get the installer on your computer', child: _download(theme)),
           const _Step(
             number: 2,
-            title: 'Run HomeplaySetup on the computer',
+            title: 'Run OwnMediaSetup on the computer',
             child: Text('Choose the folders with your movies, shows, music and photos, then your name and a password. '
                 'It sets everything up by itself in a few minutes.'),
           ),
@@ -108,7 +108,7 @@ class _OwnServerGuideState extends State<OwnServerGuide> {
             last: true,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Keep the phone on the same Wi-Fi as the computer. Tap Add your server: '
-                  'Homeplay finds the computer by itself. Enter the name and password from step 2.'),
+                  'OwnMedia finds the computer by itself. Enter the name and password from step 2.'),
               const SizedBox(height: 12),
               FilledButton.icon(onPressed: widget.onAdd, icon: const Icon(Icons.add), label: const Text('Add your server')),
             ]),

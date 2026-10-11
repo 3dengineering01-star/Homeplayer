@@ -40,16 +40,16 @@ public static class JoinPage
     public static string OwnServer(string? setupUrl)
     {
         var download = setupUrl is null
-            ? "Ask whoever sent you this link for the file <b>HomeplaySetup.exe</b> and run it on your Windows computer."
-            : $"On your Windows computer, open this page and <a href=\"{WebUtility.HtmlEncode(setupUrl)}\">download HomeplaySetup</a>. Run it.";
+            ? "Ask whoever sent you this link for the file <b>OwnMediaSetup.exe</b> and run it on your Windows computer."
+            : $"On your Windows computer, open this page and <a href=\"{WebUtility.HtmlEncode(setupUrl)}\">download OwnMediaSetup</a>. Run it.";
         return $"""
             <div class="card own">
-            <h2>Your own Homeplay</h2>
+            <h2>Your own OwnMedia</h2>
             <p class="lead">Your movies, music and photos from your computer on your phone. Free, and nothing goes to the cloud.</p>
             <ol>
               <li>{download}</li>
               <li>Choose the folders with your movies, music and photos, a name and a password. It sets everything up by itself.</li>
-              <li>At the end it shows a QR code: point your phone's camera at it. Or in Homeplay tap <b>Add your server</b>: it finds your computer on your Wi-Fi.</li>
+              <li>At the end it shows a QR code: point your phone's camera at it. Or in OwnMedia tap <b>Add your server</b>: it finds your computer on your Wi-Fi.</li>
             </ol>
             </div>
             """;
@@ -75,10 +75,10 @@ public static class JoinPage
             InviteState.Waiting => $"""
                 <h1>{name}</h1>
                 <p class="lead">You are invited to watch and listen: {WebUtility.HtmlEncode(string.Join(", ", libraries))}.</p>
-                <a class="button" href="{WebUtility.HtmlEncode(IntentLink(server, code, appUrl))}">Open in Homeplay</a>
-                <p class="small">No Homeplay on this phone yet? The button {(store ? "opens it in Google Play" : "downloads it")}. Install it, then come back to this page and tap the button again.</p>
-                <p class="small"><a href="{WebUtility.HtmlEncode(AppLink(server, code))}">Open in Homeplay</a> (if the button does nothing) · <a href="{WebUtility.HtmlEncode(appUrl)}">{(store ? "Get Homeplay on Google Play" : "Download Homeplay for Android")}</a></p>
-                <p class="small">Or in Homeplay: Add your server → Have an invite link? → paste this page's address.</p>
+                <a class="button" href="{WebUtility.HtmlEncode(IntentLink(server, code, appUrl))}">Open in OwnMedia</a>
+                <p class="small">No OwnMedia on this phone yet? The button {(store ? "opens it in Google Play" : "downloads it")}. Install it, then come back to this page and tap the button again.</p>
+                <p class="small"><a href="{WebUtility.HtmlEncode(AppLink(server, code))}">Open in OwnMedia</a> (if the button does nothing) · <a href="{WebUtility.HtmlEncode(appUrl)}">{(store ? "Get OwnMedia on Google Play" : "Download OwnMedia for Android")}</a></p>
+                <p class="small">Or in OwnMedia: Add your server → Have an invite link? → paste this page's address.</p>
                 """,
             InviteState.Joined => $"""
                 <h1>{name}</h1>
@@ -89,7 +89,7 @@ public static class JoinPage
                 <p class="lead">This invite has expired. Ask whoever sent it for a new one.</p>
                 """,
             _ => """
-                <h1>Homeplay</h1>
+                <h1>OwnMedia</h1>
                 <p class="lead">There is no such invite. Check the link, or ask whoever sent it for a new one.</p>
                 """,
         };
@@ -100,7 +100,7 @@ public static class JoinPage
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <meta name="robots" content="noindex">
-            <title>Homeplay invite</title>
+            <title>OwnMedia invite</title>
             <style>
               :root { color-scheme: light dark; --bg: #f6f4fb; --card: #fff; --text: #1c1b20; --muted: #5d5a66; --accent: #6750a4; --on-accent: #fff; }
               @media (prefers-color-scheme: dark) { :root { --bg: #141218; --card: #211f26; --text: #e6e0e9; --muted: #cac4d0; --accent: #d0bcff; --on-accent: #381e72; } }

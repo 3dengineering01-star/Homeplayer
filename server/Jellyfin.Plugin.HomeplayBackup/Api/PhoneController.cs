@@ -64,7 +64,7 @@ public class PhoneController : ControllerBase
     {
         var setup = PhoneLink.FindSetup(PluginFolder);
         return setup is null
-            ? NotFound("The Homeplay installer is not on this server.")
+            ? NotFound("The OwnMedia installer is not on this server.")
             : PhysicalFile(setup, "application/vnd.microsoft.portable-executable", PhoneLink.SetupName);
     }
 
@@ -79,7 +79,7 @@ public class PhoneController : ControllerBase
     {
         var apk = PhoneLink.FindApk(PluginFolder);
         return apk is null
-            ? NotFound("The Homeplay app is not on this server.")
+            ? NotFound("The OwnMedia app is not on this server.")
             : PhysicalFile(apk, "application/vnd.android.package-archive", PhoneLink.ApkName);
     }
 

@@ -16,24 +16,26 @@ public static class PhoneLink
     /// <summary>
     /// The file name the app is served and saved under.
     /// </summary>
-    public const string ApkName = "Homeplay.apk";
+    public const string ApkName = "OwnMedia.apk";
 
     /// <summary>
     /// The server installer for Windows, kept next to the plugin by the installer itself, so a
     /// friend can make a server of their own from here.
     /// </summary>
-    public const string SetupName = "HomeplaySetup.exe";
+    public const string SetupName = "OwnMediaSetup.exe";
 
     /// <summary>
-    /// The server installer next to the plugin.
+    /// The installer's name before the app was called OwnMedia.
+    /// </summary>
+    public const string OldSetupName = "HomeplaySetup.exe";
+
+    /// <summary>
+    /// The server installer next to the plugin, under its name or the old one.
     /// </summary>
     /// <param name="folder">The plugin's folder.</param>
     /// <returns>Its path, or null when it is not there.</returns>
-    public static string? FindSetup(string folder)
-    {
-        var path = Path.Combine(folder, SetupName);
-        return File.Exists(path) ? path : null;
-    }
+    public static string? FindSetup(string folder) =>
+        new[] { SetupName, OldSetupName }.Select(n => Path.Combine(folder, n)).FirstOrDefault(File.Exists);
 
     /// <summary>
     /// The app in Google Play: where phones get it when no app file came with the plugin (a
@@ -93,7 +95,7 @@ public static class PhoneLink
     public static string ServerUrl(string host, int port) => $"http://{host}:{port}";
 
     /// <summary>
-    /// The app file next to the plugin: Homeplay.apk, else any other .apk (e.g. Homeplay-0.2.0.apk).
+    /// The app file next to the plugin: OwnMedia.apk, else any other .apk (e.g. Homeplay.apk of an older setup).
     /// </summary>
     /// <param name="folder">The plugin's folder.</param>
     /// <returns>The file's path, or null when there is none.</returns>
@@ -122,15 +124,15 @@ public static class PhoneLink
         var name = WebUtility.HtmlEncode(serverName);
         var url = WebUtility.HtmlEncode(serverUrl);
         var qr = qrPng is null
-            ? "<p class=\"warn\">No QR code could be made. Get Homeplay from Google Play on the phone.</p>"
-            : $"<img class=\"qr\" alt=\"QR code: the Homeplay app for Android\" src=\"data:image/png;base64,{Convert.ToBase64String(qrPng)}\">";
+            ? "<p class=\"warn\">No QR code could be made. Get OwnMedia from Google Play on the phone.</p>"
+            : $"<img class=\"qr\" alt=\"QR code: the OwnMedia app for Android\" src=\"data:image/png;base64,{Convert.ToBase64String(qrPng)}\">";
         return $$"""
             <!doctype html>
             <html lang="en">
             <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Homeplay: connect your phone</title>
+            <title>OwnMedia: connect your phone</title>
             <style>
               :root { color-scheme: light dark; --bg: #f6f4fb; --card: #fff; --text: #1c1b20; --muted: #5d5a66; --accent: #6750a4; }
               @media (prefers-color-scheme: dark) { :root { --bg: #141218; --card: #211f26; --text: #e6e0e9; --muted: #cac4d0; --accent: #d0bcff; } }
@@ -155,9 +157,9 @@ public static class PhoneLink
                 {{qr}}
                 <ol>
                   <li>Connect the phone to the same Wi-Fi as this computer.</li>
-                  <li>Point the phone's camera at the code and open the link. The Homeplay app downloads from this computer.</li>
+                  <li>Point the phone's camera at the code and open the link. The OwnMedia app downloads from this computer.</li>
                   <li>Open the file and tap <b>Install</b>. If the phone asks, allow installing from this source.</li>
-                  <li>Open Homeplay and tap <b>Add your server</b>. It finds <b>{{name}}</b> by itself: enter your name and password.</li>
+                  <li>Open OwnMedia and tap <b>Add your server</b>. It finds <b>{{name}}</b> by itself: enter your name and password.</li>
                 </ol>
               </div>
               <p class="lead">Server address, if the phone does not find it: <code>{{url}}</code></p>
