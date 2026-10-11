@@ -407,6 +407,18 @@ class JellyfinClient {
     _favorites[_favoriteKey(itemId)] = on;
   }
 
+  /// Tells the server again the heart set on [itemId] while the app runs, if one was; see
+  /// [_JellyfinReporter]. Errors are only logged: the next report tries again.
+  Future<void> _sendHeartAgain(String itemId) async {
+    final on = _favorites[_favoriteKey(itemId)];
+    if (on == null) return;
+    try {
+      await _send(on ? 'POST' : 'DELETE', '/UserFavoriteItems/$itemId', query: {'userId': account.userId!});
+    } catch (e) {
+      debugPrint('homeplay heart again failed: $e');
+    }
+  }
+
   /// An album's tracks, in disc and track order.
   Future<List<JellyfinItem>> albumTracks(String albumId) => _allPages({
         'parentId': albumId,
@@ -953,6 +965,10 @@ class JellyfinClient {
 }
 
 /// Jellyfin keeps the resume point and the played mark from these reports.
+///
+/// Jellyfin 12.1 holds the playing item's user data as it was when playback began and writes it
+/// back with every report: a heart set during playback was undone by the next report, while the
+/// heart in the app stayed lit. So after each report a heart set while the app runs is sent again.
 class _JellyfinReporter implements PlaybackReporter {
   _JellyfinReporter(this._client, this._itemId, this._mediaSourceId, this._playSessionId, this._playMethod);
 
@@ -972,16 +988,20 @@ class _JellyfinReporter implements PlaybackReporter {
         'CanSeek': true,
       };
 
+  Future<void> _send(String path, Map<String, dynamic> body) async {
+    await _client._report(path, body);
+    await _client._sendHeartAgain(_itemId);
+  }
+
   @override
-  Future<void> started(Duration position) => _client._report('/Sessions/Playing', _body(position));
+  Future<void> started(Duration position) => _send('/Sessions/Playing', _body(position));
 
   @override
   Future<void> progress(Duration position, {required bool paused}) =>
-      _client._report('/Sessions/Playing/Progress', _body(position, paused: paused));
+      _send('/Sessions/Playing/Progress', _body(position, paused: paused));
 
   @override
-  Future<void> stopped(Duration position, {Duration? duration}) =>
-      _client._report('/Sessions/Playing/Stopped', _body(position));
+  Future<void> stopped(Duration position, {Duration? duration}) => _send('/Sessions/Playing/Stopped', _body(position));
 }
 
 /// How a library grid is sorted.
