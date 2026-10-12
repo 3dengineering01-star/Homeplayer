@@ -167,25 +167,56 @@ function Get-NameServers([string] $Name) {
     return @()
 }
 
+# The address as the internet sees it, from the DNS servers of its own zone: the public
+# addresses of Tailscale's Funnel, or nothing while the name is new.
+function Get-PublicAddresses([string] $Name, [string[]] $Servers) {
+    foreach ($server in $Servers) {
+        try {
+            $found = @(Resolve-DnsName -Name $Name -Type A -Server $server -DnsOnly -QuickTimeout -ErrorAction Stop |
+                Where-Object { $_.Type -eq 'A' } | ForEach-Object { $_.IPAddress })
+            if ($found.Count -gt 0) { return $found }
+        } catch {
+            # Not there yet, or this server did not answer.
+        }
+    }
+    return @()
+}
+
+# Whether the server answers from the internet: a real HTTPS request to the public addresses.
+# From this computer the name leads inside Tailscale, which works before the internet does, so
+# curl is told to go to the public address while still asking for the name (its certificate).
+function Test-FromInternet([string] $Name, [string[]] $Addresses) {
+    $curl = Join-Path $env:WINDIR 'System32\curl.exe'
+    if (-not (Test-Path $curl)) { return $true }
+    $ErrorActionPreference = 'Continue'
+    foreach ($ip in $Addresses) {
+        $code = & $curl -s -o NUL -w '%{http_code}' --max-time 10 --resolve "${Name}:443:$ip" "https://$Name/System/Info/Public" 2>$null
+        if ($code -eq '200') { return $true }
+    }
+    return $false
+}
+
+# Waits until a friend's phone can open the address: the name is known on the internet (a new one
+# takes some minutes), and Funnel answers there (its certificate takes a few more).
 function Wait-PublicName([string] $Name) {
     $servers = Get-NameServers $Name
     if ($servers.Count -eq 0) {
         Write-Log 'No DNS servers found to ask about the address; not waiting'
         return $true
     }
-    Write-Log "Waiting until $Name is known on the internet (asking $($servers -join ', '))"
+    Write-Log "Waiting until https://$Name opens from the internet (asking $($servers -join ', '))"
     $deadline = (Get-Date).AddMinutes($WaitMinutes)
+    $known = $false
     while ((Get-Date) -lt $deadline) {
-        foreach ($server in $servers) {
-            try {
-                $found = @(Resolve-DnsName -Name $Name -Server $server -DnsOnly -QuickTimeout -ErrorAction Stop |
-                    Where-Object { $_.Type -eq 'A' -or $_.Type -eq 'AAAA' -or $_.Type -eq 'CNAME' })
-                if ($found.Count -gt 0) {
-                    Write-Log "$Name is known on the internet"
-                    return $true
-                }
-            } catch {
-                # Not there yet.
+        $addresses = Get-PublicAddresses $Name $servers
+        if ($addresses.Count -gt 0) {
+            if (-not $known) {
+                Write-Log "$Name is known on the internet: $($addresses -join ', ')"
+                $known = $true
+            }
+            if (Test-FromInternet $Name $addresses) {
+                Write-Log "https://$Name opens from the internet"
+                return $true
             }
         }
         Start-Sleep -Seconds 15

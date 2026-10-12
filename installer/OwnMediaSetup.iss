@@ -140,7 +140,7 @@ begin
     'Friends, and you away from home, reach this server over the internet.',
     'OwnMedia does it with Tailscale, a free service that gives the server a safe address ' +
     'without router settings. Setup installs it; you only sign in once in your browser ' +
-    '(with a Google, Microsoft or Apple account) and allow it. ' +
+    '(the Google, Microsoft or Apple button is quickest) and press Connect. ' +
     'Then "Share with friends" in the app makes invite links right away.',
     False, False);
   InternetPage.Add('Let friends watch from anywhere');
@@ -313,6 +313,19 @@ begin
   end;
 end;
 
+function SetWindowPos(Wnd: HWND; InsertAfter: HWND; X, Y, Width, Height: Integer; Flags: Cardinal): Boolean;
+  external 'SetWindowPos@user32.dll stdcall';
+
+// The browser windows were on top, and Windows does not let a window in the back take the focus:
+// Setup is put above them for a moment instead, so that its last page is seen.
+procedure ComeBackOnTop;
+begin
+  BringToFrontAndRestore;
+  // HWND_TOPMOST, then HWND_NOTOPMOST; SWP_NOSIZE or SWP_NOMOVE or SWP_SHOWWINDOW.
+  SetWindowPos(WizardForm.Handle, HWND(-1), 0, 0, 0, 0, $43);
+  SetWindowPos(WizardForm.Handle, HWND(-2), 0, 0, 0, 0, $43);
+end;
+
 // Runs one step of internet.ps1 and gives back its exit code.
 function InternetStep(Step, Text: String): Integer;
 var
@@ -336,13 +349,12 @@ var
 begin
   Code := InternetStep('install', 'Installing Tailscale...');
   if Code = 0 then
-    Code := InternetStep('signin', 'Sign in to Tailscale in the browser window that opens, then come back here...');
+    Code := InternetStep('signin', 'In the browser window that opens, sign in to Tailscale and press Connect...');
   if Code = 0 then
     Code := InternetStep('funnel', 'Turning on access from the internet. If Tailscale asks in the browser, allow it...');
   if Code = 0 then
-    Code := InternetStep('wait', 'Waiting until the internet knows the new address. This can take up to 10 minutes...');
-  // The browser windows were on top: Setup comes back to the front to finish.
-  BringToFrontAndRestore;
+    Code := InternetStep('wait', 'Waiting until the server opens from the internet. This can take up to 10 minutes...');
+  ComeBackOnTop;
   case Code of
     0: Exit;
     3: Problem := 'Tailscale could not be installed. Check the internet connection.';
