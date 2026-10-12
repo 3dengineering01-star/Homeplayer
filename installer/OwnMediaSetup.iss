@@ -11,7 +11,7 @@
 ; Built with Inno Setup 6 (installer/build.sh). Needs, built first: the plugin in
 ; server/Jellyfin.Plugin.HomeplayBackup/bin/Release/net10.0 and app/dist/OwnMedia-<AppVersion>.apk.
 
-#define AppVersion "0.3.6"
+#define AppVersion "0.3.7"
 ; Jellyfin's installer is downloaded during setup and checked against this hash: the file is not
 ; signed, so the hash is what says it is the real one. Version 12.1, the one the plugin is built for.
 #define JellyfinUrl "https://repo.jellyfin.org/files/server/windows/stable/v12.1/amd64/jellyfin_12.1_windows-x64.exe"
@@ -132,7 +132,12 @@ begin
   HomeNetwork.Width := AccountPage.SurfaceWidth;
   HomeNetwork.Height := ScaleY(34);
   HomeNetwork.Caption := 'This computer is at home: let phones on this Wi-Fi connect to it';
-  HomeNetwork.Checked := ExpandConstant('{param:HOMENETWORK|1}') <> '0';
+  // The question is on a page an update skips: an update leaves Windows' network and firewall as
+  // they are unless asked otherwise with /HOMENETWORK=1.
+  if HasJellyfin then
+    HomeNetwork.Checked := ExpandConstant('{param:HOMENETWORK|0}') = '1'
+  else
+    HomeNetwork.Checked := ExpandConstant('{param:HOMENETWORK|1}') <> '0';
 
   // Shown on updates too: a server set up before can be opened to friends later.
   InternetPage := CreateInputOptionPage(AccountPage.ID,
