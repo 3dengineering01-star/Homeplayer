@@ -151,29 +151,42 @@ function Enable-Funnel {
     return Invoke-WithBrowser @('funnel', '--bg', "$Port") { Test-Funnel }
 }
 
-# The DNS servers that answer for the address's own zone. Public resolvers are not asked while
-# the name is new: they would remember "no such name" for a while and hand it to friends.
-function Get-NameServers([string] $Name) {
-    $zone = $Name.Substring($Name.IndexOf('.') + 1)
-    foreach ($candidate in @($zone, 'ts.net')) {
+# The DNS servers of ts.net (where every Funnel address lives), by their IP addresses. Asked
+# through a public resolver: on a computer with Tailscale the usual resolver is Tailscale's own,
+# which knows the address inside Tailscale (100.x), not on the internet. Public resolvers are not
+# asked about the address itself while it is new: they would remember "no such name" for a while
+# and hand it to friends.
+function Get-NameServers {
+    foreach ($resolver in @('1.1.1.1', '8.8.8.8')) {
         try {
-            $servers = @(Resolve-DnsName -Name $candidate -Type NS -DnsOnly -ErrorAction Stop |
+            $hosts = @(Resolve-DnsName -Name 'ts.net' -Type NS -Server $resolver -DnsOnly -ErrorAction Stop |
                 Where-Object { $_.Type -eq 'NS' } | ForEach-Object { $_.NameHost })
-            if ($servers.Count -gt 0) { return $servers }
+            $ips = @(foreach ($h in $hosts) {
+                Resolve-DnsName -Name $h -Type A -Server $resolver -DnsOnly -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Type -eq 'A' } | ForEach-Object { $_.IPAddress }
+            })
+            if ($ips.Count -gt 0) { return $ips }
         } catch {
-            # No delegation there: try the parent zone.
+            # This resolver did not answer: try the next.
         }
     }
     return @()
 }
 
-# The address as the internet sees it, from the DNS servers of its own zone: the public
-# addresses of Tailscale's Funnel, or nothing while the name is new.
+# Tailscale's own addresses (100.64.0.0/10): the address inside Tailscale, not on the internet.
+function Test-TailscaleAddress([string] $Ip) {
+    $parts = $Ip.Split('.')
+    return $parts.Count -eq 4 -and [int] $parts[0] -eq 100 -and [int] $parts[1] -ge 64 -and [int] $parts[1] -le 127
+}
+
+# The address as the internet sees it, from the DNS servers of ts.net: the public addresses of
+# Tailscale's Funnel, or nothing while the name is new.
 function Get-PublicAddresses([string] $Name, [string[]] $Servers) {
     foreach ($server in $Servers) {
         try {
             $found = @(Resolve-DnsName -Name $Name -Type A -Server $server -DnsOnly -QuickTimeout -ErrorAction Stop |
-                Where-Object { $_.Type -eq 'A' } | ForEach-Object { $_.IPAddress })
+                Where-Object { $_.Type -eq 'A' -and -not (Test-TailscaleAddress $_.IPAddress) } |
+                ForEach-Object { $_.IPAddress })
             if ($found.Count -gt 0) { return $found }
         } catch {
             # Not there yet, or this server did not answer.
@@ -199,7 +212,7 @@ function Test-FromInternet([string] $Name, [string[]] $Addresses) {
 # Waits until a friend's phone can open the address: the name is known on the internet (a new one
 # takes some minutes), and Funnel answers there (its certificate takes a few more).
 function Wait-PublicName([string] $Name) {
-    $servers = Get-NameServers $Name
+    $servers = Get-NameServers
     if ($servers.Count -eq 0) {
         Write-Log 'No DNS servers found to ask about the address; not waiting'
         return $true
