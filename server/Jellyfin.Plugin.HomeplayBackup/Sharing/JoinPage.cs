@@ -32,6 +32,14 @@ public static class JoinPage
         $"#Intent;scheme=homeplay;package=dev.homeplay.homeplay;S.browser_fallback_url={Uri.EscapeDataString(appUrl)};end";
 
     /// <summary>
+    /// What to tap when Google Play Protect warns about an app from outside Google Play: the
+    /// button that stands out cancels the install.
+    /// </summary>
+    public const string PlayProtectHint =
+        "<p class=\"small\">If the phone warns about an app from an unknown developer (Google Play Protect), " +
+        "tap <b>More details</b>, then <b>Install anyway</b>. The button that stands out cancels the install.</p>";
+
+    /// <summary>
     /// How to make a server of one's own: three steps, with the installer from this server when
     /// it has one.
     /// </summary>
@@ -77,6 +85,7 @@ public static class JoinPage
                 <p class="lead">You are invited to watch and listen: {WebUtility.HtmlEncode(string.Join(", ", libraries))}.</p>
                 <a class="button" href="{WebUtility.HtmlEncode(IntentLink(server, code, appUrl))}">Open in OwnMedia</a>
                 <p class="small">No OwnMedia on this phone yet? The button {(store ? "opens it in Google Play" : "downloads it")}. Install it, then come back to this page and tap the button again.</p>
+                {(store ? string.Empty : PlayProtectHint)}
                 <p class="small"><a href="{WebUtility.HtmlEncode(AppLink(server, code))}">Open in OwnMedia</a> (if the button does nothing) · <a href="{WebUtility.HtmlEncode(appUrl)}">{(store ? "Get OwnMedia on Google Play" : "Download OwnMedia for Android")}</a></p>
                 <p class="small">Or in OwnMedia: Add your server → Have an invite link? → paste this page's address.</p>
                 """,
