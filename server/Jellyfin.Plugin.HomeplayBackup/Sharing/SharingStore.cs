@@ -46,6 +46,12 @@ public sealed class SharingState
 
     /// <summary>Gets or sets the invites, newest last.</summary>
     public List<Invite> Invites { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the address last taken from the installer (see <see cref="SharingStore.TakeSuggestion"/>):
+    /// an address the owner cleared on purpose is not put back.
+    /// </summary>
+    public string SuggestionTaken { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -195,6 +201,33 @@ public sealed class SharingStore
             && uri.Host.Contains('.', StringComparison.Ordinal)
             ? uri.GetLeftPart(UriPartial.Path).TrimEnd('/')
             : null;
+    }
+
+    /// <summary>
+    /// The file where the installer leaves the server's internet address after turning on Tailscale
+    /// Funnel: C:\ProgramData\Homeplay\public-url.txt on Windows.
+    /// </summary>
+    public static string SuggestionFile =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Homeplay", "public-url.txt");
+
+    /// <summary>
+    /// Takes the installer's address as the server's internet address when the owner has none yet
+    /// and this address was not taken before.
+    /// </summary>
+    /// <param name="state">The sharing, changed in place.</param>
+    /// <param name="suggestion">The text of the installer's file, or null without one.</param>
+    /// <returns>Whether the state changed.</returns>
+    public static bool TakeSuggestion(SharingState state, string? suggestion)
+    {
+        var url = NormalizeUrl(suggestion);
+        if (url is null || state.PublicUrl.Length > 0 || url == state.SuggestionTaken)
+        {
+            return false;
+        }
+
+        state.PublicUrl = url;
+        state.SuggestionTaken = url;
+        return true;
     }
 
     /// <summary>

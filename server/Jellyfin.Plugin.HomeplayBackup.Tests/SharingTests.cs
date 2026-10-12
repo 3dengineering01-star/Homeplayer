@@ -111,6 +111,26 @@ public sealed class SharingTests : IDisposable
         Assert.Contains("S.browser_fallback_url=https%3A%2F%2Fplay.google.com", page, StringComparison.Ordinal);
     }
 
+    // The installer turns on Tailscale Funnel and leaves the address: the owner does not type it.
+    [Fact]
+    public void TheInstallersAddressIsTakenOnceWhenThereIsNone()
+    {
+        var state = new SharingState();
+        Assert.False(SharingStore.TakeSuggestion(state, null));
+        Assert.False(SharingStore.TakeSuggestion(state, "not an address"));
+        Assert.True(SharingStore.TakeSuggestion(state, "https://pc.tail1234.ts.net/\r\n"));
+        Assert.Equal("https://pc.tail1234.ts.net", state.PublicUrl);
+
+        // Cleared by the owner on purpose: the same address is not put back.
+        state.PublicUrl = string.Empty;
+        Assert.False(SharingStore.TakeSuggestion(state, "https://pc.tail1234.ts.net"));
+
+        // An address the owner typed stays.
+        state.PublicUrl = "https://music.example.com";
+        Assert.False(SharingStore.TakeSuggestion(state, "https://other.tail1234.ts.net"));
+        Assert.Equal("https://music.example.com", state.PublicUrl);
+    }
+
     [Fact]
     public void TheJoinPageTellsHowToMakeAServerOfOnesOwn()
     {

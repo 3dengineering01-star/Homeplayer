@@ -190,14 +190,18 @@ class _InternetSetup extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Friends are not on your Wi-Fi, so they reach your server over the internet. '
-            'The free Tailscale app gives it a safe address, with no router settings:',
+            'OwnMediaSetup does it for you with the free Tailscale service, with no router settings:',
           ),
           const SizedBox(height: 12),
-          step('1', 'On the computer with the server, install Tailscale from tailscale.com/download and sign in.'),
-          step('2', 'Open Command Prompt as administrator and run:\ntailscale funnel --bg 8096\nIt shows the address, like https://your-pc.tail1234.ts.net'),
-          step('3', 'Enter that address here.'),
+          step('1', 'On the computer with the server, run OwnMediaSetup again and keep "Let friends watch from anywhere" ticked.'),
+          step('2', 'Sign in to Tailscale in the browser window that opens, and allow what it asks.'),
+          step('3', 'Come back here and pull down to refresh: the address is already filled in.'),
           const SizedBox(height: 4),
-          FilledButton.icon(onPressed: onSet, icon: const Icon(Icons.public), label: const Text('Enter the address')),
+          OutlinedButton.icon(
+            onPressed: onSet,
+            icon: const Icon(Icons.public),
+            label: const Text('I have an address already'),
+          ),
         ]),
       ),
     );
@@ -395,8 +399,8 @@ class _AddressDialogState extends State<_AddressDialog> {
           setState(() {
             _unchecked = address;
             _error = there == null
-                ? 'Your server does not answer at this address. On the server computer, open Command Prompt '
-                      'as administrator and run: tailscale funnel --bg 8096. Then try again.'
+                ? 'Your server does not answer at this address. On the server computer, run OwnMediaSetup '
+                      'again with "Let friends watch from anywhere" ticked. Then try again.'
                 : 'This address leads to another server, not to this one.';
           });
           return;
