@@ -6,13 +6,19 @@
 #   3. turns on Tailscale Funnel for Jellyfin's port; the first time Tailscale asks, in the
 #      browser, to allow it;
 #   4. leaves the address (https://<computer>.<tailnet>.ts.net) in public-url.txt next to the setup
-#      log, where the plugin takes it as the address of the invite links.
-# Each step is skipped when already done, so running it again is harmless.
+#      log, where the plugin takes it as the address of the invite links;
+#   5. waits until the address is known on the internet: a new name takes some minutes to appear
+#      there, and an invite opened before that does not work.
+# Each step is skipped when already done, so running it again is harmless. -Step runs one of them
+# (install, signin, funnel, wait), so that Setup can say what it waits for; without it, all.
 #
 # Exit codes: 0 done; 3 Tailscale could not be installed; 4 nobody signed in in time;
-# 5 Funnel was not allowed in time; 6 anything else. What happened is in setup.log.
+# 5 Funnel was not allowed in time; 6 anything else; 7 the address is not known on the internet
+# yet (it works a little later). What happened is in setup.log.
 
 param(
+    [ValidateSet('all', 'install', 'signin', 'funnel', 'wait')]
+    [string] $Step = 'all',
     [int] $Port = 8096,
     [int] $WaitMinutes = 15
 )
@@ -52,8 +58,10 @@ function Install-Tailscale {
     if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O="?Tailscale Inc') {
         throw "The downloaded Tailscale package is not signed by Tailscale ($($signature.Status), $($signature.SignerCertificate.Subject))"
     }
+    Write-Log "Signature checked: $($signature.Status), $($signature.SignerCertificate.Subject)"
     Write-Log 'Installing Tailscale'
-    $install = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$msi`" /quiet /norestart" -Wait -PassThru
+    # TS_NOLAUNCH: Tailscale's own welcome window would come up over Setup and the sign-in page.
+    $install = Start-Process -FilePath 'msiexec.exe' -ArgumentList "/i `"$msi`" /quiet /norestart TS_NOLAUNCH=yes" -Wait -PassThru
     Remove-Item $msi -Force -ErrorAction SilentlyContinue
     if ($install.ExitCode -ne 0 -and $install.ExitCode -ne 3010) {
         throw "Tailscale setup ended with code $($install.ExitCode)"
@@ -143,26 +151,81 @@ function Enable-Funnel {
     return Invoke-WithBrowser @('funnel', '--bg', "$Port") { Test-Funnel }
 }
 
-try {
-    Write-Log 'Opening the server to the internet with Tailscale'
-    try {
-        Install-Tailscale
-    } catch {
-        Write-Log "Tailscale could not be installed: $($_.Exception.Message)"
-        exit 3
+# The DNS servers that answer for the address's own zone. Public resolvers are not asked while
+# the name is new: they would remember "no such name" for a while and hand it to friends.
+function Get-NameServers([string] $Name) {
+    $zone = $Name.Substring($Name.IndexOf('.') + 1)
+    foreach ($candidate in @($zone, 'ts.net')) {
+        try {
+            $servers = @(Resolve-DnsName -Name $candidate -Type NS -DnsOnly -ErrorAction Stop |
+                Where-Object { $_.Type -eq 'NS' } | ForEach-Object { $_.NameHost })
+            if ($servers.Count -gt 0) { return $servers }
+        } catch {
+            # No delegation there: try the parent zone.
+        }
     }
-    if (-not (Connect-Tailscale)) {
+    return @()
+}
+
+function Wait-PublicName([string] $Name) {
+    $servers = Get-NameServers $Name
+    if ($servers.Count -eq 0) {
+        Write-Log 'No DNS servers found to ask about the address; not waiting'
+        return $true
+    }
+    Write-Log "Waiting until $Name is known on the internet (asking $($servers -join ', '))"
+    $deadline = (Get-Date).AddMinutes($WaitMinutes)
+    while ((Get-Date) -lt $deadline) {
+        foreach ($server in $servers) {
+            try {
+                $found = @(Resolve-DnsName -Name $Name -Server $server -DnsOnly -QuickTimeout -ErrorAction Stop |
+                    Where-Object { $_.Type -eq 'A' -or $_.Type -eq 'AAAA' -or $_.Type -eq 'CNAME' })
+                if ($found.Count -gt 0) {
+                    Write-Log "$Name is known on the internet"
+                    return $true
+                }
+            } catch {
+                # Not there yet.
+            }
+        }
+        Start-Sleep -Seconds 15
+    }
+    return $false
+}
+
+function Get-Address {
+    $state = Get-TailscaleState
+    if (-not $state -or -not $state.Self -or -not $state.Self.DNSName) { throw 'Tailscale gave no address for this computer' }
+    return $state.Self.DNSName.TrimEnd('.')
+}
+
+try {
+    if ($Step -eq 'all' -or $Step -eq 'install') {
+        Write-Log 'Opening the server to the internet with Tailscale'
+        try {
+            Install-Tailscale
+        } catch {
+            Write-Log "Tailscale could not be installed: $($_.Exception.Message)"
+            exit 3
+        }
+    }
+    if (($Step -eq 'all' -or $Step -eq 'signin') -and -not (Connect-Tailscale)) {
         Write-Log 'Nobody signed in to Tailscale in time'
         exit 4
     }
-    if (-not (Enable-Funnel)) {
-        Write-Log 'Funnel was not turned on in time'
-        exit 5
+    if ($Step -eq 'all' -or $Step -eq 'funnel') {
+        if (-not (Enable-Funnel)) {
+            Write-Log 'Funnel was not turned on in time'
+            exit 5
+        }
+        $address = "https://$(Get-Address)"
+        Set-Content -Path $UrlFile -Value $address -Encoding ASCII
+        Write-Log "On the internet at $address"
     }
-    $name = (Get-TailscaleState).Self.DNSName.TrimEnd('.')
-    $address = "https://$name"
-    Set-Content -Path $UrlFile -Value $address -Encoding ASCII
-    Write-Log "On the internet at $address"
+    if (($Step -eq 'all' -or $Step -eq 'wait') -and -not (Wait-PublicName (Get-Address))) {
+        Write-Log 'The address is not known on the internet yet; it works a little later'
+        exit 7
+    }
     exit 0
 } catch {
     Write-Log "Failed: $($_.Exception.Message)"

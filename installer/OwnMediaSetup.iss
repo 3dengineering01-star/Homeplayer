@@ -73,7 +73,7 @@ Type: files; Name: "{autoprograms}\OwnMedia - connect a phone.url"
 Type: files; Name: "{app}\plugin\OwnMediaSetup.exe"
 
 [Run]
-Filename: "{#PhonePage}"; Description: "Show how to connect your phone"; Flags: postinstall shellexec nowait
+Filename: "{#PhonePage}"; Description: "Show how to connect your phone"; Flags: postinstall shellexec nowait skipifsilent
 
 [Code]
 var
@@ -313,24 +313,46 @@ begin
   end;
 end;
 
-// Opens the server to the internet with Tailscale (internet.ps1). Not having it is no failure:
-// the server works at home all the same, and running Setup again tries again.
+// Runs one step of internet.ps1 and gives back its exit code.
+function InternetStep(Step, Text: String): Integer;
+var
+  Code: Integer;
+begin
+  Status(Text);
+  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\internet.ps1') + '" -Step ' + Step,
+    '', SW_HIDE, ewWaitUntilTerminated, Code) then
+    Code := -1;
+  Result := Code;
+end;
+
+// Opens the server to the internet with Tailscale (internet.ps1), a step at a time so that the
+// status line says what Setup waits for. Not having it is no failure: the server works at home
+// all the same, and running Setup again tries again.
 procedure OpenToInternet;
 var
   Code: Integer;
   Problem: String;
 begin
-  // One line only: the browser window says the rest.
-  Status('Sign in to Tailscale in the browser window that opens, then come back here...');
-  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
-    '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\internet.ps1') + '"',
-    '', SW_HIDE, ewWaitUntilTerminated, Code) then
-    Code := -1;
+  Code := InternetStep('install', 'Installing Tailscale...');
+  if Code = 0 then
+    Code := InternetStep('signin', 'Sign in to Tailscale in the browser window that opens, then come back here...');
+  if Code = 0 then
+    Code := InternetStep('funnel', 'Turning on access from the internet. If Tailscale asks in the browser, allow it...');
+  if Code = 0 then
+    Code := InternetStep('wait', 'Waiting until the internet knows the new address. This can take up to 10 minutes...');
+  // The browser windows were on top: Setup comes back to the front to finish.
+  BringToFrontAndRestore;
   case Code of
     0: Exit;
     3: Problem := 'Tailscale could not be installed. Check the internet connection.';
     4: Problem := 'Nobody signed in to Tailscale in time.';
     5: Problem := 'Tailscale did not get the permission to put the server on the internet in time.';
+    7: begin
+      SuppressibleMsgBox('The server is on the internet, but its address is still new: invite links may ' +
+        'not open for a few more minutes. Wait a little before sending them.', mbInformation, MB_OK, IDOK);
+      Exit;
+    end;
   else
     Problem := 'The server could not be opened to the internet (code ' + IntToStr(Code) + ').';
   end;
