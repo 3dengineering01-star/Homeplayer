@@ -180,17 +180,18 @@ function Test-TailscaleAddress([string] $Ip) {
 }
 
 # The address as the internet sees it, from the DNS servers of ts.net: the public addresses of
-# Tailscale's Funnel, or nothing while the name is new.
+# Tailscale's Funnel, or nothing while the name is new. Asked with nslookup: Windows sends every
+# Resolve-DnsName question about *.ts.net to Tailscale (its NRPT rule), whatever server it names,
+# while nslookup asks the server it is given. Its labels depend on the Windows language, so the
+# answer is read as all IPv4 addresses in it except the server's own.
 function Get-PublicAddresses([string] $Name, [string[]] $Servers) {
+    $nslookup = Join-Path $env:WINDIR 'System32\nslookup.exe'
+    $ErrorActionPreference = 'Continue'
     foreach ($server in $Servers) {
-        try {
-            $found = @(Resolve-DnsName -Name $Name -Type A -Server $server -DnsOnly -QuickTimeout -ErrorAction Stop |
-                Where-Object { $_.Type -eq 'A' -and -not (Test-TailscaleAddress $_.IPAddress) } |
-                ForEach-Object { $_.IPAddress })
-            if ($found.Count -gt 0) { return $found }
-        } catch {
-            # Not there yet, or this server did not answer.
-        }
+        $text = (& $nslookup -type=A $Name $server 2>$null) -join "`n"
+        $found = @([regex]::Matches([string] $text, '\b\d{1,3}(\.\d{1,3}){3}\b') | ForEach-Object { $_.Value } |
+            Where-Object { $_ -ne $server -and -not (Test-TailscaleAddress $_) } | Select-Object -Unique)
+        if ($found.Count -gt 0) { return $found }
     }
     return @()
 }

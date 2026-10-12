@@ -351,7 +351,7 @@ begin
   if Code = 0 then
     Code := InternetStep('signin', 'In the browser window that opens, sign in to Tailscale and press Connect...');
   if Code = 0 then
-    Code := InternetStep('funnel', 'Turning on access from the internet. If Tailscale asks in the browser, allow it...');
+    Code := InternetStep('funnel', 'Turning on access from the internet. If Tailscale asks in the browser, press Enable Funnel...');
   if Code = 0 then
     Code := InternetStep('wait', 'Waiting until the server opens from the internet. This can take up to 10 minutes...');
   ComeBackOnTop;
