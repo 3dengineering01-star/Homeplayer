@@ -158,7 +158,7 @@ public static class PhoneLink
                 <ol>
                   <li>Connect the phone to the same Wi-Fi as this computer.</li>
                   <li>Point the phone's camera at the code and open the link. The OwnMedia app downloads from this computer.</li>
-                  <li>Open the file and tap <b>Install</b>. If the phone asks, allow installing from this source.</li>
+                  <li>Open the file and tap <b>Install</b>. If the phone asks, allow installing from this source. If Google Play Protect warns about an unknown developer, tap <b>More details</b>, then <b>Install anyway</b>.</li>
                   <li>Open OwnMedia and tap <b>Add your server</b>. It finds <b>{{name}}</b> by itself: enter your name and password.</li>
                 </ol>
               </div>

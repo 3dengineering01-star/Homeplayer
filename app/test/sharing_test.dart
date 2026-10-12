@@ -123,6 +123,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('First: your server on the internet'), findsOneWidget);
+    expect(find.textContaining('run OwnMediaSetup again'), findsOneWidget);
+    expect(find.textContaining('tailscale funnel'), findsNothing);
     expect(find.text('Invite a friend'), findsNothing);
   });
 
@@ -132,7 +134,7 @@ void main() {
       home: ShareScreen(client: server({'PublicUrl': '', 'Libraries': _libraries, 'Invites': []}, seen: seen)),
     ));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Enter the address'));
+    await tester.tap(find.text('I have an address already'));
     await tester.pumpAndSettle();
     expect(find.text('For example https://goodman.tail1234.ts.net'), findsOneWidget);
     await tester.tap(find.text('Save'));

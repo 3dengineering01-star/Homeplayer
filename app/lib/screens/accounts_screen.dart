@@ -25,7 +25,7 @@ class AccountsScreen extends StatefulWidget {
   State<AccountsScreen> createState() => _AccountsScreenState();
 }
 
-class _AccountsScreenState extends State<AccountsScreen> {
+class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObserver {
   List<Account>? _accounts;
   String? _lastId;
 
@@ -38,6 +38,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
   }
 
@@ -75,7 +76,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
         screen = SubsonicArtists(client: SubsonicClient(a), title: a.serverName);
     }
     if (!mounted) return;
-    Navigator.push(context, instant ? _InstantRoute(builder: (_) => screen) : MaterialPageRoute(builder: (_) => screen));
+    // Back on the list: whether each server answers may have changed meanwhile (the phone's
+    // Wi-Fi came back, a computer was turned on).
+    Navigator.push(context, instant ? _InstantRoute(builder: (_) => screen) : MaterialPageRoute(builder: (_) => screen))
+        .then((_) => _recheck());
   }
 
   Future<void> _remove(Account a) async {
@@ -198,6 +202,22 @@ class _AccountsScreenState extends State<AccountsScreen> {
               const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
             ]),
     );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _recheck();
+  }
+
+  void _recheck() {
+    final accounts = _accounts;
+    if (mounted && accounts != null) _checkAll(accounts);
   }
 
   /// Asks every server whether it answers, for the dot on its card.

@@ -77,8 +77,39 @@ public class ShareController : ControllerBase
     public ActionResult<SharingInfo> GetSharing()
     {
         var state = Store.Load();
+        if (state.PublicUrl.Length == 0)
+        {
+            state = TakeInstallerAddress() ?? state;
+        }
+
         var libraries = Libraries();
         return new SharingInfo(state.PublicUrl, libraries, [.. state.Invites.Select(i => Info(state, i, libraries))]);
+    }
+
+    // The address the installer left after turning on Tailscale Funnel, when the owner has none.
+    private SharingState? TakeInstallerAddress()
+    {
+        try
+        {
+            var file = SharingStore.SuggestionFile;
+            if (!System.IO.File.Exists(file))
+            {
+                return null;
+            }
+
+            var text = System.IO.File.ReadAllText(file);
+            return Store.Update(s => SharingStore.TakeSuggestion(s, text) ? s : null);
+        }
+        catch (System.IO.IOException e)
+        {
+            _logger.LogWarning(e, "Homeplay sharing: cannot read the installer's address");
+            return null;
+        }
+        catch (UnauthorizedAccessException e)
+        {
+            _logger.LogWarning(e, "Homeplay sharing: cannot read the installer's address");
+            return null;
+        }
     }
 
     /// <summary>

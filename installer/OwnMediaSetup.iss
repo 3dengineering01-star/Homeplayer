@@ -11,7 +11,7 @@
 ; Built with Inno Setup 6 (installer/build.sh). Needs, built first: the plugin in
 ; server/Jellyfin.Plugin.HomeplayBackup/bin/Release/net10.0 and app/dist/OwnMedia-<AppVersion>.apk.
 
-#define AppVersion "0.3.5"
+#define AppVersion "0.3.7"
 ; Jellyfin's installer is downloaded during setup and checked against this hash: the file is not
 ; signed, so the hash is what says it is the real one. Version 12.1, the one the plugin is built for.
 #define JellyfinUrl "https://repo.jellyfin.org/files/server/windows/stable/v12.1/amd64/jellyfin_12.1_windows-x64.exe"
@@ -47,6 +47,7 @@ SolidCompression=yes
 
 [Files]
 Source: "configure.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "internet.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "homeplay.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PluginBin}\Jellyfin.Plugin.HomeplayBackup.dll"; DestDir: "{app}\plugin"; Flags: ignoreversion
 Source: "{#PluginBin}\QRCoder.dll"; DestDir: "{app}\plugin"; Flags: ignoreversion
@@ -72,13 +73,14 @@ Type: files; Name: "{autoprograms}\OwnMedia - connect a phone.url"
 Type: files; Name: "{app}\plugin\OwnMediaSetup.exe"
 
 [Run]
-Filename: "{#PhonePage}"; Description: "Show how to connect your phone"; Flags: postinstall shellexec nowait
+Filename: "{#PhonePage}"; Description: "Show how to connect your phone"; Flags: postinstall shellexec nowait skipifsilent
 
 [Code]
 var
   FoldersPage: TInputDirWizardPage;
   AccountPage: TInputQueryWizardPage;
   HomeNetwork: TNewCheckBox;
+  InternetPage: TInputOptionWizardPage;
   DownloadPage: TDownloadWizardPage;
   HasJellyfin: Boolean;
   SetupFailed: String;
@@ -130,7 +132,28 @@ begin
   HomeNetwork.Width := AccountPage.SurfaceWidth;
   HomeNetwork.Height := ScaleY(34);
   HomeNetwork.Caption := 'This computer is at home: let phones on this Wi-Fi connect to it';
-  HomeNetwork.Checked := ExpandConstant('{param:HOMENETWORK|1}') <> '0';
+  // The question is on a page an update skips: an update leaves Windows' network and firewall as
+  // they are unless asked otherwise with /HOMENETWORK=1.
+  if HasJellyfin then
+    HomeNetwork.Checked := ExpandConstant('{param:HOMENETWORK|0}') = '1'
+  else
+    HomeNetwork.Checked := ExpandConstant('{param:HOMENETWORK|1}') <> '0';
+
+  // Shown on updates too: a server set up before can be opened to friends later.
+  InternetPage := CreateInputOptionPage(AccountPage.ID,
+    'Watch from anywhere',
+    'Friends, and you away from home, reach this server over the internet.',
+    'OwnMedia does it with Tailscale, a free service that gives the server a safe address ' +
+    'without router settings. Setup installs it; you only sign in once in your browser ' +
+    '(the Google, Microsoft or Apple button is quickest) and press Connect. ' +
+    'Then "Share with friends" in the app makes invite links right away.',
+    False, False);
+  InternetPage.Add('Let friends watch from anywhere');
+  // A silent install opens no browser unless asked to with /INTERNET=1.
+  if WizardSilent then
+    InternetPage.Values[0] := ExpandConstant('{param:INTERNET|0}') = '1'
+  else
+    InternetPage.Values[0] := ExpandConstant('{param:INTERNET|1}') <> '0';
 
   DownloadPage := CreateDownloadPage('Downloading Jellyfin',
     'Jellyfin is the free media server OwnMedia plays from.', nil);
@@ -192,6 +215,9 @@ begin
       Space + 'Music: ' + FoldersPage.Values[2] + NewLine +
       Space + 'Photos: ' + FoldersPage.Values[3] + NewLine +
       Space + 'Name: ' + AccountPage.Values[0];
+  if InternetPage.Values[0] then
+    Result := Result + NewLine + NewLine + 'Then it opens the server to the internet with Tailscale: ' +
+      'a browser window opens for you to sign in and allow it.';
 end;
 
 function JsonString(S: String): String;
@@ -292,6 +318,67 @@ begin
   end;
 end;
 
+function SetWindowPos(Wnd: HWND; InsertAfter: HWND; X, Y, Width, Height: Integer; Flags: Cardinal): Boolean;
+  external 'SetWindowPos@user32.dll stdcall';
+
+// The browser windows were on top, and Windows does not let a window in the back take the focus:
+// Setup is put above them for a moment instead, so that its last page is seen.
+procedure ComeBackOnTop;
+begin
+  BringToFrontAndRestore;
+  // HWND_TOPMOST, then HWND_NOTOPMOST; SWP_NOSIZE or SWP_NOMOVE or SWP_SHOWWINDOW.
+  SetWindowPos(WizardForm.Handle, HWND(-1), 0, 0, 0, 0, $43);
+  SetWindowPos(WizardForm.Handle, HWND(-2), 0, 0, 0, 0, $43);
+end;
+
+// Runs one step of internet.ps1 and gives back its exit code.
+function InternetStep(Step, Text: String): Integer;
+var
+  Code: Integer;
+begin
+  Status(Text);
+  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\internet.ps1') + '" -Step ' + Step,
+    '', SW_HIDE, ewWaitUntilTerminated, Code) then
+    Code := -1;
+  Result := Code;
+end;
+
+// Opens the server to the internet with Tailscale (internet.ps1), a step at a time so that the
+// status line says what Setup waits for. Not having it is no failure: the server works at home
+// all the same, and running Setup again tries again.
+procedure OpenToInternet;
+var
+  Code: Integer;
+  Problem: String;
+begin
+  Code := InternetStep('install', 'Installing Tailscale...');
+  if Code = 0 then
+    Code := InternetStep('signin', 'In the browser window that opens, sign in to Tailscale and press Connect...');
+  if Code = 0 then
+    Code := InternetStep('funnel', 'Turning on access from the internet. If Tailscale asks in the browser, press Enable Funnel...');
+  if Code = 0 then
+    Code := InternetStep('wait', 'Waiting until the server opens from the internet. This can take up to 10 minutes...');
+  ComeBackOnTop;
+  case Code of
+    0: Exit;
+    3: Problem := 'Tailscale could not be installed. Check the internet connection.';
+    4: Problem := 'Nobody signed in to Tailscale in time.';
+    5: Problem := 'Tailscale did not get the permission to put the server on the internet in time.';
+    7: begin
+      SuppressibleMsgBox('The server is on the internet, but its address is still new: invite links may ' +
+        'not open for a few more minutes. Wait a little before sending them.', mbInformation, MB_OK, IDOK);
+      Exit;
+    end;
+  else
+    Problem := 'The server could not be opened to the internet (code ' + IntToStr(Code) + ').';
+  end;
+  SuppressibleMsgBox(Problem + #13#10#13#10 +
+    'The server works at home as before. To let friends watch from anywhere, run OwnMediaSetup ' +
+    'again. What happened is written in ' + ExpandConstant('{commonappdata}\Homeplay\setup.log') + '.',
+    mbInformation, MB_OK, IDOK);
+end;
+
 // A silent install that could not set the server up says so in its exit code.
 function GetCustomSetupExitCode: Integer;
 begin
@@ -304,6 +391,8 @@ begin
     SetUpServer;
     if SetupFailed <> '' then
       SuppressibleMsgBox(SetupFailed + #13#10#13#10 + 'What happened is written in ' +
-        ExpandConstant('{commonappdata}\Homeplay\setup.log') + '.', mbError, MB_OK, IDOK);
+        ExpandConstant('{commonappdata}\Homeplay\setup.log') + '.', mbError, MB_OK, IDOK)
+    else if InternetPage.Values[0] then
+      OpenToInternet;
   end;
 end;

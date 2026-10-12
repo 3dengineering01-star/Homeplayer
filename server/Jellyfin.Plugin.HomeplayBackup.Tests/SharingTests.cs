@@ -95,6 +95,7 @@ public sealed class SharingTests : IDisposable
         Assert.Contains("intent://join?server=https%3A%2F%2Fpc.ts.net&amp;code=ABC#Intent;scheme=homeplay;package=dev.homeplay.homeplay;S.browser_fallback_url=https%3A%2F%2Fpc.ts.net%2FHomeplay%2FApp;end", page, StringComparison.Ordinal);
         Assert.Contains("homeplay://join?server=https%3A%2F%2Fpc.ts.net&amp;code=ABC", page, StringComparison.Ordinal);
         Assert.Contains("Download OwnMedia for Android", page, StringComparison.Ordinal);
+        Assert.Contains("Install anyway", page, StringComparison.Ordinal);
         Assert.DoesNotContain("Open in OwnMedia", JoinPage.Html(InviteState.Joined, "PC", [], "https://pc.ts.net", "ABC", "x"), StringComparison.Ordinal);
         Assert.Contains("expired", JoinPage.Html(InviteState.Expired, "PC", [], "https://pc.ts.net", "ABC", "x"), StringComparison.Ordinal);
     }
@@ -108,7 +109,28 @@ public sealed class SharingTests : IDisposable
         var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", store);
         Assert.Contains("Get OwnMedia on Google Play", page, StringComparison.Ordinal);
         Assert.Contains("opens it in Google Play", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("Install anyway", page, StringComparison.Ordinal);
         Assert.Contains("S.browser_fallback_url=https%3A%2F%2Fplay.google.com", page, StringComparison.Ordinal);
+    }
+
+    // The installer turns on Tailscale Funnel and leaves the address: the owner does not type it.
+    [Fact]
+    public void TheInstallersAddressIsTakenOnceWhenThereIsNone()
+    {
+        var state = new SharingState();
+        Assert.False(SharingStore.TakeSuggestion(state, null));
+        Assert.False(SharingStore.TakeSuggestion(state, "not an address"));
+        Assert.True(SharingStore.TakeSuggestion(state, "https://pc.tail1234.ts.net/\r\n"));
+        Assert.Equal("https://pc.tail1234.ts.net", state.PublicUrl);
+
+        // Cleared by the owner on purpose: the same address is not put back.
+        state.PublicUrl = string.Empty;
+        Assert.False(SharingStore.TakeSuggestion(state, "https://pc.tail1234.ts.net"));
+
+        // An address the owner typed stays.
+        state.PublicUrl = "https://music.example.com";
+        Assert.False(SharingStore.TakeSuggestion(state, "https://other.tail1234.ts.net"));
+        Assert.Equal("https://music.example.com", state.PublicUrl);
     }
 
     [Fact]
