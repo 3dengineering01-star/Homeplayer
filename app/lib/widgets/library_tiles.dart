@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../api/jellyfin.dart';
 import '../services/appearance.dart';
+import 'glass.dart';
 import 'pressable.dart';
 
 /// How the home screen shows a library: its icon, the Jellyfin item types it counts
@@ -66,48 +67,42 @@ class LibraryTile extends StatelessWidget {
     final (bg, fg) = libraryColors(context, index);
     final icon = libraryKind(library.collectionType).icon;
     return Pressable(
-      child: Material(
-        borderRadius: BorderRadius.circular(20),
-        clipBehavior: Clip.antiAlias,
-        color: bg,
-        child: InkWell(
-          onTap: onTap,
-          child: Stack(
-            children: [
-              // A large faint copy of the icon in the corner, for a bit of picture.
-              Positioned(right: -14, bottom: -18, child: Icon(icon, size: 96, color: fg.withValues(alpha: 0.10))),
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: fg.withValues(alpha: 0.12),
-                      child: Icon(icon, color: fg, size: 22),
-                    ),
-                    const Spacer(),
-                    Text(
-                      library.name,
+      child: GlassPane(
+        radius: 20,
+        tint: bg.withValues(alpha: 0.55),
+        solid: bg,
+        onTap: onTap,
+        child: Stack(
+          children: [
+            // A large faint copy of the icon in the corner, for a bit of picture.
+            Positioned(right: -14, bottom: -18, child: Icon(icon, size: 96, color: fg.withValues(alpha: 0.10))),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  IconOrb(icon: icon, color: Color.lerp(bg, fg, 0.22)!, onColor: fg, flat: fg.withValues(alpha: 0.12)),
+                  const Spacer(),
+                  Text(
+                    library.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(color: fg, fontWeight: FontWeight.w700),
+                  ),
+                  AnimatedOpacity(
+                    opacity: count == null ? 0 : 1,
+                    duration: const Duration(milliseconds: 250),
+                    child: Text(
+                      count ?? ' ',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(color: fg, fontWeight: FontWeight.w700),
+                      style: theme.textTheme.bodySmall?.copyWith(color: fg.withValues(alpha: 0.8)),
                     ),
-                    AnimatedOpacity(
-                      opacity: count == null ? 0 : 1,
-                      duration: const Duration(milliseconds: 250),
-                      child: Text(
-                        count ?? ' ',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(color: fg.withValues(alpha: 0.8)),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -128,10 +123,12 @@ class LibraryRow extends StatelessWidget {
     final (bg, fg) = libraryColors(context, index);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      leading: CircleAvatar(
-        radius: 22,
-        backgroundColor: bg,
-        child: Icon(libraryKind(library.collectionType).icon, color: fg),
+      leading: IconOrb(
+        icon: libraryKind(library.collectionType).icon,
+        color: Color.lerp(bg, fg, 0.22)!,
+        onColor: fg,
+        flat: bg,
+        size: 44,
       ),
       title: Text(library.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: count == null ? null : Text(count!),
@@ -167,19 +164,28 @@ class LibraryCircle extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [bg, Color.lerp(bg, fg, 0.18)!],
+              if (GlassLook.from(context).on)
+                IconOrb(
+                  icon: libraryKind(library.collectionType).icon,
+                  color: Color.lerp(bg, fg, 0.22)!,
+                  onColor: fg,
+                  flat: bg,
+                  size: 64,
+                )
+              else
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [bg, Color.lerp(bg, fg, 0.18)!],
+                    ),
                   ),
+                  child: Icon(libraryKind(library.collectionType).icon, color: fg, size: 30),
                 ),
-                child: Icon(libraryKind(library.collectionType).icon, color: fg, size: 30),
-              ),
               const SizedBox(height: 6),
               Text(
                 library.name,

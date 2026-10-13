@@ -73,11 +73,14 @@ class HomeplayApp extends StatelessWidget {
             // the light theme.
             builder: (context, child) => AppBackdrop(
               look: look,
-              child: Column(children: [
-                Expanded(child: child!),
-                MiniPlayer(
-                    onOpen: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const PlayerScreen()))),
-              ]),
+              // One blur of the background for all glass panes on screen (see GlassPane).
+              child: BackdropGroup(
+                child: Column(children: [
+                  Expanded(child: child!),
+                  MiniPlayer(
+                      onOpen: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const PlayerScreen()))),
+                ]),
+              ),
             ),
             home: const AccountsScreen(),
           );

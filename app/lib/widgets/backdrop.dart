@@ -20,7 +20,7 @@ class AppBackdrop extends StatelessWidget {
     return Stack(fit: StackFit.expand, children: [
       // The window is always clear: without the wallpaper, something solid under a picture
       // that is still loading.
-      if (look.backdrop != Backdrop.wallpaper) ColoredBox(color: scheme.surface),
+      if (look.shown != Backdrop.wallpaper) ColoredBox(color: scheme.surface),
       // Drawn once and kept: nothing in it moves, so playback never waits on it.
       RepaintBoundary(child: BackdropLayer(look: look)),
       ColoredBox(color: scheme.surface.withValues(alpha: look.veil)),
@@ -38,7 +38,7 @@ class BackdropLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return switch (look.backdrop) {
+    return switch (look.shown) {
       // The window is clear and Android shows the wallpaper under it.
       Backdrop.wallpaper || Backdrop.plain => const SizedBox.expand(),
       Backdrop.theme => _Blend(colors: [scheme.primaryContainer, scheme.tertiaryContainer, scheme.secondaryContainer]),
@@ -56,7 +56,7 @@ class BackdropLayer extends StatelessWidget {
                     errorBuilder: (_, _, _) => ColoredBox(color: scheme.surface),
                   );
                 }),
-      _ => _Blend(colors: look.backdrop.colors),
+      _ => _Blend(colors: look.shown.colors),
     };
   }
 }
