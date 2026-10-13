@@ -85,6 +85,7 @@ class Appearance {
     this.show = 0.45,
     this.blur = false,
     this.libraries = LibraryLayout.tiles,
+    this.glass = true,
   });
 
   final ThemeBrightness brightness;
@@ -102,11 +103,20 @@ class Appearance {
 
   final LibraryLayout libraries;
 
-  /// Whether the screens let a background through instead of painting the theme's colour.
-  bool get seeThrough => backdrop != Backdrop.plain && (backdrop != Backdrop.picture || picture != null);
+  /// Liquid glass: cards, panels and the mini player as frosted, see-through glass over a
+  /// colourful background, like Apple's Liquid Glass.
+  final bool glass;
 
-  /// The theme's colour laid over the background: the less [show], the more of it.
-  double get veil => seeThrough ? 1 - show.clamp(0.1, 1.0) : 1;
+  /// The background actually shown: glass needs colours behind it, so with glass the plain
+  /// background is the theme's blend.
+  Backdrop get shown => glass && backdrop == Backdrop.plain ? Backdrop.theme : backdrop;
+
+  /// Whether the screens let a background through instead of painting the theme's colour.
+  bool get seeThrough => shown != Backdrop.plain && (shown != Backdrop.picture || picture != null);
+
+  /// The theme's colour laid over the background: the less [show], the more of it. Glass lets
+  /// more of the background through, its panels keep text readable.
+  double get veil => seeThrough ? (1 - show.clamp(0.1, 1.0)) * (glass ? 0.6 : 1) : 1;
 
   Appearance copyWith({
     ThemeBrightness? brightness,
@@ -116,6 +126,7 @@ class Appearance {
     double? show,
     bool? blur,
     LibraryLayout? libraries,
+    bool? glass,
   }) =>
       Appearance(
         brightness: brightness ?? this.brightness,
@@ -125,6 +136,7 @@ class Appearance {
         show: show ?? this.show,
         blur: blur ?? this.blur,
         libraries: libraries ?? this.libraries,
+        glass: glass ?? this.glass,
       );
 
   static const _brightnessKey = 'theme_brightness';
@@ -134,6 +146,7 @@ class Appearance {
   static const _showKey = 'backdrop_show';
   static const _blurKey = 'backdrop_blur';
   static const _librariesKey = 'home_libraries';
+  static const _glassKey = 'theme_glass';
 
   Map<String, String> toPrefs() => {
         _brightnessKey: brightness.name,
@@ -143,6 +156,7 @@ class Appearance {
         _showKey: show.toStringAsFixed(2),
         _blurKey: '$blur',
         _librariesKey: libraries.name,
+        _glassKey: '$glass',
       };
 
   static Appearance fromPrefs(Object? Function(String key) read) {
@@ -155,6 +169,8 @@ class Appearance {
       show: (double.tryParse('${read(_showKey)}') ?? 0.45).clamp(0.1, 1.0),
       blur: read(_blurKey) == 'true',
       libraries: LibraryLayout.values.firstWhere((l) => l.name == read(_librariesKey), orElse: () => LibraryLayout.tiles),
+      // Glass from the start, also for those who chose their look before glass came.
+      glass: read(_glassKey) != 'false',
     );
   }
 
@@ -177,22 +193,72 @@ class Appearance {
         surfaceContainerHighest: const Color(0xFF222222),
       );
     }
-    return buildTheme(scheme, seeThrough: seeThrough);
+    return buildTheme(scheme, seeThrough: seeThrough, glass: glass);
   }
+}
+
+/// The glass of the theme: whether panels are glass, and its tint, edge and shine. Widgets that
+/// draw glass themselves ([GlassPane]) take it from here.
+@immutable
+class GlassLook extends ThemeExtension<GlassLook> {
+  const GlassLook({required this.on, required this.tint, required this.edge, required this.shine});
+
+  /// For [scheme]: light glass is milky, dark glass smoky.
+  factory GlassLook.of(ColorScheme scheme, {required bool on}) {
+    final dark = scheme.brightness == Brightness.dark;
+    return GlassLook(
+      on: on,
+      tint: dark ? scheme.surfaceContainer.withValues(alpha: 0.42) : scheme.surface.withValues(alpha: 0.45),
+      edge: Colors.white.withValues(alpha: dark ? 0.16 : 0.6),
+      shine: Colors.white.withValues(alpha: dark ? 0.10 : 0.32),
+    );
+  }
+
+  static const _off = GlassLook(on: false, tint: Colors.transparent, edge: Colors.transparent, shine: Colors.transparent);
+
+  /// The glass of the current theme; no glass where the theme has none.
+  static GlassLook from(BuildContext context) => Theme.of(context).extension<GlassLook>() ?? _off;
+
+  final bool on;
+
+  /// The colour the glass adds to what is behind it.
+  final Color tint;
+
+  /// The thin bright edge around a pane.
+  final Color edge;
+
+  /// The soft light along a pane's top.
+  final Color shine;
+
+  @override
+  GlassLook copyWith({bool? on, Color? tint, Color? edge, Color? shine}) =>
+      GlassLook(on: on ?? this.on, tint: tint ?? this.tint, edge: edge ?? this.edge, shine: shine ?? this.shine);
+
+  @override
+  GlassLook lerp(GlassLook? other, double t) => other == null
+      ? this
+      : GlassLook(
+          on: t < 0.5 ? on : other.on,
+          tint: Color.lerp(tint, other.tint, t)!,
+          edge: Color.lerp(edge, other.edge, t)!,
+          shine: Color.lerp(shine, other.shine, t)!,
+        );
 }
 
 /// The app's theme around [scheme]: rounded cards and sheets, quieter app bars. With
 /// [seeThrough] the pages are clear, so the background under them shows; an app bar gets a
-/// frosted tint only once the page scrolls under it.
-ThemeData buildTheme(ColorScheme scheme, {bool seeThrough = false}) {
+/// frosted tint only once the page scrolls under it. With [glass], cards, chips and menus are
+/// see-through glass with a bright edge, and corners rounder.
+ThemeData buildTheme(ColorScheme scheme, {bool seeThrough = false, bool glass = false}) {
   final base = ThemeData(colorScheme: scheme, useMaterial3: true);
   final text = base.textTheme;
-  return base.copyWith(
+  final look = GlassLook.of(scheme, on: glass);
+  final themed = base.copyWith(
     scaffoldBackgroundColor: seeThrough ? Colors.transparent : scheme.surface,
     appBarTheme: AppBarTheme(
       backgroundColor: seeThrough
           ? WidgetStateColor.resolveWith((states) => states.contains(WidgetState.scrolledUnder)
-              ? scheme.surfaceContainer.withValues(alpha: 0.9)
+              ? scheme.surfaceContainer.withValues(alpha: glass ? 0.72 : 0.9)
               : Colors.transparent)
           : scheme.surface,
       surfaceTintColor: Colors.transparent,
@@ -202,21 +268,29 @@ ThemeData buildTheme(ColorScheme scheme, {bool seeThrough = false}) {
     ),
     cardTheme: CardThemeData(
       elevation: 0,
-      color: scheme.surfaceContainer,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: glass ? look.tint : scheme.surfaceContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(glass ? 24 : 16),
+        side: glass ? BorderSide(color: look.edge) : BorderSide.none,
+      ),
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
     ),
     listTileTheme: ListTileThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(glass ? 18 : 12)),
       iconColor: scheme.onSurfaceVariant,
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: scheme.surfaceContainerLow,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: glass ? scheme.surfaceContainerLow.withValues(alpha: 0.94) : scheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(glass ? 32 : 24))),
       showDragHandle: true,
     ),
-    chipTheme: base.chipTheme.copyWith(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    chipTheme: base.chipTheme.copyWith(
+      shape: glass
+          ? StadiumBorder(side: BorderSide(color: look.edge))
+          : RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      backgroundColor: glass ? look.tint : null,
+    ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: scheme.primaryContainer,
@@ -226,6 +300,22 @@ ThemeData buildTheme(ColorScheme scheme, {bool seeThrough = false}) {
       TargetPlatform.android:
           seeThrough ? const _SeeThroughTransitions() : const PredictiveBackPageTransitionsBuilder(),
     }),
+    extensions: [look],
+  );
+  if (!glass) return themed;
+  return themed.copyWith(
+    dialogTheme: DialogThemeData(
+      backgroundColor: scheme.surfaceContainerHigh.withValues(alpha: 0.96),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32), side: BorderSide(color: look.edge)),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: scheme.surfaceContainer.withValues(alpha: 0.96),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: look.edge)),
+    ),
+    navigationBarTheme: NavigationBarThemeData(backgroundColor: look.tint, elevation: 0),
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: SegmentedButton.styleFrom(backgroundColor: look.tint, side: BorderSide(color: look.edge)),
+    ),
   );
 }
 

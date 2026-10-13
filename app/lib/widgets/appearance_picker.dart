@@ -52,7 +52,15 @@ class AppearancePicker extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text('Colours follow your wallpaper (Android 12 and newer).', style: theme.textTheme.bodySmall),
                 ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Liquid glass'),
+                subtitle: const Text('Cards and panels as frosted glass over a colourful background'),
+                value: look.glass,
+                onChanged: (v) => AppearanceStore.set(look.copyWith(glass: v)),
+              ),
+              const SizedBox(height: 12),
               Text('Libraries on the home screen', style: theme.textTheme.titleSmall),
               const SizedBox(height: 10),
               SizedBox(
@@ -75,12 +83,14 @@ class AppearancePicker extends StatelessWidget {
               Text('Background', style: theme.textTheme.titleSmall),
               const SizedBox(height: 10),
               Wrap(spacing: 10, runSpacing: 12, children: [
+                // Glass needs something behind it: no plain background with glass.
                 for (final b in Backdrop.values)
-                  _BackdropChoice(
-                    look: look,
-                    backdrop: b,
-                    onTap: () => _choose(context, look, b),
-                  ),
+                  if (!(look.glass && b == Backdrop.plain))
+                    _BackdropChoice(
+                      look: look,
+                      backdrop: b,
+                      onTap: () => _choose(context, look, b),
+                    ),
               ]),
               if (look.backdrop == Backdrop.picture && look.picture != null)
                 Align(
@@ -153,7 +163,7 @@ class _BackdropChoice extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final selected = look.backdrop == backdrop;
+    final selected = look.shown == backdrop;
     final icon = switch (backdrop) {
       Backdrop.wallpaper => Icons.wallpaper,
       Backdrop.picture when look.picture == null => Icons.add_photo_alternate_outlined,

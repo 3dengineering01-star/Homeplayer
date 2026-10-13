@@ -23,8 +23,8 @@ void main() {
   });
 
   test('black has true black backgrounds, dark does not', () {
-    final black = const Appearance(brightness: ThemeBrightness.black).theme(dark: true);
-    final dark = const Appearance(brightness: ThemeBrightness.dark).theme(dark: true);
+    final black = const Appearance(brightness: ThemeBrightness.black, glass: false).theme(dark: true);
+    final dark = const Appearance(brightness: ThemeBrightness.dark, glass: false).theme(dark: true);
     expect(black.colorScheme.surface, Colors.black);
     expect(black.scaffoldBackgroundColor, Colors.black);
     expect(dark.colorScheme.surface, isNot(Colors.black));
@@ -61,16 +61,43 @@ void main() {
   });
 
   test('pages are clear only over a background there is', () {
-    expect(const Appearance().seeThrough, isFalse);
-    expect(const Appearance().veil, 1);
-    expect(const Appearance(backdrop: Backdrop.picture).seeThrough, isFalse);
+    expect(const Appearance(glass: false).seeThrough, isFalse);
+    expect(const Appearance(glass: false).veil, 1);
+    expect(const Appearance(backdrop: Backdrop.picture, glass: false).seeThrough, isFalse);
     expect(const Appearance(backdrop: Backdrop.picture, picture: '/p.jpg').seeThrough, isTrue);
-    expect(const Appearance(backdrop: Backdrop.wallpaper, show: 0.8).veil, closeTo(0.2, 0.001));
-    expect(const Appearance(backdrop: Backdrop.aurora, show: 0).veil, closeTo(0.9, 0.001));
+    expect(const Appearance(backdrop: Backdrop.wallpaper, show: 0.8, glass: false).veil, closeTo(0.2, 0.001));
+    expect(const Appearance(backdrop: Backdrop.aurora, show: 0, glass: false).veil, closeTo(0.9, 0.001));
 
     final clear = const Appearance(backdrop: Backdrop.ocean).theme(dark: false);
     expect(clear.scaffoldBackgroundColor, Colors.transparent);
-    expect(const Appearance().theme(dark: false).scaffoldBackgroundColor, isNot(Colors.transparent));
+    expect(const Appearance(glass: false).theme(dark: false).scaffoldBackgroundColor, isNot(Colors.transparent));
+  });
+
+  // Liquid glass, the look from the start: see-through glass panes over a colourful background.
+  test('glass is on from the start and kept; it shows a background even when plain was chosen', () {
+    expect(const Appearance().glass, isTrue);
+    expect(Appearance.fromPrefs((_) => null).glass, isTrue, reason: 'saved before glass came');
+    final off = const Appearance(glass: false).toPrefs();
+    expect(Appearance.fromPrefs((k) => off[k]).glass, isFalse);
+
+    expect(const Appearance().shown, Backdrop.theme);
+    expect(const Appearance().seeThrough, isTrue);
+    expect(const Appearance(glass: false).shown, Backdrop.plain);
+    expect(const Appearance(backdrop: Backdrop.aurora).shown, Backdrop.aurora);
+    // More of the background shows through glass.
+    expect(const Appearance(backdrop: Backdrop.aurora, show: 0.5).veil, closeTo(0.3, 0.001));
+  });
+
+  test('with glass, cards are see-through with a bright edge; without, solid', () {
+    final glass = const Appearance().theme(dark: false);
+    final look = glass.extension<GlassLook>()!;
+    expect(look.on, isTrue);
+    expect(glass.cardTheme.color!.a, lessThan(1));
+    expect((glass.cardTheme.shape! as RoundedRectangleBorder).side.color, look.edge);
+
+    final solid = const Appearance(glass: false).theme(dark: true);
+    expect(solid.extension<GlassLook>()!.on, isFalse);
+    expect(solid.cardTheme.color!.a, 1);
   });
 
   test('the colour blends have colours, the others draw their own', () {

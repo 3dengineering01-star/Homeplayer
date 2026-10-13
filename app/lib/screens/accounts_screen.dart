@@ -7,7 +7,9 @@ import '../models/account.dart';
 import '../services/account_store.dart';
 import '../services/own_server.dart';
 import '../services/server_status.dart';
+import '../services/appearance.dart';
 import '../widgets/appearance_picker.dart';
+import '../widgets/glass.dart';
 import '../widgets/library_tiles.dart';
 import '../widgets/own_server_guide.dart';
 import '../widgets/pressable.dart';
@@ -267,6 +269,84 @@ class _ServerCard extends StatelessWidget {
       true => (const Color(0xFF2EB872), 'Online'),
       false => (const Color(0xFFE5484D), 'Not reachable'),
     };
+    final glass = GlassLook.from(context).on;
+    final content = Stack(children: [
+      // A large faint copy of the icon in the corner.
+      Positioned(right: -20, bottom: -28, child: Icon(icon, size: 150, color: fg.withValues(alpha: 0.08))),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 8, 20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: fg.withValues(alpha: 0.12)),
+              child: Icon(icon, color: fg, size: 30),
+            ),
+            const Spacer(),
+            if (last)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: fg.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+                child: Text('Last opened', style: theme.textTheme.labelSmall?.copyWith(color: fg)),
+              ),
+            IconButton(
+              tooltip: 'More',
+              icon: Icon(Icons.more_vert, color: fg),
+              onPressed: () => _menu(context),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          Text(account.serverName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.headlineSmall?.copyWith(color: fg, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 2),
+          Text('${jellyfin ? 'Jellyfin' : 'Navidrome'} · ${account.username}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(color: fg.withValues(alpha: 0.85))),
+          const SizedBox(height: 12),
+          Row(children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: dot),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text('$status · $host',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(color: fg.withValues(alpha: 0.8))),
+            ),
+            // Room for the arrow in the corner: a long address ends in "…" before it.
+            const SizedBox(width: 64),
+          ]),
+        ]),
+      ),
+      Positioned(
+        right: 16,
+        bottom: 16,
+        child: CircleAvatar(
+          radius: 20,
+          backgroundColor: fg,
+          child: Icon(Icons.arrow_forward_rounded, color: bg),
+        ),
+      ),
+    ]);
+    if (glass) {
+      return Pressable(
+        child: GlassPane(
+          radius: 28,
+          tint: bg.withValues(alpha: 0.5),
+          onTap: onOpen,
+          onLongPress: () => _menu(context),
+          child: content,
+        ),
+      );
+    }
     return Pressable(
       child: Material(
         borderRadius: BorderRadius.circular(28),
@@ -284,72 +364,7 @@ class _ServerCard extends StatelessWidget {
                 colors: [bg, Color.lerp(bg, fg, 0.14)!],
               ),
             ),
-            child: Stack(children: [
-              // A large faint copy of the icon in the corner.
-              Positioned(right: -20, bottom: -28, child: Icon(icon, size: 150, color: fg.withValues(alpha: 0.08))),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 8, 20),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: fg.withValues(alpha: 0.12)),
-                      child: Icon(icon, color: fg, size: 30),
-                    ),
-                    const Spacer(),
-                    if (last)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(color: fg.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-                        child: Text('Last opened', style: theme.textTheme.labelSmall?.copyWith(color: fg)),
-                      ),
-                    IconButton(
-                      tooltip: 'More',
-                      icon: Icon(Icons.more_vert, color: fg),
-                      onPressed: () => _menu(context),
-                    ),
-                  ]),
-                  const SizedBox(height: 14),
-                  Text(account.serverName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.headlineSmall?.copyWith(color: fg, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text('${jellyfin ? 'Jellyfin' : 'Navidrome'} · ${account.username}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(color: fg.withValues(alpha: 0.85))),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(shape: BoxShape.circle, color: dot),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text('$status · $host',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(color: fg.withValues(alpha: 0.8))),
-                    ),
-                    // Room for the arrow in the corner: a long address ends in "…" before it.
-                    const SizedBox(width: 64),
-                  ]),
-                ]),
-              ),
-              Positioned(
-                right: 16,
-                bottom: 16,
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: fg,
-                  child: Icon(Icons.arrow_forward_rounded, color: bg),
-                ),
-              ),
-            ]),
+            child: content,
           ),
         ),
       ),
@@ -401,6 +416,24 @@ class _AddCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final body = Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: scheme.primaryContainer,
+          child: Icon(Icons.add_rounded, color: scheme.onPrimaryContainer),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Add a server', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+            Text('Jellyfin or Navidrome', style: theme.textTheme.bodySmall),
+          ]),
+        ),
+      ]),
+    );
+    if (GlassLook.from(context).on) return Pressable(child: GlassPane(radius: 28, onTap: onTap, child: body));
     return Pressable(
       child: Material(
         color: Colors.transparent,
@@ -409,26 +442,7 @@ class _AddCard extends StatelessWidget {
           side: BorderSide(color: scheme.outlineVariant, width: 1.5),
         ),
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: scheme.primaryContainer,
-                child: Icon(Icons.add_rounded, color: scheme.onPrimaryContainer),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Add a server', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  Text('Jellyfin or Navidrome', style: theme.textTheme.bodySmall),
-                ]),
-              ),
-            ]),
-          ),
-        ),
+        child: InkWell(onTap: onTap, child: body),
       ),
     );
   }
@@ -444,34 +458,33 @@ class _OwnServerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    return Pressable(
-      child: Material(
-        color: scheme.secondaryContainer,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: scheme.surface,
-                child: Icon(Icons.computer_rounded, color: scheme.onSurface),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Your own OwnMedia',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: scheme.onSecondaryContainer)),
-                  Text('Your movies and music from your computer, in a few clicks',
-                      style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSecondaryContainer)),
-                ]),
-              ),
-              Icon(Icons.chevron_right_rounded, color: scheme.onSecondaryContainer),
-            ]),
-          ),
+    final body = Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: scheme.surface,
+          child: Icon(Icons.computer_rounded, color: scheme.onSurface),
         ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Your own OwnMedia',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: scheme.onSecondaryContainer)),
+            Text('Your movies and music from your computer, in a few clicks',
+                style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSecondaryContainer)),
+          ]),
+        ),
+        Icon(Icons.chevron_right_rounded, color: scheme.onSecondaryContainer),
+      ]),
+    );
+    return Pressable(
+      child: GlassPane(
+        radius: 28,
+        tint: scheme.secondaryContainer.withValues(alpha: 0.55),
+        solid: scheme.secondaryContainer,
+        onTap: onTap,
+        child: body,
       ),
     );
   }

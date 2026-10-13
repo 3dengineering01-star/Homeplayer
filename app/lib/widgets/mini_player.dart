@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../services/appearance.dart';
 import '../services/playback.dart';
 import 'artwork.dart';
+import 'glass.dart';
 import 'vinyl_art.dart';
 
 /// Bar at the bottom of every screen while music plays and the full player is closed.
@@ -25,57 +27,71 @@ class MiniPlayer extends StatelessWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            child: Material(
-              color: scheme.surfaceContainerHigh,
-              elevation: 6,
-              shadowColor: Colors.black54,
-              borderRadius: BorderRadius.circular(18),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: onOpen,
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 4, 6),
-                    child: Row(children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: SizedBox.square(
-                          dimension: 46,
-                          child: artworkImage(item, fallback: const NoteTile()),
-                        ),
+            child: _Frame(
+              onTap: onOpen,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 8, 4, 6),
+                  child: Row(children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: SizedBox.square(
+                        dimension: 46,
+                        child: artworkImage(item, fallback: const NoteTile()),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                          Text(item.title,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                        Text(item.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                        if (item.subtitle != null)
+                          Text(item.subtitle!,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                          if (item.subtitle != null)
-                            Text(item.subtitle!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.primary)),
-                        ]),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.primary)),
+                      ]),
+                    ),
+                    StreamBuilder<bool>(
+                      stream: pb.player.stream.playing,
+                      initialData: pb.player.state.playing,
+                      builder: (context, s) => IconButton.filled(
+                        icon: Icon(s.data! ? Icons.pause : Icons.play_arrow, semanticLabel: s.data! ? 'Pause' : 'Play'),
+                        onPressed: s.data! ? pb.pause : pb.play,
                       ),
-                      StreamBuilder<bool>(
-                        stream: pb.player.stream.playing,
-                        initialData: pb.player.state.playing,
-                        builder: (context, s) => IconButton.filled(
-                          icon: Icon(s.data! ? Icons.pause : Icons.play_arrow, semanticLabel: s.data! ? 'Pause' : 'Play'),
-                          onPressed: s.data! ? pb.pause : pb.play,
-                        ),
-                      ),
-                      IconButton(icon: const Icon(Icons.close, semanticLabel: 'Stop'), onPressed: pb.stop),
-                    ]),
-                  ),
-                  _Progress(pb: pb),
-                ]),
-              ),
+                    ),
+                    IconButton(icon: const Icon(Icons.close, semanticLabel: 'Stop'), onPressed: pb.stop),
+                  ]),
+                ),
+                _Progress(pb: pb),
+              ]),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// The bar's card: a pane of glass with the glass style, else a raised card.
+class _Frame extends StatelessWidget {
+  const _Frame({required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (GlassLook.from(context).on) return GlassPane(radius: 22, onTap: onTap, child: child);
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
+      elevation: 6,
+      shadowColor: Colors.black54,
+      borderRadius: BorderRadius.circular(18),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(onTap: onTap, child: child),
     );
   }
 }
