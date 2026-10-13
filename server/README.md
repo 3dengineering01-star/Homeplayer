@@ -75,3 +75,12 @@ dotnet build server/Jellyfin.Plugin.HomeplayBackup -c Release
 запустить Jellyfin. Номер версии в панели Jellyfin берёт из `meta.json` в папке плагина (и имени папки), а не
 из dll: после замены dll панель может показывать старый номер, на работу это не влияет. Чтобы номер был
 верным, поправить `"version"` в `meta.json` до запуска Jellyfin.
+
+## Каталог модулей (NAS, Docker, Linux)
+
+Модуль работает на любом Jellyfin 12.1+, не только на Windows. Для установки из интерфейса Jellyfin есть
+каталог: Панель управления → Плагины → Каталог → Репозитории → адрес
+`https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/manifest.json`.
+Собирается `tools/make_plugin_repo.sh` (zip без APK и установщика). Проверено на Jellyfin 12.1 под Linux:
+установка из каталога, статус «Активен», приглашения, страница телефона. Пошагово для Synology —
+`docs/synology.md`.
