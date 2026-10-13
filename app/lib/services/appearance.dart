@@ -201,7 +201,14 @@ class Appearance {
 /// draw glass themselves ([GlassPane]) take it from here.
 @immutable
 class GlassLook extends ThemeExtension<GlassLook> {
-  const GlassLook({required this.on, required this.tint, required this.edge, required this.shine});
+  const GlassLook({
+    required this.on,
+    required this.tint,
+    required this.edge,
+    required this.shine,
+    required this.shade,
+    required this.shadow,
+  });
 
   /// For [scheme]: light glass is milky, dark glass smoky.
   factory GlassLook.of(ColorScheme scheme, {required bool on}) {
@@ -210,11 +217,20 @@ class GlassLook extends ThemeExtension<GlassLook> {
       on: on,
       tint: dark ? scheme.surfaceContainer.withValues(alpha: 0.42) : scheme.surface.withValues(alpha: 0.45),
       edge: Colors.white.withValues(alpha: dark ? 0.16 : 0.6),
-      shine: Colors.white.withValues(alpha: dark ? 0.10 : 0.32),
+      shine: Colors.white.withValues(alpha: dark ? 0.16 : 0.4),
+      shade: Colors.black.withValues(alpha: dark ? 0.22 : 0.05),
+      shadow: Colors.black.withValues(alpha: dark ? 0.4 : 0.16),
     );
   }
 
-  static const _off = GlassLook(on: false, tint: Colors.transparent, edge: Colors.transparent, shine: Colors.transparent);
+  static const _off = GlassLook(
+    on: false,
+    tint: Colors.transparent,
+    edge: Colors.transparent,
+    shine: Colors.transparent,
+    shade: Colors.transparent,
+    shadow: Colors.transparent,
+  );
 
   /// The glass of the current theme; no glass where the theme has none.
   static GlassLook from(BuildContext context) => Theme.of(context).extension<GlassLook>() ?? _off;
@@ -227,12 +243,24 @@ class GlassLook extends ThemeExtension<GlassLook> {
   /// The thin bright edge around a pane.
   final Color edge;
 
-  /// The soft light along a pane's top.
+  /// The light on a pane's top left corner, where the light falls on it.
   final Color shine;
 
+  /// The darkening of a pane's bottom right corner, away from the light.
+  final Color shade;
+
+  /// The shadow a pane or a bead casts on what is under it.
+  final Color shadow;
+
   @override
-  GlassLook copyWith({bool? on, Color? tint, Color? edge, Color? shine}) =>
-      GlassLook(on: on ?? this.on, tint: tint ?? this.tint, edge: edge ?? this.edge, shine: shine ?? this.shine);
+  GlassLook copyWith({bool? on, Color? tint, Color? edge, Color? shine, Color? shade, Color? shadow}) => GlassLook(
+        on: on ?? this.on,
+        tint: tint ?? this.tint,
+        edge: edge ?? this.edge,
+        shine: shine ?? this.shine,
+        shade: shade ?? this.shade,
+        shadow: shadow ?? this.shadow,
+      );
 
   @override
   GlassLook lerp(GlassLook? other, double t) => other == null
@@ -242,6 +270,8 @@ class GlassLook extends ThemeExtension<GlassLook> {
           tint: Color.lerp(tint, other.tint, t)!,
           edge: Color.lerp(edge, other.edge, t)!,
           shine: Color.lerp(shine, other.shine, t)!,
+          shade: Color.lerp(shade, other.shade, t)!,
+          shadow: Color.lerp(shadow, other.shadow, t)!,
         );
 }
 

@@ -277,11 +277,12 @@ class _ServerCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 18, 8, 20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: fg.withValues(alpha: 0.12)),
-              child: Icon(icon, color: fg, size: 30),
+            IconOrb(
+              icon: icon,
+              color: Color.lerp(bg, fg, 0.22)!,
+              onColor: fg,
+              flat: fg.withValues(alpha: 0.12),
+              size: 56,
             ),
             const Spacer(),
             if (last)
@@ -329,11 +330,7 @@ class _ServerCard extends StatelessWidget {
       Positioned(
         right: 16,
         bottom: 16,
-        child: CircleAvatar(
-          radius: 20,
-          backgroundColor: fg,
-          child: Icon(Icons.arrow_forward_rounded, color: bg),
-        ),
+        child: IconOrb(icon: Icons.arrow_forward_rounded, color: fg, onColor: bg, flat: fg),
       ),
     ]);
     if (glass) {
@@ -419,10 +416,12 @@ class _AddCard extends StatelessWidget {
     final body = Padding(
       padding: const EdgeInsets.all(20),
       child: Row(children: [
-        CircleAvatar(
-          radius: 24,
-          backgroundColor: scheme.primaryContainer,
-          child: Icon(Icons.add_rounded, color: scheme.onPrimaryContainer),
+        IconOrb(
+          icon: Icons.add_rounded,
+          color: scheme.primaryContainer,
+          onColor: scheme.onPrimaryContainer,
+          flat: scheme.primaryContainer,
+          size: 48,
         ),
         const SizedBox(width: 16),
         Expanded(

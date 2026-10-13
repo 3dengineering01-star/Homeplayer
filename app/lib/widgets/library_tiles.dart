@@ -81,11 +81,7 @@ class LibraryTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: fg.withValues(alpha: 0.12),
-                    child: Icon(icon, color: fg, size: 22),
-                  ),
+                  IconOrb(icon: icon, color: Color.lerp(bg, fg, 0.22)!, onColor: fg, flat: fg.withValues(alpha: 0.12)),
                   const Spacer(),
                   Text(
                     library.name,
@@ -127,10 +123,12 @@ class LibraryRow extends StatelessWidget {
     final (bg, fg) = libraryColors(context, index);
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      leading: CircleAvatar(
-        radius: 22,
-        backgroundColor: bg,
-        child: Icon(libraryKind(library.collectionType).icon, color: fg),
+      leading: IconOrb(
+        icon: libraryKind(library.collectionType).icon,
+        color: Color.lerp(bg, fg, 0.22)!,
+        onColor: fg,
+        flat: bg,
+        size: 44,
       ),
       title: Text(library.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: count == null ? null : Text(count!),
@@ -166,19 +164,28 @@ class LibraryCircle extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [bg, Color.lerp(bg, fg, 0.18)!],
+              if (GlassLook.from(context).on)
+                IconOrb(
+                  icon: libraryKind(library.collectionType).icon,
+                  color: Color.lerp(bg, fg, 0.22)!,
+                  onColor: fg,
+                  flat: bg,
+                  size: 64,
+                )
+              else
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [bg, Color.lerp(bg, fg, 0.18)!],
+                    ),
                   ),
+                  child: Icon(libraryKind(library.collectionType).icon, color: fg, size: 30),
                 ),
-                child: Icon(libraryKind(library.collectionType).icon, color: fg, size: 30),
-              ),
               const SizedBox(height: 6),
               Text(
                 library.name,
