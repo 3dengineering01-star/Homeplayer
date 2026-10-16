@@ -164,3 +164,17 @@ DSM, например `http://192.168.1.50:8096`):
 ведёт в Google Play. Пока приложения там нет, положите `OwnMedia.apk` через File Station в папку
 модуля: `docker/jellyfin/config/plugins/Homeplay Backup_<версия>/` — страница приглашения и QR-код
 сразу начнут давать его скачать.
+
+## Как убрать OwnMedia с NAS
+
+1. **Container Manager → Проект → `ownmedia` → Остановить → Удалить**, затем **Образ → `jellyfin/jellyfin`
+   → Удалить** (около 1,7 ГБ).
+2. **Планировщик задач → `OwnMedia Funnel` → Удалить.** Это не выключает доступ из интернета: Funnel
+   остаётся включённым в самом Tailscale (адрес открывается, но с ошибкой). Чтобы выключить его, либо
+   удалите пакет Tailscale (**Центр пакетов → Tailscale → Удалить**, затем удалите NAS в списке Machines
+   на сайте Tailscale), либо, если Tailscale нужен для другого, выполните разовую задачу от `root`:
+   `/var/packages/Tailscale/target/bin/tailscale funnel --https=443 off`.
+3. **File Station:** удалить `docker/jellyfin` и `docker/tasklogs`. Общую папку `docker` — только если в ней
+   больше ничего нет и Container Manager не нужен.
+4. Ваши фильмы, музыка и копии фото не трогаются: удалите папку копий фото сами, если она не нужна.
+5. В OwnMedia на телефоне: меню ⋮ у сервера → удалить сервер.
