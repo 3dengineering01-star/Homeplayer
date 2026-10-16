@@ -174,7 +174,8 @@ DSM, например `http://192.168.1.50:8096`):
    удалите пакет Tailscale (**Центр пакетов → Tailscale → Удалить**, затем удалите NAS в списке Machines
    на сайте Tailscale), либо, если Tailscale нужен для другого, выполните разовую задачу от `root`:
    `/var/packages/Tailscale/target/bin/tailscale funnel --https=443 off`.
-3. **File Station:** удалить `docker/jellyfin` и `docker/tasklogs`. Общую папку `docker` — только если в ней
-   больше ничего нет и Container Manager не нужен.
+3. **File Station:** удалить `docker/jellyfin` и `docker/tasklogs`. Общую папку `docker`, если она стала пустой,
+   можно удалить в **Панель управления → Общая папка** (Container Manager при этом не мешает; при
+   следующем проекте папку придётся создать заново).
 4. Ваши фильмы, музыка и копии фото не трогаются: удалите папку копий фото сами, если она не нужна.
 5. В OwnMedia на телефоне: меню ⋮ у сервера → удалить сервер.
