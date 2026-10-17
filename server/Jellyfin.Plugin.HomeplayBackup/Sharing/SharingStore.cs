@@ -34,6 +34,9 @@ public sealed class Invite
 
     /// <summary>Gets or sets when the friend joined (UTC).</summary>
     public DateTime? Joined { get; set; }
+
+    /// <summary>Gets or sets the phone that joined, as it calls itself (e.g. "Google Pixel 10a").</summary>
+    public string Device { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -160,6 +163,44 @@ public sealed class SharingStore
     };
 
     /// <summary>
+    /// How a friend uses the server: when they were last seen and what plays for them now.
+    /// </summary>
+    /// <param name="sessions">The friend's sessions: last activity (UTC) and what plays, if anything.</param>
+    /// <param name="userLastActivity">The last activity Jellyfin keeps for the friend's user (UTC).</param>
+    /// <param name="now">The time (UTC).</param>
+    /// <returns>The last time seen, and what plays now; a session quiet for longer than a few minutes plays nothing.</returns>
+    public static FriendActivity Activity(IEnumerable<(DateTime LastActivity, string? NowPlaying)> sessions, DateTime? userLastActivity, DateTime now)
+    {
+        var list = sessions.ToList();
+        DateTime? last = userLastActivity;
+        foreach (var (at, _) in list)
+        {
+            if (last is null || at > last)
+            {
+                last = at;
+            }
+        }
+
+        var watching = list
+            .Where(s => !string.IsNullOrWhiteSpace(s.NowPlaying) && now - s.LastActivity < TimeSpan.FromMinutes(5))
+            .OrderByDescending(s => s.LastActivity)
+            .Select(s => s.NowPlaying)
+            .FirstOrDefault();
+        return new FriendActivity(last, watching);
+    }
+
+    /// <summary>
+    /// The name of a phone as the owner sees it: trimmed, at most 60 characters.
+    /// </summary>
+    /// <param name="device">What the phone sent.</param>
+    /// <returns>The name; empty when it sent none.</returns>
+    public static string DeviceName(string? device)
+    {
+        var d = (device ?? string.Empty).Trim();
+        return d.Length > 60 ? d[..60] : d;
+    }
+
+    /// <summary>
     /// The invite with <paramref name="code"/>, typed in any case.
     /// </summary>
     /// <param name="state">The state.</param>
@@ -267,3 +308,8 @@ public sealed class SharingStore
         return name;
     }
 }
+
+/// <summary>How a friend uses the server.</summary>
+/// <param name="LastSeen">When they were last seen (UTC), if ever.</param>
+/// <param name="Watching">What plays for them now, if anything.</param>
+public sealed record FriendActivity(DateTime? LastSeen, string? Watching);

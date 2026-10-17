@@ -5,6 +5,7 @@ import 'package:media_kit/media_kit.dart';
 import 'screens/accounts_screen.dart';
 import 'screens/join_screen.dart';
 import 'screens/player_screen.dart';
+import 'screens/tv_screen.dart';
 import 'services/app_links.dart';
 import 'services/appearance.dart';
 import 'services/backup.dart';
@@ -77,6 +78,9 @@ class HomeplayApp extends StatelessWidget {
               child: BackdropGroup(
                 child: Column(children: [
                   Expanded(child: child!),
+                  TvBar(
+                      onOpen: (cast) => navigatorKey.currentState
+                          ?.push(MaterialPageRoute(builder: (_) => TvRemoteScreen(cast: cast, start: false)))),
                   MiniPlayer(
                       onOpen: () => navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const PlayerScreen()))),
                 ]),

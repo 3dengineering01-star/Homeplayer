@@ -41,7 +41,10 @@ class _JoinScreenState extends State<JoinScreen> {
 
   Future<String> _deviceName() async {
     try {
-      return (await DeviceInfoPlugin().androidInfo).model;
+      // "Google Pixel 10a", "samsung SM-S911B": the owner sees it in the list of who joined.
+      final info = await DeviceInfoPlugin().androidInfo;
+      final maker = info.manufacturer.trim();
+      return maker.isEmpty || info.model.toLowerCase().startsWith(maker.toLowerCase()) ? info.model : '$maker ${info.model}';
     } catch (_) {
       return 'Phone';
     }

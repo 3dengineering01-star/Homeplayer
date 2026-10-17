@@ -7,6 +7,8 @@ import '../models/account.dart';
 import '../services/quality.dart';
 import '../services/search_filters.dart';
 import 'common.dart';
+import 'discovery.dart';
+import 'dlna.dart';
 import 'sharing.dart';
 
 const _appVersion = '0.1.0';
@@ -208,11 +210,16 @@ MediaVersion? chooseVersion(List<MediaVersion> versions, String? resolution) =>
     resolution == null ? null : versions.where((v) => v.resolution == resolution).firstOrNull;
 
 class JellyfinClient {
-  JellyfinClient(this.account, this.deviceId, {http.Client? client}) : _http = client ?? http.Client();
+  JellyfinClient(this.account, this.deviceId, {http.Client? client, Future<List<DiscoveredServer>> Function()? discover})
+      : _http = client ?? http.Client(),
+        _discover = discover ?? discoverJellyfin;
 
   final Account account;
   final String deviceId;
   final http.Client _http;
+
+  /// Servers on the phone's Wi-Fi that answer the search; a stand-in in tests.
+  final Future<List<DiscoveredServer>> Function() _discover;
 
   String get _base => account.baseUrl;
 
@@ -221,6 +228,16 @@ class JellyfinClient {
       '${token != null ? ', Token="$token"' : ''}';
 
   Map<String, String> get headers => {'Authorization': _authHeader(deviceId, account.token)};
+
+  /// What the server's "no longer signed in" means: for a friend, that the owner ended the access
+  /// (their sign-in is removed); otherwise an expired session.
+  String get signedOut => account.shared
+      ? 'The owner of this server ended your access. Remove the server, or ask them for a new invite.'
+      : 'Session expired. Remove the server and sign in again.';
+
+  /// A read refused for the sign-in itself: 401, or for a friend also 403, which Jellyfin 12.1
+  /// answers once the owner removed the friend's user.
+  bool _lostAccess(int status) => status == 401 || (account.shared && status == 403);
 
   static Future<Account> login({
     required String baseUrl,
@@ -263,7 +280,7 @@ class JellyfinClient {
   Future<Map<String, dynamic>> _get(String path, [Map<String, String>? query]) async {
     final uri = Uri.parse('$_base$path').replace(queryParameters: query);
     final res = await _http.get(uri, headers: headers).timeout(_timeout);
-    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (_lostAccess(res.statusCode)) throw ApiException(signedOut);
     if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for $path');
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -300,7 +317,7 @@ class JellyfinClient {
   Future<List<JellyfinItem>> _list(String path, Map<String, String> query) async {
     final uri = Uri.parse('$_base$path').replace(queryParameters: query);
     final res = await _http.get(uri, headers: headers).timeout(_timeout);
-    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (_lostAccess(res.statusCode)) throw ApiException(signedOut);
     if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for $path');
     final body = jsonDecode(res.body);
     // Most answer with {Items: [...]}, a few with a bare list.
@@ -523,7 +540,7 @@ class JellyfinClient {
     final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
     if (res.statusCode < 300) return res;
     throw ApiException(switch (res.statusCode) {
-      401 => 'Session expired. Remove the server and sign in again.',
+      401 => signedOut,
       403 => "Only the server's owner can share it.",
       404 when path == '/Homeplay/Sharing' =>
         'Sharing needs the newer OwnMedia on the server computer. Run the new OwnMediaSetup there.',
@@ -599,12 +616,49 @@ class JellyfinClient {
     }
   }
 
+  Future<String?>? _homeBase;
+
+  /// The server's address in its home network, for a TV there, when the phone knows it by an
+  /// internet or Tailscale address. First the address the server answers the Wi-Fi search with
+  /// (it picks the one of the phone's network), then the address it gives for itself, each only
+  /// if the phone gets the same server there (that is, the phone is at home too). Null when the
+  /// phone's address will do or no home address works. Asked once per client.
+  Future<String?> homeBase() => _homeBase ??= _findHomeBase();
+
+  Future<String?> _findHomeBase() async {
+    if (isHomeHost(Uri.parse(_base).host)) return null;
+    try {
+      final res = await _http.get(Uri.parse('$_base/System/Info/Public')).timeout(const Duration(seconds: 5));
+      final info = jsonDecode(res.body) as Map<String, dynamic>;
+      final id = info['Id'] as String?;
+      if (id == null) return null;
+      final found = await _discover().catchError((_) => <DiscoveredServer>[]);
+      final candidates = [
+        for (final s in found)
+          if (s.id == id) s.address,
+        ?info['LocalAddress'] as String?,
+      ];
+      for (final c in candidates) {
+        final host = Uri.tryParse(c)?.host;
+        if (host == null || !isHomeHost(host)) continue;
+        final home = normalizeBaseUrl(c);
+        // The phone on the same Wi-Fi as the TV reaches it too; elsewhere it is not this server.
+        final there = await publicId(home, client: _http).timeout(const Duration(seconds: 3), onTimeout: () => null);
+        if (there == id) return home;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('homeplay home address not found: $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> _send(String method, String path, {Map<String, String>? query, Object? body}) async {
     final req = http.Request(method, Uri.parse('$_base$path').replace(queryParameters: query))
       ..headers.addAll({...headers, 'Content-Type': 'application/json'});
     if (body != null) req.body = jsonEncode(body);
     final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
-    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (res.statusCode == 401) throw ApiException(signedOut);
     if (res.statusCode == 403) throw ApiException('The server does not allow this for your user.');
     if (res.statusCode >= 300) throw ApiException('Server answered ${res.statusCode} for $path');
     if (res.body.isEmpty) return null;
@@ -961,6 +1015,12 @@ class JellyfinClient {
         headers: headers,
         reporter: _reporter(item, versionId, null, 'DirectPlay'),
         favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
+        container: item.container,
+        tvUrl: () async {
+          final url = streamUrl(item, versionId: versionId);
+          final home = await homeBase();
+          return home == null ? url : rebaseUrl(url, _base, home);
+        },
       );
 }
 
