@@ -31,7 +31,10 @@ class ShareInvite {
           'Expired' => InviteState.expired,
           _ => InviteState.waiting,
         },
-        link = j['Link'] as String? ?? '';
+        link = j['Link'] as String? ?? '',
+        device = j['Device'] as String? ?? '',
+        lastSeen = j['LastSeen'] == null ? null : DateTime.parse(j['LastSeen'] as String).toLocal(),
+        watching = j['Watching'] as String?;
 
   final String code;
   final String friend;
@@ -40,6 +43,26 @@ class ShareInvite {
   final DateTime? joined;
   final InviteState state;
   final String link;
+
+  /// The phone that joined, as it calls itself ("Google Pixel 10a"); empty before plugin 1.7.
+  final String device;
+
+  /// When the friend last used the server; null if never or before plugin 1.7.
+  final DateTime? lastSeen;
+
+  /// What plays for the friend right now.
+  final String? watching;
+}
+
+/// "today 14:05", "yesterday 09:30" or "12.10.2026" for when a friend was last seen.
+String seenLabel(DateTime at, DateTime now) {
+  final day = DateTime(at.year, at.month, at.day), today = DateTime(now.year, now.month, now.day);
+  final time = '${at.hour}:${at.minute.toString().padLeft(2, '0')}';
+  return switch (today.difference(day).inDays) {
+    0 => 'today $time',
+    1 => 'yesterday $time',
+    _ => '${at.day}.${at.month.toString().padLeft(2, '0')}.${at.year}',
+  };
 }
 
 class SharingInfo {

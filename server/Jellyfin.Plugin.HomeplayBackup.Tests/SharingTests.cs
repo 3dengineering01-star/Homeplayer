@@ -57,6 +57,45 @@ public sealed class SharingTests : IDisposable
     }
 
     [Fact]
+    public void TheOwnerSeesWhenAFriendWasLastSeenAndWhatTheyWatch()
+    {
+        // Never signed in since joining: nothing to show.
+        Assert.Equal(new FriendActivity(null, null), SharingStore.Activity([], null, Now));
+
+        var a = SharingStore.Activity(
+            [(Now.AddMinutes(-1), "Dune"), (Now.AddDays(-2), null)],
+            Now.AddHours(-3),
+            Now);
+        Assert.Equal(Now.AddMinutes(-1), a.LastSeen);
+        Assert.Equal("Dune", a.Watching);
+
+        // A session quiet for a while plays nothing, even if it still names a movie.
+        var quiet = SharingStore.Activity([(Now.AddMinutes(-30), "Dune")], Now.AddHours(-3), Now);
+        Assert.Equal(Now.AddMinutes(-30), quiet.LastSeen);
+        Assert.Null(quiet.Watching);
+
+        // The user's own activity counts when it is newer than any session.
+        Assert.Equal(Now.AddMinutes(-2), SharingStore.Activity([(Now.AddDays(-1), null)], Now.AddMinutes(-2), Now).LastSeen);
+    }
+
+    [Fact]
+    public void ThePhoneThatJoinedIsKeptShort()
+    {
+        Assert.Equal("Google Pixel 10a", SharingStore.DeviceName("  Google Pixel 10a "));
+        Assert.Equal(string.Empty, SharingStore.DeviceName(null));
+        Assert.Equal(60, SharingStore.DeviceName(new string('x', 200)).Length);
+
+        var file = Path.Combine(_folder, "sharing.json");
+        var store = new SharingStore(file);
+        store.Update(s =>
+        {
+            s.Invites.Add(new Invite { Code = "A", Friend = "Anna", Created = Now, Expires = Now.AddDays(7), UserId = Guid.NewGuid(), Device = "Google Pixel 10a" });
+            return 0;
+        });
+        Assert.Equal("Google Pixel 10a", new SharingStore(file).Load().Invites.Single().Device);
+    }
+
+    [Fact]
     public void CodesAreLongAndReadable()
     {
         var codes = Enumerable.Range(0, 200).Select(_ => SharingStore.NewCode()).ToList();

@@ -223,6 +223,16 @@ class JellyfinClient {
 
   Map<String, String> get headers => {'Authorization': _authHeader(deviceId, account.token)};
 
+  /// What the server's "no longer signed in" means: for a friend, that the owner ended the access
+  /// (their sign-in is removed); otherwise an expired session.
+  String get signedOut => account.shared
+      ? 'The owner of this server ended your access. Remove the server, or ask them for a new invite.'
+      : 'Session expired. Remove the server and sign in again.';
+
+  /// A read refused for the sign-in itself: 401, or for a friend also 403, which Jellyfin 12.1
+  /// answers once the owner removed the friend's user.
+  bool _lostAccess(int status) => status == 401 || (account.shared && status == 403);
+
   static Future<Account> login({
     required String baseUrl,
     required String username,
@@ -264,7 +274,7 @@ class JellyfinClient {
   Future<Map<String, dynamic>> _get(String path, [Map<String, String>? query]) async {
     final uri = Uri.parse('$_base$path').replace(queryParameters: query);
     final res = await _http.get(uri, headers: headers).timeout(_timeout);
-    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (_lostAccess(res.statusCode)) throw ApiException(signedOut);
     if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for $path');
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
@@ -301,7 +311,7 @@ class JellyfinClient {
   Future<List<JellyfinItem>> _list(String path, Map<String, String> query) async {
     final uri = Uri.parse('$_base$path').replace(queryParameters: query);
     final res = await _http.get(uri, headers: headers).timeout(_timeout);
-    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (_lostAccess(res.statusCode)) throw ApiException(signedOut);
     if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for $path');
     final body = jsonDecode(res.body);
     // Most answer with {Items: [...]}, a few with a bare list.
@@ -524,7 +534,7 @@ class JellyfinClient {
     final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
     if (res.statusCode < 300) return res;
     throw ApiException(switch (res.statusCode) {
-      401 => 'Session expired. Remove the server and sign in again.',
+      401 => signedOut,
       403 => "Only the server's owner can share it.",
       404 when path == '/Homeplay/Sharing' =>
         'Sharing needs the newer OwnMedia on the server computer. Run the new OwnMediaSetup there.',
@@ -631,7 +641,7 @@ class JellyfinClient {
       ..headers.addAll({...headers, 'Content-Type': 'application/json'});
     if (body != null) req.body = jsonEncode(body);
     final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
-    if (res.statusCode == 401) throw ApiException('Session expired. Remove the server and sign in again.');
+    if (res.statusCode == 401) throw ApiException(signedOut);
     if (res.statusCode == 403) throw ApiException('The server does not allow this for your user.');
     if (res.statusCode >= 300) throw ApiException('Server answered ${res.statusCode} for $path');
     if (res.body.isEmpty) return null;

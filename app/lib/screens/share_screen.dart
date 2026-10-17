@@ -60,7 +60,8 @@ class _ShareScreenState extends State<ShareScreen> {
       builder: (c) => AlertDialog(
         title: Text(invite.state == InviteState.joined ? 'End ${invite.friend}\'s access?' : 'Take the invite back?'),
         content: Text(invite.state == InviteState.joined
-            ? '${invite.friend} will no longer see your server. You can invite them again later.'
+            ? '${invite.device.isEmpty ? 'The phone that joined' : 'The ${invite.device} that joined'} by this invite '
+                'will no longer see your server, at once. You can invite ${invite.friend} again later.'
             : 'The link will stop working.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
@@ -135,16 +136,38 @@ class _ShareScreenState extends State<ShareScreen> {
                         ),
                       ]),
                     ),
-                  for (final i in info.invites.reversed)
-                    _InviteTile(
-                      invite: i,
-                      onSend: () => _send(i),
-                      onCopy: () {
-                        Clipboard.setData(ClipboardData(text: i.link));
-                        _say('Link copied');
-                      },
-                      onRemove: () => _remove(i),
-                    ),
+                  ...() {
+                    Widget tile(ShareInvite i) => _InviteTile(
+                          invite: i,
+                          onSend: () => _send(i),
+                          onCopy: () {
+                            Clipboard.setData(ClipboardData(text: i.link));
+                            _say('Link copied');
+                          },
+                          onRemove: () => _remove(i),
+                        );
+                    final newest = info.invites.reversed;
+                    final joined = [for (final i in newest) if (i.state == InviteState.joined) i];
+                    final rest = [for (final i in newest) if (i.state != InviteState.joined) i];
+                    return [
+                      if (joined.isNotEmpty) ...[
+                        _Heading('Who has access (${joined.length})'),
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(4, 0, 4, 8),
+                          child: Text(
+                            'A link works for whoever uses it first. If you do not know a phone here, '
+                            'or someone you did not invite watches, end their access.',
+                          ),
+                        ),
+                        for (final i in joined) tile(i),
+                        const SizedBox(height: 16),
+                      ],
+                      if (rest.isNotEmpty) ...[
+                        _Heading('Invites not used'),
+                        for (final i in rest) tile(i),
+                      ],
+                    ];
+                  }(),
                 ],
               ],
             ),
@@ -220,39 +243,60 @@ class _InviteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final state = switch (invite.state) {
-      InviteState.waiting => 'Link not used yet · works until ${_date(invite.expires)}',
-      InviteState.joined => 'Joined ${_date(invite.joined!)}',
-      InviteState.expired => 'Link expired, not used',
-    };
+    final joined = invite.state == InviteState.joined;
+    final lines = [
+      invite.libraryNames.join(', '),
+      switch (invite.state) {
+        InviteState.waiting => 'Link not used yet · works until ${_date(invite.expires)}',
+        InviteState.joined => ['Joined ${_date(invite.joined!)}', if (invite.device.isNotEmpty) 'from ${invite.device}'].join(' '),
+        InviteState.expired => 'Link expired, not used',
+      },
+      if (joined)
+        invite.watching != null
+            ? 'Watching now: ${invite.watching}'
+            : invite.lastSeen != null
+                ? 'Last seen ${seenLabel(invite.lastSeen!, DateTime.now())}'
+                : 'Not seen since joining',
+    ];
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          child: Icon(invite.state == InviteState.joined ? Icons.person : Icons.schedule_send),
+          child: Icon(joined ? (invite.watching != null ? Icons.play_arrow : Icons.person) : Icons.schedule_send),
         ),
         title: Text(invite.friend),
-        subtitle: Text('${invite.libraryNames.join(', ')}\n$state'),
+        subtitle: Text(lines.join('\n')),
         isThreeLine: true,
-        trailing: PopupMenuButton<VoidCallback>(
-          tooltip: 'More',
-          onSelected: (a) => a(),
-          itemBuilder: (_) => [
-            if (invite.state == InviteState.waiting) ...[
-              PopupMenuItem(value: onSend, child: const ListTile(leading: Icon(Icons.send), title: Text('Send the link'))),
-              PopupMenuItem(value: onCopy, child: const ListTile(leading: Icon(Icons.copy), title: Text('Copy the link'))),
-            ],
-            PopupMenuItem(
-              value: onRemove,
-              child: ListTile(
-                leading: const Icon(Icons.person_remove),
-                title: Text(invite.state == InviteState.joined ? 'End access' : 'Remove'),
+        trailing: joined
+            ? IconButton(tooltip: 'End access', onPressed: onRemove, icon: const Icon(Icons.person_remove))
+            : PopupMenuButton<VoidCallback>(
+                tooltip: 'More',
+                onSelected: (a) => a(),
+                itemBuilder: (_) => [
+                  if (invite.state == InviteState.waiting) ...[
+                    PopupMenuItem(value: onSend, child: const ListTile(leading: Icon(Icons.send), title: Text('Send the link'))),
+                    PopupMenuItem(value: onCopy, child: const ListTile(leading: Icon(Icons.copy), title: Text('Copy the link'))),
+                  ],
+                  PopupMenuItem(
+                    value: onRemove,
+                    child: const ListTile(leading: Icon(Icons.delete_outline), title: Text('Remove')),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
+}
+
+class _Heading extends StatelessWidget {
+  const _Heading(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 6),
+        child: Text(text, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
+      );
 }
 
 /// A new invite: the friend's name and the libraries they see (photos left out unless ticked).

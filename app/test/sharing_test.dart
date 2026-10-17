@@ -174,4 +174,74 @@ void main() {
     expect(find.text('Movies'), findsWidgets);
     expect(find.text('Personal: not shared unless you tick it'), findsOneWidget);
   });
+
+  testWidgets('who has access: the phone, what they watch, and ending the access', (tester) async {
+    final seen = <http.Request>[];
+    Map<String, dynamic> joined(String code, String friend, {String? watching, String? lastSeen}) => {
+          'Code': code,
+          'Friend': friend,
+          'LibraryNames': ['Movies'],
+          'Created': '2026-10-01T10:00:00Z',
+          'Expires': '2026-10-08T10:00:00Z',
+          'Joined': '2026-10-02T10:00:00Z',
+          'State': 'Joined',
+          'Link': '',
+          'Device': 'Google Pixel 10a',
+          'LastSeen': ?lastSeen,
+          'Watching': ?watching,
+        };
+    await tester.pumpWidget(MaterialApp(
+      home: ShareScreen(
+        client: server({
+          'PublicUrl': 'https://pc.ts.net',
+          'Libraries': _libraries,
+          'Invites': [
+            joined('A', 'Petr', watching: 'Dune'),
+            joined('B', 'Olga', lastSeen: '2026-10-05T08:30:00Z'),
+            {
+              'Code': 'C',
+              'Friend': 'Ivan',
+              'LibraryNames': ['Movies'],
+              'Created': '2026-10-01T10:00:00Z',
+              'Expires': '2099-10-08T10:00:00Z',
+              'State': 'Waiting',
+              'Link': 'https://pc.ts.net/Homeplay/Join/C',
+            },
+          ],
+        }, seen: seen),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Who has access (2)'), findsOneWidget);
+    expect(find.text('Invites not used'), findsOneWidget);
+    expect(find.textContaining('Joined 2.10.2026 from Google Pixel 10a'), findsNWidgets(2));
+    expect(find.textContaining('Watching now: Dune'), findsOneWidget);
+    expect(find.textContaining('Last seen 5.10.2026'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byTooltip('End access').last); // Newest first: Petr's invite is the oldest.
+    await tester.pumpAndSettle();
+    expect(find.text("End Petr's access?"), findsOneWidget);
+    expect(find.textContaining('The Google Pixel 10a that joined'), findsOneWidget);
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+    expect(seen.where((r) => r.method == 'DELETE').single.url.path, '/Homeplay/Invites/A');
+  });
+
+  test('when the last time seen was', () {
+    final now = DateTime(2026, 10, 17, 20, 0);
+    expect(seenLabel(DateTime(2026, 10, 17, 9, 5), now), 'today 9:05');
+    expect(seenLabel(DateTime(2026, 10, 16, 23, 59), now), 'yesterday 23:59');
+    expect(seenLabel(DateTime(2026, 10, 2, 12, 0), now), '2.10.2026');
+  });
+
+  test('a friend whose access was ended is told so, the owner of a server is not', () async {
+    // Jellyfin 12.1 answers 403 to a friend whose user the owner removed, 401 to an expired sign-in.
+    JellyfinClient signedOut(Account a, int status) =>
+        JellyfinClient(a, 'dev', client: MockClient((_) async => http.Response('', status)));
+    const friend = Account(
+        id: 'f', kind: ServerKind.jellyfin, baseUrl: 'https://pc.ts.net', username: 'Petr', serverName: "Anna's", token: 't', userId: 'u', shared: true);
+    await expectLater(signedOut(friend, 403).views(), throwsA(predicate((e) => '$e'.contains('ended your access'))));
+    await expectLater(signedOut(_owner, 401).views(), throwsA(predicate((e) => '$e'.contains('Session expired'))));
+  });
 }

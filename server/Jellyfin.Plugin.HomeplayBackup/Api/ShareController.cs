@@ -56,16 +56,34 @@ public class ShareController : ControllerBase
         .Select(f => new LibraryInfo(Guid.Parse(f.ItemId), f.Name, f.CollectionType?.ToString().ToLowerInvariant()))
         .ToList();
 
-    private InviteInfo Info(SharingState state, Invite i, IReadOnlyList<LibraryInfo> libraries) => new(
-        i.Code,
-        i.Friend,
-        i.Libraries,
-        [.. i.Libraries.Select(id => libraries.FirstOrDefault(l => l.Id == id)?.Name).OfType<string>()],
-        i.Created,
-        i.Expires,
-        i.Joined,
-        SharingStore.StateOf(i, DateTime.UtcNow).ToString(),
-        state.PublicUrl.Length == 0 ? string.Empty : SharingStore.JoinLink(state.PublicUrl, i.Code));
+    private InviteInfo Info(SharingState state, Invite i, IReadOnlyList<LibraryInfo> libraries)
+    {
+        var activity = i.UserId == Guid.Empty ? new FriendActivity(null, null) : ActivityOf(i.UserId);
+        return new(
+            i.Code,
+            i.Friend,
+            i.Libraries,
+            [.. i.Libraries.Select(id => libraries.FirstOrDefault(l => l.Id == id)?.Name).OfType<string>()],
+            i.Created,
+            i.Expires,
+            i.Joined,
+            SharingStore.StateOf(i, DateTime.UtcNow).ToString(),
+            state.PublicUrl.Length == 0 ? string.Empty : SharingStore.JoinLink(state.PublicUrl, i.Code),
+            i.Device,
+            activity.LastSeen,
+            activity.Watching);
+    }
+
+    // When the friend's sign-in was last used and what plays for it now.
+    private FriendActivity ActivityOf(Guid userId)
+    {
+        var sessions = _sessions.Sessions
+            .Where(s => s.UserId == userId)
+            .Select(s => (s.LastActivityDate, s.NowPlayingItem is { } item
+                ? (string.IsNullOrEmpty(item.SeriesName) ? item.Name : $"{item.SeriesName}: {item.Name}")
+                : null));
+        return SharingStore.Activity(sessions, _users.GetUserById(userId)?.LastActivityDate, DateTime.UtcNow);
+    }
 
     /// <summary>
     /// The owner's sharing: the internet address, the libraries there are and the invites.
@@ -301,6 +319,7 @@ public class ShareController : ControllerBase
                 {
                     i.UserId = user.Id;
                     i.Joined = DateTime.UtcNow;
+                    i.Device = SharingStore.DeviceName(request.DeviceName);
                 }
 
                 return i;
@@ -331,7 +350,10 @@ public sealed record LibraryInfo(Guid Id, string Name, string? CollectionType);
 /// <param name="Joined">When the friend joined (UTC), if they did.</param>
 /// <param name="State">Waiting, Joined or Expired.</param>
 /// <param name="Link">The link to send.</param>
-public sealed record InviteInfo(string Code, string Friend, IReadOnlyList<Guid> Libraries, IReadOnlyList<string> LibraryNames, DateTime Created, DateTime Expires, DateTime? Joined, string State, string Link);
+/// <param name="Device">The phone that joined, as it calls itself; empty until someone joins.</param>
+/// <param name="LastSeen">When the friend last used the server (UTC), if ever.</param>
+/// <param name="Watching">What plays for the friend now, if anything.</param>
+public sealed record InviteInfo(string Code, string Friend, IReadOnlyList<Guid> Libraries, IReadOnlyList<string> LibraryNames, DateTime Created, DateTime Expires, DateTime? Joined, string State, string Link, string Device, DateTime? LastSeen, string? Watching);
 
 /// <summary>The owner's sharing.</summary>
 /// <param name="PublicUrl">The server's internet address; empty when not set.</param>
