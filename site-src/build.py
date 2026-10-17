@@ -44,10 +44,10 @@ SETTINGS = {
     # Email for privacy questions and support.
     "CONTACT_EMAIL": "support@ownmedia.app",
     # The company, letter for letter as in the Google payments profile and D-U-N-S.
-    "COMPANY_NAME": "SIA “Mroya”",
+    "COMPANY_NAME": "MROYA SIA",
     "COMPANY_REG": "50203370261",
-    # TO CHECK with the owner: taken from a directory site, not from the register.
-    "COMPANY_ADDRESS": "Ganību dambis 20A, Rīga, Latvia",
+    # As the owner gave it (17.10.2026), letter for letter.
+    "COMPANY_ADDRESS": "Riga, Ganibu dambis 20A, LV-1045",
     "COMPANY_COUNTRY": "Latvia",
     # The app in Google Play; empty while it is not published (the site offers the beta instead).
     "PLAY_URL": "",
