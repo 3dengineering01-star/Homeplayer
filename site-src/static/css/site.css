@@ -357,6 +357,7 @@ section { padding: 72px 0; }
 .i-blue { --t: 59 130 246; --ink: #1d4ed8; --ink-d: #93c5fd; }
 .i-amber { --t: 234 179 8; --ink: #a16207; --ink-d: #fde047; }
 .i-slate { --t: 100 116 139; --ink: #475569; --ink-d: #cbd5e1; }
+.i-teal { --t: 13 148 136; --ink: #0f766e; --ink-d: #5eead4; }
 .float-chip .ic { color: var(--ink); background: rgb(var(--t) / 0.16); }
 @media (prefers-color-scheme: dark) { .icon, .float-chip .ic { color: var(--ink-d); } }
 
@@ -665,3 +666,9 @@ button:disabled { opacity: 0.6; cursor: default; }
 .share-shots .shot { flex: 1 1 0; min-width: 0; max-width: 250px; margin: 0; }
 .share-shots .phone { width: 100%; }
 @media (max-width: 900px) { .share-shots .phone { width: 100%; } .share-shots { gap: 14px; } }
+
+/* Nine feature cards: three by three, two by two on tablets, one column on phones. */
+.grid-features { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1000px) { .grid-features { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .grid-features { grid-template-columns: 1fr; } }
+.dl-note { font-size: 0.9rem; color: var(--muted); margin: 14px 0 0; }
