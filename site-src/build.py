@@ -292,6 +292,19 @@ def read_page(file):
     return meta, body
 
 
+# Pictures get ?v=<their checksum> in every page, like the CSS and the script: a picture that
+# changes under the same name (a new screenshot) then reaches browsers that cached the old one.
+IMG_VERSIONS = {}
+
+
+def version_images(text):
+    def add(m):
+        rel = m.group(2)
+        v = IMG_VERSIONS.get(rel)
+        return f'{m.group(1)}{rel}?v={v}"' if v else m.group(0)
+    return re.sub(r'((?:src|href|content)="[^"]*?)(img/[^"?]+)"', add, text)
+
+
 def write(rel, text):
     target = OUT / rel
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -301,21 +314,27 @@ def write(rel, text):
 def main():
     s = SETTINGS
     sn = snippets(s)
-    if OUT.exists():
-        shutil.rmtree(OUT)
-    shutil.copytree(STATIC, OUT)
+    # Empty site/ and fill it again. The folder itself stays: it may be open in Explorer or a shell.
+    OUT.mkdir(exist_ok=True)
+    for old in OUT.iterdir():
+        shutil.rmtree(old) if old.is_dir() else old.unlink()
+    shutil.copytree(STATIC, OUT, dirs_exist_ok=True)
 
     digest = hashlib.sha1()
     for f in sorted((STATIC / "css").glob("*")) + sorted((STATIC / "js").glob("*")):
         digest.update(f.read_bytes())
     asset_v = digest.hexdigest()[:8]
 
+    for f in (OUT / "img").rglob("*"):
+        if f.is_file():
+            IMG_VERSIONS[f.relative_to(OUT).as_posix()] = hashlib.sha1(f.read_bytes()).hexdigest()[:8]
+
     sitemap = []
     for file in sorted(PAGES.rglob("*.html")):
         meta, body = read_page(file)
         path = meta["path"]
         out_file = meta.get("file") or (path + "index.html")
-        write(out_file, page(meta, body, sn, asset_v))
+        write(out_file, version_images(page(meta, body, sn, asset_v)))
         if not (meta["noindex"] or meta["nositemap"]):
             sitemap.append(path)
 
