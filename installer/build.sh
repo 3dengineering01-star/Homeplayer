@@ -8,5 +8,7 @@ DOTNET="${DOTNET:-/d/APP/tools/dotnet/dotnet}"
 ISCC="${ISCC:-/d/APP/tools/InnoSetup/ISCC.exe}"
 ./app/build.sh apk
 "$DOTNET" build server/Jellyfin.Plugin.HomeplayBackup -c Release
-"$ISCC" installer/OwnMediaSetup.iss
-echo "Готово: installer/dist/OwnMediaSetup.exe"
+# Версия установщика и APK внутри — версия приложения из app/pubspec.yaml.
+version=$(sed -n 's/^version: *\([^+]*\)+.*/\1/p' app/pubspec.yaml)
+"$ISCC" "-DAppVersion=$version" installer/OwnMediaSetup.iss
+echo "Готово: installer/dist/OwnMediaSetup.exe ($version), app/dist/OwnMedia-$version.apk"
