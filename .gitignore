@@ -12,3 +12,5 @@ app/dist/
 installer/dist/
 # The site archive for Hostinger, made by site-src/build.py
 ownmedia-site.zip
+# The Windows installer the site serves: copied from the release folder by site-src/build.py.
+site/download/*.exe

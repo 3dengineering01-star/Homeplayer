@@ -51,8 +51,13 @@ SETTINGS = {
     "COMPANY_COUNTRY": "Latvia",
     # The app in Google Play; empty while it is not published (the site offers the beta instead).
     "PLAY_URL": "",
-    # Where OwnMediaSetup.exe is downloaded from; empty while there is no public link.
-    "INSTALLER_URL": "",
+    # Where OwnMediaSetup.exe is downloaded from; empty while there is no public link. {{root}} makes
+    # it a link to the file on this site (copied there from INSTALLER_FILE by the build).
+    "INSTALLER_URL": "{{root}}download/OwnMediaSetup.exe",
+    # The release the site serves: the build copies it to site/download/OwnMediaSetup.exe. The file is
+    # too big for git: it stays in the release folder (git ignores the copy in site/).
+    "INSTALLER_FILE": r"D:\APP\OwnMedia-release\0.3.13\OwnMediaSetup.exe",
+    "INSTALLER_VERSION": "0.3.13",
     # The Jellyfin plugin catalogue for NAS, Docker and Linux (jellyfin-repo/manifest.json).
     "CATALOG_URL": "https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/manifest.json",
     # The plugin's public source code (GPL).
@@ -121,13 +126,27 @@ def snippets(s):
         out["PLAY_BUTTON"] = (f'<a class="btn" href="{{{{root}}}}#beta">{icon("phone")} Join the beta</a>')
         out["PLAY_STATE"] = "Not in Google Play yet: join the beta and we’ll send you the test link."
     if s["INSTALLER_URL"]:
-        out["INSTALLER_BUTTON"] = (f'<a class="btn" href="{e["INSTALLER_URL"]}">{icon("download")} '
+        out["INSTALLER_BUTTON"] = (f'<a class="btn" href="{e["INSTALLER_URL"]}" download>{icon("download")} '
                                    'Download OwnMediaSetup.exe</a>')
     else:
         out["INSTALLER_BUTTON"] = (f'<a class="btn" aria-disabled="true" role="link">{icon("download")} '
                                    'Download link coming soon</a>')
+    out["INSTALLER_META"] = installer_meta(s)
     out["YEAR"] = str(date.today().year)
     return out
+
+
+def installer_meta(s):
+    """Version, size and checksum of the installer, and what to do about Windows' warning."""
+    f = Path(s["INSTALLER_FILE"])
+    if not (s["INSTALLER_URL"] and f.is_file()):
+        return ""
+    sha = hashlib.sha256(f.read_bytes()).hexdigest()
+    mb = round(f.stat().st_size / 1_000_000)
+    return (f'<p class="dl-meta">Version {html.escape(s["INSTALLER_VERSION"])}, {mb} MB. '
+            f'SHA-256: <code class="sha">{sha}</code></p>'
+            '<p class="dl-note">The installer isn’t digitally signed yet, so Windows may say '
+            '<i>“Windows protected your PC”</i>. Click <i>More info</i>, then <i>Run anyway</i>.</p>')
 
 
 # ---------------------------------------------------------------------------------------------
@@ -320,6 +339,12 @@ def main():
     for old in OUT.iterdir():
         shutil.rmtree(old) if old.is_dir() else old.unlink()
     shutil.copytree(STATIC, OUT, dirs_exist_ok=True)
+    installer = Path(s["INSTALLER_FILE"])
+    if s["INSTALLER_URL"] and installer.is_file():
+        (OUT / "download").mkdir(exist_ok=True)
+        shutil.copy2(installer, OUT / "download" / "OwnMediaSetup.exe")
+    elif s["INSTALLER_URL"]:
+        print(f"Installer not found: {installer}", file=sys.stderr)
 
     digest = hashlib.sha1()
     for f in sorted((STATIC / "css").glob("*")) + sorted((STATIC / "js").glob("*")):

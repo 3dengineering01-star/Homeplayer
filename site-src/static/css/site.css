@@ -672,3 +672,7 @@ button:disabled { opacity: 0.6; cursor: default; }
 @media (max-width: 1000px) { .grid-features { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .grid-features { grid-template-columns: 1fr; } }
 .dl-note { font-size: 0.9rem; color: var(--muted); margin: 14px 0 0; }
+
+.dl-meta { font-size: 0.88rem; color: var(--muted); margin: 14px 0 0; }
+.dl-meta .sha { display: block; margin-top: 4px; font-size: 0.78rem; word-break: break-all; }
+.article .dl-meta, .article .dl-note { margin-top: 12px; }
