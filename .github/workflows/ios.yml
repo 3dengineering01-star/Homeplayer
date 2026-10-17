@@ -39,6 +39,22 @@ jobs:
       - name: Release build without signing
         run: flutter build ios --release --no-codesign
 
+      # .ipa без подписи: Sideloadly подписывает его бесплатным Apple ID при установке (docs/ios.md).
+      - name: Package .ipa for Sideloadly
+        run: |
+          version=$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)
+          mkdir -p ../dist/Payload
+          cp -R build/ios/iphoneos/Runner.app ../dist/Payload/
+          (cd ../dist && zip -qry "OwnMedia-$version.ipa" Payload && rm -rf Payload)
+          ls -lh ../dist
+
+      - name: Keep the .ipa
+        uses: actions/upload-artifact@v5
+        with:
+          name: OwnMedia-ipa
+          path: dist/*.ipa
+          retention-days: 30
+
       - name: Build for the simulator
         run: flutter build ios --simulator --debug
 
