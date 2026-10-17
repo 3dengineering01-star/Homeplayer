@@ -961,6 +961,7 @@ class JellyfinClient {
         headers: headers,
         reporter: _reporter(item, versionId, null, 'DirectPlay'),
         favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
+        container: item.container,
       );
 }
 

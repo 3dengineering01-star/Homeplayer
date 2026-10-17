@@ -222,6 +222,12 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> with JellyfinActi
       ),
       const SizedBox(width: 8),
       IconButton.filledTonal(
+        tooltip: 'Play on TV',
+        onPressed: item == null || (_isSeries && _episodes == null) ? null : () => playOnTvItem(item),
+        icon: const Icon(Icons.cast),
+      ),
+      const SizedBox(width: 8),
+      IconButton.filledTonal(
         tooltip: 'More',
         onPressed: () => itemActions(list, _isSeries ? _item : item ?? _item),
         icon: const Icon(Icons.more_horiz),

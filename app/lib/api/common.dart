@@ -37,6 +37,7 @@ class PlayItem {
     this.withQuality,
     this.subtitles = const [],
     this.favorite,
+    this.container,
   });
 
   final String title;
@@ -71,6 +72,9 @@ class PlayItem {
   /// downloads played without the server).
   final ItemFavorite? favorite;
 
+  /// The file's container as the server names it ("mkv", "mp4"), for telling a TV its type.
+  final String? container;
+
   PlayItem copyWith({
     Uri? url,
     String? audioTrackId,
@@ -94,6 +98,7 @@ class PlayItem {
         withQuality: withQuality ?? this.withQuality,
         subtitles: subtitles ?? this.subtitles,
         favorite: favorite,
+        container: container,
       );
 }
 

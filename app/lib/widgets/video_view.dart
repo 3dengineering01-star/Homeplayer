@@ -7,6 +7,7 @@ import 'package:screen_brightness/screen_brightness.dart';
 import 'package:volume_controller/volume_controller.dart';
 
 import '../api/common.dart';
+import '../screens/tv_screen.dart';
 import '../services/pip.dart';
 import '../services/playback.dart';
 import '../services/video_tuning.dart';
@@ -401,6 +402,17 @@ class _VideoViewState extends State<VideoView> {
               Text(widget.item.subtitle!,
                   maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ]),
+        ),
+        IconButton(
+          tooltip: 'Play on TV',
+          color: Colors.white,
+          onPressed: () {
+            _hideTimer?.cancel();
+            // The TV goes on from here. The remote takes the player's place, and closing the
+            // player ends the phone's own playback.
+            playOnTv(context, widget.item, startAt: _pb.player.state.position, replace: true);
+          },
+          icon: const Icon(Icons.cast),
         ),
         IconButton(
           tooltip: 'Audio, subtitles and quality',

@@ -17,6 +17,7 @@ import 'photo_viewer.dart';
 import 'player_screen.dart';
 import 'playlist_picker.dart';
 import 'track_list_screen.dart';
+import 'tv_screen.dart';
 
 /// The page for a Jellyfin folder: a series has its details page, music its artists, albums and
 /// playlists, a movie or show library its poster grid, anything else (seasons, home videos) its
@@ -71,49 +72,9 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
       return;
     }
 
-    // Several files of one movie: the user picks, e.g. 1080p instead of 4K on mobile data.
-    String? versionId;
-    if (item.versionCount > 1) {
-      final versions = await busy(client.versions(item).onError((e, _) {
-        debugPrint('homeplay versions failed for ${item.name}: $e');
-        return <MediaVersion>[];
-      }));
-      if (versions.length > 1) {
-        final prefs = await SharedPreferences.getInstance();
-        final remembered = pickVersion ? null : chooseVersion(versions, prefs.getString(_versionKey));
-        if (remembered != null) {
-          versionId = remembered.id;
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Playing ${remembered.name.isNotEmpty ? remembered.name : remembered.resolution}. '
-                  'Long-press it in the list to choose another version.'),
-              duration: const Duration(seconds: 4),
-            ));
-          }
-        } else {
-          // Long press: the box shows whether a resolution is remembered, and clearing it forgets
-          // it. Otherwise it is ticked only when nothing is remembered yet, so a movie without
-          // the remembered resolution does not replace it unless asked to.
-          final saved = prefs.getString(_versionKey);
-          final choice = await _askVersion(versions, remember: pickVersion ? saved != null : saved == null);
-          if (choice == null) return;
-          versionId = choice.version.id;
-          final resolution = choice.version.resolution;
-          if (choice.remember && resolution != null) {
-            await prefs.setString(_versionKey, resolution);
-          } else if (!choice.remember && pickVersion) {
-            await prefs.remove(_versionKey);
-          }
-        }
-      }
-    }
-
-    Duration? startAt;
-    if (item.isVideo && !item.played && item.resumePosition > const Duration(seconds: 30)) {
-      final choice = await _askResume(item.resumePosition);
-      if (choice == null) return;
-      startAt = choice;
-    }
+    final choice = await _chooseStart(item, pickVersion: pickVersion);
+    if (choice == null) return;
+    final (:versionId, :startAt) = choice;
 
     // An episode on its own (from the home screen) plays on through its season.
     var around = items;
@@ -154,6 +115,62 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
     await pb.reportsSent;
     // Lists show no progress for music, and a reload would scroll them back to the top.
     if (mounted && item.isVideo) refresh();
+  }
+
+  /// The version to play and where to start, asking when needed; null when the user backs out.
+  Future<({String? versionId, Duration? startAt})?> _chooseStart(JellyfinItem item, {bool pickVersion = false}) async {
+    // Several files of one movie: the user picks, e.g. 1080p instead of 4K on mobile data.
+    String? versionId;
+    if (item.versionCount > 1) {
+      final versions = await busy(client.versions(item).onError((e, _) {
+        debugPrint('homeplay versions failed for ${item.name}: $e');
+        return <MediaVersion>[];
+      }));
+      if (versions.length > 1) {
+        final prefs = await SharedPreferences.getInstance();
+        final remembered = pickVersion ? null : chooseVersion(versions, prefs.getString(_versionKey));
+        if (remembered != null) {
+          versionId = remembered.id;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Playing ${remembered.name.isNotEmpty ? remembered.name : remembered.resolution}. '
+                  'Long-press it in the list to choose another version.'),
+              duration: const Duration(seconds: 4),
+            ));
+          }
+        } else {
+          // Long press: the box shows whether a resolution is remembered, and clearing it forgets
+          // it. Otherwise it is ticked only when nothing is remembered yet, so a movie without
+          // the remembered resolution does not replace it unless asked to.
+          final saved = prefs.getString(_versionKey);
+          final choice = await _askVersion(versions, remember: pickVersion ? saved != null : saved == null);
+          if (choice == null) return null;
+          versionId = choice.version.id;
+          final resolution = choice.version.resolution;
+          if (choice.remember && resolution != null) {
+            await prefs.setString(_versionKey, resolution);
+          } else if (!choice.remember && pickVersion) {
+            await prefs.remove(_versionKey);
+          }
+        }
+      }
+    }
+
+    Duration? startAt;
+    if (item.isVideo && !item.played && item.resumePosition > const Duration(seconds: 30)) {
+      final choice = await _askResume(item.resumePosition);
+      if (choice == null) return null;
+      startAt = choice;
+    }
+    return (versionId: versionId, startAt: startAt);
+  }
+
+  /// Plays [item] on a TV on this Wi-Fi, the phone becoming its remote.
+  Future<void> playOnTvItem(JellyfinItem item) async {
+    final choice = await _chooseStart(item);
+    if (choice == null || !mounted) return;
+    await playOnTv(context, client.toPlayItem(item, versionId: choice.versionId), startAt: choice.startAt ?? Duration.zero);
+    if (mounted) refresh();
   }
 
   /// Long press: download (a single item, or everything playable in a folder), or pick a version.
@@ -209,6 +226,13 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
               onTap: () => Navigator.pop(context, 'queue'),
             ),
           ],
+          if (item.isPlayable && !item.isPhoto)
+            ListTile(
+              leading: const Icon(Icons.cast),
+              title: const Text('Play on TV'),
+              subtitle: const Text('On a TV on this Wi-Fi, the phone as its remote'),
+              onTap: () => Navigator.pop(context, 'tv'),
+            ),
           if (item.isPlayable && saved == null)
             ListTile(
               leading: const Icon(Icons.download_outlined),
@@ -243,6 +267,8 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
     final messenger = ScaffoldMessenger.of(context);
     if (action.startsWith('extra')) return extra[int.parse(action.substring(5))].run();
     switch (action) {
+      case 'tv':
+        await playOnTvItem(item);
       case 'favorite':
         final on = !client.isFavorite(item);
         try {
