@@ -40,9 +40,9 @@ from pathlib import Path
 SETTINGS = {
     # The site's full address, without a slash at the end. Used only where a full address is a
     # must: sitemap.xml, robots.txt, link previews (Open Graph) and the canonical address.
-    "SITE_URL": "https://educonsalt.com",
+    "SITE_URL": "https://ownmedia.app",
     # Email for privacy questions and support.
-    "CONTACT_EMAIL": "",
+    "CONTACT_EMAIL": "support@ownmedia.app",
     # The company, letter for letter as in the Google payments profile and D-U-N-S.
     "COMPANY_NAME": "SIA “Mroya”",
     "COMPANY_REG": "50203370261",

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://educonsalt.com/sitemap.xml
+Sitemap: https://ownmedia.app/sitemap.xml
