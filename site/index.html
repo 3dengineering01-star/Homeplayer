@@ -22,8 +22,8 @@
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./img/favicon-32.png?v=670ec50d" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="./img/apple-touch-icon.png?v=71be1fb5">
-<link rel="stylesheet" href="./css/site.css?v=8d6c5d01">
-<script src="./js/site.js?v=8d6c5d01" defer></script>
+<link rel="stylesheet" href="./css/site.css?v=b519b7ba">
+<script src="./js/site.js?v=b519b7ba" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -76,7 +76,7 @@
         <img src="./img/screens/home.webp?v=8f043a1c" width="600" height="1300" alt="OwnMedia: the libraries of a home server as glass tiles, with the mini player" fetchpriority="high">
       </div>
       <div class="float-chip glass chip-b"><span class="ic i-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><span>Away from home<small>no port forwarding</small></span></div>
-      <div class="float-chip glass chip-c"><span class="ic i-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span><span>Invite friends<small>one link, no password</small></span></div>
+      <div class="float-chip glass chip-c"><span class="ic i-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span><span>Share with family<small>one link, no password</small></span></div>
     </div>
   </div>
 </section>
@@ -115,7 +115,7 @@
       </article>
       <article class="card glass">
         <div class="icon i-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></div>
-        <h3>Share with friends</h3>
+        <h3><a class="card-anchor" href="#share">Share with family and friends</a></h3>
         <p>Send an invite link: a friend adds your server with one tap, no password. They only
           watch and listen, and you can end their access any time.</p>
       </article>
@@ -137,6 +137,35 @@
         <p>The app talks only to your servers. No sign-up with us, no ads, no analytics. This site has
           none either.</p>
       </article>
+    </div>
+  </div>
+</section>
+
+<section id="share" class="share">
+  <div class="wrap share-grid">
+    <div class="share-text">
+      <h2>Share your server with family and friends</h2>
+      <p class="lead">Parents in another city, a friend across town: send them a link, and your movies
+        and music are on their phone. No accounts to create, no passwords to explain.</p>
+      <ol class="share-steps">
+        <li><b>Pick what to share.</b> Choose the libraries. Your photos stay private unless you add them.</li>
+        <li><b>Send the link</b> in any messenger. It works once, for one person, for 7 days.</li>
+        <li><b>They tap “Add to OwnMedia”.</b> No name, no password. They can watch and listen, but can’t
+          delete anything or pass the access on.</li>
+      </ol>
+      <div class="share-control">
+        <h3>You stay in control</h3>
+        <p>“Who has access” shows each person’s phone, when they last watched and what’s on now.
+          “End access” closes it at once, and their app tells them so.</p>
+      </div>
+      <p class="muted share-note">Friends reach your server over the internet: the Windows installer sets
+        that up for you. <a href="./guides/remote-access/#friends">How sharing works</a>.</p>
+    </div>
+    <div class="share-shots">
+      <figure class="shot share-shot-owner"><div class="phone"><img src="./img/screens/share.webp?v=8e21f995" width="600" height="1300" alt="Share with friends: the libraries to share and the list of who has access" loading="lazy"></div>
+        <figcaption>You<span>Pick libraries, see who has access</span></figcaption></figure>
+      <figure class="shot share-shot-friend"><div class="phone"><img src="./img/screens/invite.webp?v=1fffdc40" width="600" height="1300" alt="The invite on a friend’s phone with the Add to OwnMedia button" loading="lazy"></div>
+        <figcaption>Your friend<span>One tap to add your server</span></figcaption></figure>
     </div>
   </div>
 </section>
@@ -375,6 +404,7 @@
         <h2>App</h2>
         <ul>
           <li><a href="./#features">Features</a></li>
+          <li><a href="./#share">Sharing with friends</a></li>
           <li><a href="./download/">Download</a></li>
           <li><a href="./#screens">Screenshots</a></li>
           <li><a href="./#faq">FAQ</a></li>

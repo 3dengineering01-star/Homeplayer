@@ -186,6 +186,7 @@ def footer(root, sn):
         <h2>App</h2>
         <ul>
           <li><a href="{root}#features">Features</a></li>
+          <li><a href="{root}#share">Sharing with friends</a></li>
           <li><a href="{root}download/">Download</a></li>
           <li><a href="{root}#screens">Screenshots</a></li>
           <li><a href="{root}#faq">FAQ</a></li>

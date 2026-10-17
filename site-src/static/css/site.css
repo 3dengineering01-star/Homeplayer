@@ -622,3 +622,46 @@ button:disabled { opacity: 0.6; cursor: default; }
 
 /* The hero chips sit over the dark phone screen: a denser glass keeps their small text readable. */
 .float-chip.glass { background: linear-gradient(180deg, var(--glass-strong), var(--glass-top)); }
+
+/* Sharing with family and friends -------------------------------------------------------- */
+
+.share-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+.share-text .lead { margin-bottom: 26px; }
+.share-steps { list-style: none; counter-reset: s; margin: 0 0 26px; padding: 0; display: grid; gap: 16px; }
+.share-steps li { counter-increment: s; position: relative; padding-left: 48px; color: var(--muted); }
+.share-steps li b { color: var(--text); }
+.share-steps li::before {
+  content: counter(s);
+  position: absolute; left: 0; top: -1px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 0.92rem;
+  color: var(--btn-text);
+  background: var(--accent);
+}
+.share-control {
+  padding: 18px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--surface-line);
+  margin-bottom: 16px;
+}
+.share-control h3 { margin-bottom: 6px; }
+.share-control p { margin: 0; color: var(--muted); }
+.share-note { font-size: 0.95rem; margin: 0; }
+.share-shots { display: flex; justify-content: center; gap: 22px; }
+.share-shots .phone { width: min(250px, 40vw); }
+.share-shot-friend { margin-top: 64px; }
+.share-shots figcaption { margin-top: 12px; text-align: center; font-weight: 650; }
+.share-shots figcaption span { display: block; font-weight: 450; font-size: 0.88rem; color: var(--muted); }
+.card-anchor { color: inherit; text-decoration: none; }
+.card-anchor:hover { text-decoration: underline; }
+@media (max-width: 900px) {
+  .share-grid { grid-template-columns: 1fr; gap: 36px; }
+  .share-shots .phone { width: min(220px, 42vw); }
+  .share-shot-friend { margin-top: 40px; }
+}
+.share-shots .shot { flex: 1 1 0; min-width: 0; max-width: 250px; margin: 0; }
+.share-shots .phone { width: 100%; }
+@media (max-width: 900px) { .share-shots .phone { width: 100%; } .share-shots { gap: 14px; } }

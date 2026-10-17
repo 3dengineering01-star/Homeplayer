@@ -65,7 +65,9 @@
 использование. Авторы указаны под галереей и на странице `/legal/` — этого требуют лицензии.
 
 Файлы в `site-src/static/img/screens/`: `home.webp`, `library.webp`, `movie.webp`, `music.webp`,
-`photos.webp` (600 × 1300) и `player.webp` (1300 × 566, горизонтальный). Демо-сервер и материалы лежат
+`photos.webp`, `share.webp` (экран «Share with friends» владельца) и `invite.webp` (приглашение на телефоне
+друга) — все 600 × 1300 — и `player.webp` (1300 × 566, горизонтальный). Друзья на `share.webp` (Mum, Sam, Dad,
+Grandma) — вымышленные, на демо-сервере. Демо-сервер и материалы лежат
 в `D:\APP\ownmedia-demo` — их же можно использовать для снимков в Google Play.
 
 ## Как поменять тексты или настройки
