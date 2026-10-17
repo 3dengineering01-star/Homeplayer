@@ -1,0 +1,66 @@
+title: Download
+description: Get OwnMedia for Android, the OwnMedia server installer for Windows, and the plugin catalogue for NAS and Docker.
+path: download/
+---
+<div class="page-hero">
+  <div class="wrap">
+    <h1>Download</h1>
+    <p class="lead">The app for your phone, and the server side for your computer or NAS.</p>
+  </div>
+</div>
+
+<section class="dl">
+  <div class="wrap">
+    <div class="grid grid-3">
+      <article class="dl-card glass" id="android">
+        <div class="icon i-orange">{{icon:phone}}</div>
+        <h2 class="h3">Android app</h2>
+        <p class="muted">{{PLAY_STATE}}</p>
+        <ul>
+          <li>Android 7 and newer</li>
+          <li>Jellyfin and Navidrome / Subsonic</li>
+          <li>Free during the beta</li>
+        </ul>
+        <div class="btn-row">{{PLAY_BUTTON}}</div>
+      </article>
+
+      <article class="dl-card glass" id="windows">
+        <div class="icon i-cyan">{{icon:windows}}</div>
+        <h2 class="h3">Server for Windows</h2>
+        <p class="muted"><b>OwnMediaSetup.exe</b> installs Jellyfin, adds your folders, puts in the OwnMedia
+          plugin and, if you like, opens the server to the internet. At the end it shows a QR code for your
+          phone.</p>
+        <ul>
+          <li>Windows 10 or 11, 64-bit</li>
+          <li>Administrator rights, internet during setup</li>
+          <li>Already have Jellyfin? Only the plugin is added</li>
+        </ul>
+        <div class="btn-row">{{INSTALLER_BUTTON}}<a class="btn btn-glass" href="{{root}}guides/windows/">Guide</a></div>
+      </article>
+
+      <article class="dl-card glass" id="nas">
+        <div class="icon i-violet">{{icon:nas}}</div>
+        <h2 class="h3">NAS and Docker</h2>
+        <p class="muted">Run Jellyfin 12.1 or newer in a container, then add the OwnMedia plugin catalogue in
+          Jellyfin: Dashboard → Plugins → Manage Repositories → +.</p>
+        <div class="copy">
+          <code id="catalog">{{CATALOG_URL}}</code>
+          <button class="btn btn-glass btn-small" type="button" data-copy="catalog">Copy</button>
+        </div>
+        <div class="btn-row"><a class="btn btn-glass" href="{{root}}guides/synology/">Synology guide</a><a class="btn btn-glass" href="{{root}}guides/docker/">Docker guide</a></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow">
+    <div class="card glass">
+      <h2 class="h3">What the plugin does</h2>
+      <p>“Homeplay Backup” is the server side of OwnMedia: it receives the photo backup from phones, makes
+        invite links for friends and shows the page with the QR code for connecting a phone. Its code is
+        open, under the GPL (<a href="{{SOURCE_URL}}" rel="noopener">source</a>). New versions show up in
+        Jellyfin by themselves, under Plugins.</p>
+    </div>
+  </div>
+</section>

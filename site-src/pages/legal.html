@@ -1,0 +1,42 @@
+title: Company details
+description: Who makes OwnMedia: company name, registration number, address and contact.
+path: legal/
+---
+<div class="page-hero">
+  <div class="wrap narrow">
+    <h1>Company details</h1>
+    <p class="lead">OwnMedia, the Android app and the server installer, are made and published by:</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <table>
+      <tr><th scope="row">Company</th><td>{{COMPANY_NAME}}</td></tr>
+      <tr><th scope="row">Registration number</th><td>{{COMPANY_REG}}</td></tr>
+      <tr><th scope="row">Registered address</th><td>{{COMPANY_ADDRESS}}</td></tr>
+      <tr><th scope="row">Country</th><td>{{COMPANY_COUNTRY}}</td></tr>
+      <tr><th scope="row">Email</th><td>{{EMAIL_LINK}}</td></tr>
+    </table>
+
+    <h2>Trademarks</h2>
+    <p>OwnMedia is an independent project, not affiliated with, endorsed or sponsored by Jellyfin, Navidrome,
+      Plex, Emby or Tailscale. Their names are used only to say which servers and services OwnMedia works with.
+      Android and Google Play are trademarks of Google LLC.</p>
+
+    <h2>Content</h2>
+    <p>OwnMedia plays what is on your own server. It doesn’t provide, sell or stream any movies, shows or
+      music. Share only what you have the right to share.</p>
+
+    <h2>Open source</h2>
+    <ul>
+      <li>The server plugin “Homeplay Backup” is free software under the GNU GPL version 2 or later;
+        <a href="{{SOURCE_URL}}" rel="noopener">source code</a>.</li>
+      <li>The app uses open-source libraries (media_kit, libmpv, Flutter and others). Their licenses are in the
+        app: <i>Settings → Open-source licenses</i>.</li>
+    </ul>
+
+    <h2>Privacy</h2>
+    <p>See the <a href="{{root}}privacy/">privacy policy</a>.</p>
+  </article>
+</div>

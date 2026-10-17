@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>Privacy policy — OwnMedia</title>
+<meta name="description" content="What the OwnMedia Android app does with your data: it talks only to your own servers. No account, no analytics, no ads. Also what this website collects.">
+<link rel="canonical" href="https://educonsalt.com/privacy/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:title" content="Privacy policy — OwnMedia">
+<meta property="og:description" content="What the OwnMedia Android app does with your data: it talks only to your own servers. No account, no analytics, no ads. Also what this website collects.">
+<meta property="og:url" content="https://educonsalt.com/privacy/">
+<meta property="og:image" content="https://educonsalt.com/img/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia: movies, music and photos from your own server">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" href="../img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png">
+<link rel="stylesheet" href="../css/site.css?v=c4c9012d">
+<script src="../js/site.js?v=c4c9012d" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../" aria-label="OwnMedia home">
+      <img src="../img/logo-64.webp" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../download/">Download</a>
+      <a href="../guides/">Guides</a>
+      <a href="../privacy/" aria-current="page">Privacy</a>
+      <a href="../support/">Support</a>
+      <a class="btn btn-small" href="../#beta">Get the app</a>
+    </nav>
+    <details class="menu">
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../">Home</a>
+        <a href="../download/">Download</a>
+      <a href="../guides/">Guides</a>
+      <a href="../privacy/" aria-current="page">Privacy</a>
+      <a href="../support/">Support</a>
+        <a class="btn" href="../#beta">Get the app</a>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero">
+  <div class="wrap narrow">
+    <h1>Privacy policy</h1>
+    <p class="lead">OwnMedia for Android and this website · last updated 17 October 2026 · <a href="#ru" hreflang="ru" lang="ru">Русский</a></p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <div class="note">
+      <p>OwnMedia talks only to the media servers you add to it (Jellyfin, Navidrome or another Subsonic
+        server). We, the developers, receive nothing from the app: there is no OwnMedia account, no analytics,
+        no crash reporting, no ads and no tracking.</p>
+    </div>
+    <p>The app and this site are made by SIA “Mroya” (reg. No. 50203370261, Ganību dambis 20A, Rīga, Latvia).
+      Contact: <em>(email address coming soon)</em>.</p>
+
+    <h2>Your servers and sign-in</h2>
+    <ul>
+      <li>You enter the address of your server and sign in to it. Your password goes only to that server and is
+        not stored on the phone.</li>
+      <li>What the app keeps to stay signed in (a Jellyfin access token, or a salted Subsonic token) is stored
+        on the phone in Android’s encrypted storage.</li>
+      <li>The app sends your server what any client does: what you browse, what you play and how far you got,
+        so the server can show your progress and played marks. Songs you mark with ♥ are saved as favorites
+        on the server.</li>
+      <li>To find your server on the home Wi-Fi, the app sends a discovery message on the local network. It
+        doesn’t leave your network.</li>
+      <li>Before converting a video for a slow connection, the app may download a few megabytes of test data
+        from your server to measure the speed.</li>
+    </ul>
+
+    <h2>Sharing with friends (invites)</h2>
+    <ul>
+      <li>When you share your server, your server (with the OwnMedia plugin) makes an invite: the friend’s name
+        as you typed it, the libraries you picked and a secret one-time code. They are stored on your server
+        only.</li>
+      <li>The invite link contains your server’s address and that code. You send it yourself, with the
+        messenger or app you choose; it works once, for 7 days.</li>
+      <li>When a friend uses it, your server makes a separate sign-in for them that only sees the chosen
+        libraries. Your server then keeps which phone joined (the model name the phone reports, for example
+        “Google Pixel 10a”), when the friend last used the server and what they are playing, so that you see
+        it under “Who has access”. Only you, the owner, see this, and nothing of it reaches us. “End access”
+        deletes their sign-in.</li>
+      <li>The friend’s app stores your server’s address and their own sign-in token, in Android’s encrypted
+        storage, like for any server.</li>
+      <li>Your server’s internet address, if you use one, comes from Tailscale Funnel (see Third parties).</li>
+    </ul>
+
+    <h2>Photo and video backup (optional)</h2>
+    <ul>
+      <li>Only if you turn it on. The app then reads your photos and videos, including the place they were
+        taken, and uploads them to the Jellyfin server you chose, where the Homeplay Backup plugin stores them
+        in a folder you set. It works in the background, over Wi-Fi and mobile data.</li>
+      <li>They go to your server only. The app keeps a list of what it has uploaded on the phone, so it does not
+        send anything twice.</li>
+      <li>Nothing is deleted from the phone. You can turn backup off at any time.</li>
+    </ul>
+
+    <h2>Downloads and saved songs</h2>
+    <ul>
+      <li>Movies, episodes and music you download are stored in the app’s own storage on the phone.
+        Uninstalling the app removes them.</li>
+      <li>When you play downloads without a connection, the app remembers where you stopped and sends that to
+        your server once it is reachable again.</li>
+      <li>“Save to phone’s Music” is different: it copies the original song file into the phone’s Music folder
+        (<code>Music/Homeplay</code>), where other music players see it. These files stay on the phone if you
+        uninstall the app.</li>
+    </ul>
+
+    <h2>Android Auto</h2>
+    <p>In the car, the app lists the music from your downloads and your servers and plays it. Android Auto gets
+      the titles and artists of what is shown and playing, as with any music app. Voice search sends your
+      words, as text from Android, to your servers to find the songs.</p>
+
+    <h2 id="tv">Play on TV</h2>
+    <p>To show a video on a smart TV, the app looks for TVs on your Wi-Fi (UPnP/DLNA) and gives the chosen TV
+      a link to the file on your server, including the access needed to play it. The TV downloads the file
+      straight from your server over your home network. Where you stopped goes to your server, as with ordinary
+      playback. Nothing of this leaves your home network or reaches us.</p>
+
+    <h2>Permissions</h2>
+    <ul>
+      <li><b>Photos and videos, media location</b>: only for the optional backup.</li>
+      <li><b>Notifications</b>: for playback controls and download and backup progress.</li>
+      <li><b>Network</b>: to reach your servers and TVs.</li>
+      <li><b>Foreground service</b>: to keep music playing and downloads running with the screen off.</li>
+    </ul>
+
+    <h2>Third parties</h2>
+    <p>The app shares no data with third parties. Connections go directly from your phone to your server, for
+      example over your home network, or over Tailscale if you use it. If your server is opened to the
+      internet with Tailscale Funnel, connections to its <code>….ts.net</code> address pass through Tailscale’s
+      servers in encrypted form; Tailscale’s own privacy policy applies to your Tailscale account.</p>
+
+    <h2 id="website">This website</h2>
+    <ul>
+      <li>No cookies, no analytics, no tracking, and nothing is loaded from other websites.</li>
+      <li>Like any web server, our hosting provider (Hostinger) keeps standard access logs (IP address, page,
+        time, browser) for security and operation.</li>
+      <li>If you join the beta, the form sends your email and answers to Formspree, the service that delivers
+        the form to us. We use them only to invite you to the beta and to understand what testers need, and
+        delete them on request: write to <em>(email address coming soon)</em>.</li>
+    </ul>
+
+    <h2>Children</h2>
+    <p>OwnMedia is not directed at children under 13.</p>
+
+    <h2>Your rights, changes and contact</h2>
+    <p>You can ask what we hold about you (on this website: only beta sign-ups), have it corrected or deleted,
+      and complain to your data protection authority. If this policy changes, the new version will be on this
+      page with a new date. Questions: <em>(email address coming soon)</em>.</p>
+
+    <div class="lang-part" id="ru" lang="ru">
+      <h2>Политика конфиденциальности</h2>
+      <p class="muted">OwnMedia для Android и этот сайт · обновлено 17 октября 2026</p>
+
+      <div class="note">
+        <p>OwnMedia общается только с медиасерверами, которые вы в него добавили (Jellyfin, Navidrome или другой
+          Subsonic-сервер). Мы, разработчики, не получаем от приложения ничего: нет учётной записи OwnMedia,
+          аналитики, отчётов об ошибках, рекламы и слежки.</p>
+      </div>
+      <p>Приложение и сайт делает SIA “Mroya” (рег. № 50203370261, Ganību dambis 20A, Rīga, Latvia).
+        Связь: <em>(email address coming soon)</em>.</p>
+
+      <h3>Ваши серверы и вход</h3>
+      <ul>
+        <li>Вы вводите адрес своего сервера и входите в него. Пароль уходит только на этот сервер и на телефоне
+          не хранится.</li>
+        <li>То, что нужно, чтобы оставаться в системе (ключ доступа Jellyfin или токен Subsonic), хранится на
+          телефоне в зашифрованном хранилище Android.</li>
+        <li>Серверу приложение сообщает то же, что любой клиент: что вы открываете и смотрите и где остановились,
+          чтобы сервер показывал прогресс и отметки о просмотре. Песни, отмеченные ♥, сохраняются в избранном
+          на сервере.</li>
+        <li>Чтобы найти сервер в домашнем Wi-Fi, приложение отправляет поисковый запрос в локальную сеть. За её
+          пределы он не выходит.</li>
+        <li>Перед сжатием видео для медленной сети приложение может скачать с вашего сервера несколько мегабайт
+          пробных данных, чтобы замерить скорость.</li>
+      </ul>
+
+      <h3>Приглашения друзьям</h3>
+      <ul>
+        <li>Когда вы делитесь сервером, ваш сервер (с модулем OwnMedia) создаёт приглашение: имя друга, как вы
+          его ввели, выбранные разделы и секретный одноразовый код. Всё это хранится только на вашем сервере.</li>
+        <li>В ссылке-приглашении — адрес вашего сервера и этот код. Отправляете её вы сами, через выбранный вами
+          мессенджер или приложение; она работает один раз, 7 дней.</li>
+        <li>Когда друг ею воспользовался, ваш сервер создаёт для него отдельную учётную запись, которая видит
+          только выбранные разделы. Затем сервер хранит, с какого телефона он подключился (модель, которую
+          сообщает телефон, например «Google Pixel 10a»), когда друг заходил последний раз и что смотрит, —
+          чтобы вы видели это в «Who has access». Видите это только вы, владелец, к нам это не попадает. «End access»
+          удаляет его учётную запись.</li>
+        <li>Приложение друга хранит адрес вашего сервера и свой ключ доступа в зашифрованном хранилище Android,
+          как для любого сервера.</li>
+        <li>Адрес сервера в интернете, если он есть, даёт Tailscale Funnel (см. «Третьи лица»).</li>
+      </ul>
+
+      <h3>Копирование фото и видео (по желанию)</h3>
+      <ul>
+        <li>Только если вы его включили. Тогда приложение читает фото и видео, в том числе место съёмки, и
+          отправляет их на выбранный вами сервер Jellyfin, где модуль Homeplay Backup складывает их в заданную
+          вами папку. Работает в фоне, по Wi-Fi и мобильной сети.</li>
+        <li>Они уходят только на ваш сервер. Список уже отправленного хранится на телефоне, чтобы ничего не
+          отправлялось дважды.</li>
+        <li>С телефона ничего не удаляется. Копирование можно выключить в любой момент.</li>
+      </ul>
+
+      <h3>Загрузки и сохранённые песни</h3>
+      <ul>
+        <li>Скачанные фильмы, серии и музыка хранятся в собственной памяти приложения на телефоне и удаляются
+          вместе с ним.</li>
+        <li>Если вы смотрите скачанное без сети, приложение запоминает, где вы остановились, и сообщает это
+          вашему серверу, когда он снова доступен.</li>
+        <li>«Save to phone’s Music» — другое: исходный файл песни копируется в папку «Музыка» телефона
+          (<code>Music/Homeplay</code>), где его видят другие плееры. Эти файлы остаются на телефоне и после
+          удаления приложения.</li>
+      </ul>
+
+      <h3>Android Auto</h3>
+      <p>В машине приложение показывает музыку из загрузок и с ваших серверов и играет её. Android Auto видит
+        названия и исполнителей показанного и играющего, как у любого музыкального приложения. Голосовой поиск
+        отправляет ваши слова, текстом от Android, на ваши серверы, чтобы найти песни.</p>
+
+      <h3>Показ на телевизоре</h3>
+      <p>Чтобы показать видео на телевизоре, приложение ищет телевизоры в вашем Wi-Fi (UPnP/DLNA) и даёт
+        выбранному ссылку на файл на вашем сервере вместе с доступом, нужным для воспроизведения. Телевизор
+        скачивает файл прямо с вашего сервера по домашней сети. Где вы остановились, уходит на ваш сервер, как при
+        обычном просмотре. Ничего из этого не покидает домашнюю сеть и к нам не попадает.</p>
+
+      <h3>Разрешения</h3>
+      <ul>
+        <li><b>Фото и видео, место съёмки</b>: только для копирования по желанию.</li>
+        <li><b>Уведомления</b>: управление воспроизведением, прогресс загрузок и копирования.</li>
+        <li><b>Сеть</b>: доступ к вашим серверам и телевизорам.</li>
+        <li><b>Служба переднего плана</b>: чтобы музыка играла и загрузки шли при выключенном экране.</li>
+      </ul>
+
+      <h3>Третьи лица</h3>
+      <p>Приложение не передаёт данные третьим лицам. Соединения идут напрямую с телефона на ваш сервер,
+        например по домашней сети или через Tailscale, если вы им пользуетесь. Если сервер открыт в интернет
+        через Tailscale Funnel, соединения с его адресом <code>….ts.net</code> проходят через серверы Tailscale
+        в зашифрованном виде; к вашей учётной записи Tailscale применяется политика самого Tailscale.</p>
+
+      <h3>Этот сайт</h3>
+      <ul>
+        <li>Без cookie, аналитики и слежки; ничего не загружается с чужих сайтов.</li>
+        <li>Как любой веб-сервер, наш хостинг (Hostinger) ведёт обычные журналы обращений (IP-адрес, страница,
+          время, браузер) для безопасности и работы.</li>
+        <li>Если вы записались в бету, форма отправляет вашу почту и ответы в Formspree — сервис, который
+          доставляет форму нам. Мы используем их только чтобы пригласить вас в бету и понять, что нужно
+          тестировщикам, и удаляем по просьбе: пишите на <em>(email address coming soon)</em>.</li>
+      </ul>
+
+      <h3>Дети</h3>
+      <p>OwnMedia не предназначен для детей младше 13 лет.</p>
+
+      <h3>Ваши права, изменения и контакты</h3>
+      <p>Вы можете узнать, что мы о вас храним (на этом сайте — только записи в бету), исправить или удалить
+        это и пожаловаться в свой орган по защите данных. Если политика изменится, новая версия появится на
+        этой странице с новой датой. Вопросы: <em>(email address coming soon)</em>.</p>
+    </div>
+  </article>
+</div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../"><img src="../img/logo-64.webp" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Movies, shows, music and photos from your own server, on your Android phone.</p>
+      </div>
+      <div>
+        <h2>App</h2>
+        <ul>
+          <li><a href="../#features">Features</a></li>
+          <li><a href="../download/">Download</a></li>
+          <li><a href="../#screens">Screenshots</a></li>
+          <li><a href="../#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Help</h2>
+        <ul>
+          <li><a href="../guides/windows/">Windows server</a></li>
+          <li><a href="../guides/synology/">Synology NAS</a></li>
+          <li><a href="../guides/docker/">Docker</a></li>
+          <li><a href="../guides/remote-access/">Remote access &amp; friends</a></li>
+          <li><a href="../guides/tv/">Watch on TV</a></li>
+          <li><a href="../support/">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Company</h2>
+        <address>
+          SIA “Mroya”<br>
+          Reg. No. 50203370261<br>
+          Ganību dambis 20A, Rīga, Latvia<br>
+          <em>(email address coming soon)</em>
+        </address>
+        <ul>
+          <li><a href="../legal/">Company details</a></li>
+          <li><a href="../privacy/">Privacy policy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 SIA “Mroya”. No cookies, no analytics, no tracking.</span>
+      <span>OwnMedia is an independent project, not affiliated with Jellyfin, Navidrome, Plex or Tailscale.</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

@@ -10,3 +10,5 @@ app/android/key.properties
 app/dist/
 # HomeplaySetup.exe (./installer/build.sh).
 installer/dist/
+# The site archive for Hostinger, made by site-src/build.py
+ownmedia-site.zip

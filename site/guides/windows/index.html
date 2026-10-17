@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>Set up the server on Windows — OwnMedia</title>
+<meta name="description" content="OwnMediaSetup.exe step by step: Jellyfin, your folders, access from the internet with Tailscale and a QR code for your phone.">
+<link rel="canonical" href="https://educonsalt.com/guides/windows/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:title" content="Set up the server on Windows — OwnMedia">
+<meta property="og:description" content="OwnMediaSetup.exe step by step: Jellyfin, your folders, access from the internet with Tailscale and a QR code for your phone.">
+<meta property="og:url" content="https://educonsalt.com/guides/windows/">
+<meta property="og:image" content="https://educonsalt.com/img/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia: movies, music and photos from your own server">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../../favicon.ico" sizes="any">
+<link rel="icon" href="../../img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../../img/apple-touch-icon.png">
+<link rel="stylesheet" href="../../css/site.css?v=c4c9012d">
+<script src="../../js/site.js?v=c4c9012d" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../../" aria-label="OwnMedia home">
+      <img src="../../img/logo-64.webp" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../../download/">Download</a>
+      <a href="../../guides/" aria-current="page">Guides</a>
+      <a href="../../privacy/">Privacy</a>
+      <a href="../../support/">Support</a>
+      <a class="btn btn-small" href="../../#beta">Get the app</a>
+    </nav>
+    <details class="menu">
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../../">Home</a>
+        <a href="../../download/">Download</a>
+      <a href="../../guides/" aria-current="page">Guides</a>
+      <a href="../../privacy/">Privacy</a>
+      <a href="../../support/">Support</a>
+        <a class="btn" href="../../#beta">Get the app</a>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="../../guides/">Guides</a> / Windows</div>
+    <h1>Server on Windows</h1>
+    <p class="lead">One program turns a Windows PC into the server for OwnMedia. A few minutes, once.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <h2 id="before">Before you start</h2>
+    <ul>
+      <li>A PC with Windows 10 or 11 (64-bit) that stays on while you watch. Your movies, shows and music
+        are on it, or on a drive connected to it.</li>
+      <li>Administrator rights and an internet connection: setup downloads Jellyfin, about 200 MB.</li>
+      <li>Jellyfin already on this PC? Fine: setup only adds OwnMedia to it. Its users and libraries stay as
+        they are, and the folder and password steps are skipped.</li>
+    </ul>
+    <div class="btn-row"><a class="btn" aria-disabled="true" role="link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg> Download link coming soon</a></div>
+
+    <h2 id="steps">Step by step</h2>
+    <ol class="ol-steps">
+      <li><b>Run OwnMediaSetup.exe</b> and allow it to make changes.</li>
+      <li><b>Your movies, shows, music and photos.</b> Point each line to a folder. TV shows want a folder
+        for each show. Leave a line empty to skip it. New files you put into these folders later show up by
+        themselves. Photos backed up from your phone go into the last folder.</li>
+      <li><b>Your name and password.</b> You will sign in with them in the app; the password needs at least
+        4 characters. Keep <i>“This computer is at home: let phones on this Wi-Fi connect to it”</i> ticked
+        so that phones at home find the server.</li>
+      <li><b>Watch from anywhere.</b> Keep <i>“Let friends watch from anywhere”</i> ticked if you want to
+        watch away from home or invite friends. Setup installs Tailscale, a free service that gives the
+        server a safe internet address without router settings.</li>
+      <li><b>Install.</b> Setup downloads and installs Jellyfin and sets it up; this takes a minute or two.</li>
+      <li><b>Sign in to Tailscale</b> (only with “watch from anywhere”). A browser window opens: sign in
+        (the Google, Microsoft or Apple button is quickest) and press <i>Connect</i>. If Tailscale asks,
+        press <i>Enable Funnel</i>. Then setup waits until the address works on the internet, up to
+        10 minutes.</li>
+      <li><b>Finish.</b> The page <i>“Your server is ready”</i> opens in the browser, with a QR code and the
+        server’s address. It stays in the Start menu as <i>OwnMedia – connect a phone</i>, for the next
+        phone.</li>
+    </ol>
+
+    <h2 id="phone">On the phone</h2>
+    <ol class="ol-steps">
+      <li>Connect the phone to the same Wi-Fi as the PC.</li>
+      <li>Get the app: point the phone’s camera at the QR code and open the link, and OwnMedia downloads
+        from your PC. Open the file and tap <i>Install</i>; if the phone asks, allow installing from this
+        source, and if Google Play Protect warns about an unknown developer, tap <i>More details</i> →
+        <i>Install anyway</i>. Or join the <a href="../../download/#android">beta</a>.</li>
+      <li>Open OwnMedia and tap <i>Add your server</i>. It finds your PC by itself. If not, type the address
+        shown on the page, for example <code>http://192.168.1.10:8096</code>.</li>
+      <li>Enter the name and password from step 3 and tap <i>Connect</i>.</li>
+    </ol>
+    <p>Next: <a href="../../guides/remote-access/#friends">invite friends</a>.</p>
+
+    <h2 id="if-something-goes-wrong">If something goes wrong</h2>
+    <ul>
+      <li><b>“Jellyfin could not be downloaded.”</b> Check the internet connection and run setup again.</li>
+      <li><b>Opening to the internet didn’t work</b> (nobody signed in to Tailscale in time, or Funnel
+        wasn’t allowed). The server works at home as before. Run OwnMediaSetup again to try once more:
+        steps that are already done are skipped.</li>
+      <li><b>“Its address is still new.”</b> The server is on the internet, but invite links may not open
+        for a few more minutes. Wait a little before sending them.</li>
+      <li><b>The phone doesn’t find the server.</b> Make sure it is on the same Wi-Fi, or type the address
+        by hand.</li>
+      <li>What happened during setup is written in <code>C:\ProgramData\Homeplay\setup.log</code> (it never
+        contains your password). Send it to <a href="../../support/">support</a> if you’re stuck.</li>
+    </ul>
+
+    <h2 id="updates">Updates and removal</h2>
+    <p>A new version of OwnMediaSetup installs over the old one; your settings, users and libraries stay.
+      To remove it, use Windows <i>Settings → Apps</i>: <i>OwnMedia Server</i>, and Jellyfin and Tailscale
+      separately if you no longer need them. Your movies, music and photos are never touched.</p>
+  </article>
+</div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../../"><img src="../../img/logo-64.webp" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Movies, shows, music and photos from your own server, on your Android phone.</p>
+      </div>
+      <div>
+        <h2>App</h2>
+        <ul>
+          <li><a href="../../#features">Features</a></li>
+          <li><a href="../../download/">Download</a></li>
+          <li><a href="../../#screens">Screenshots</a></li>
+          <li><a href="../../#faq">FAQ</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Help</h2>
+        <ul>
+          <li><a href="../../guides/windows/">Windows server</a></li>
+          <li><a href="../../guides/synology/">Synology NAS</a></li>
+          <li><a href="../../guides/docker/">Docker</a></li>
+          <li><a href="../../guides/remote-access/">Remote access &amp; friends</a></li>
+          <li><a href="../../guides/tv/">Watch on TV</a></li>
+          <li><a href="../../support/">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Company</h2>
+        <address>
+          SIA “Mroya”<br>
+          Reg. No. 50203370261<br>
+          Ganību dambis 20A, Rīga, Latvia<br>
+          <em>(email address coming soon)</em>
+        </address>
+        <ul>
+          <li><a href="../../legal/">Company details</a></li>
+          <li><a href="../../privacy/">Privacy policy</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 SIA “Mroya”. No cookies, no analytics, no tracking.</span>
+      <span>OwnMedia is an independent project, not affiliated with Jellyfin, Navidrome, Plex or Tailscale.</span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

@@ -5,6 +5,7 @@
 - `app/` — Android-приложение, Flutter + media_kit (libmpv)
 - `server/` — плагин Jellyfin «Homeplay Backup» для копирования фото с телефона на сервер
 - `landing/` — лендинг с листом ожидания для проверки спроса
+- `site/` — сайт OwnMedia для Hostinger (собирается из `site-src/` командой `python site-src/build.py`; как залить — `site/README.md`)
 - `docs/validation.md` — план проверки спроса и черновики постов
 
 ## Сборка
