@@ -7,6 +7,7 @@ import '../models/account.dart';
 import '../services/quality.dart';
 import '../services/search_filters.dart';
 import 'common.dart';
+import 'dlna.dart';
 import 'sharing.dart';
 
 const _appVersion = '0.1.0';
@@ -599,6 +600,32 @@ class JellyfinClient {
     }
   }
 
+  Future<String?>? _homeBase;
+
+  /// The server's address in its home network, for a TV there, when the phone knows it by an
+  /// internet or Tailscale address: the address the server gives for itself, if the phone gets
+  /// the same server there (that is, the phone is at home too). Null when the phone's address will
+  /// do or no home address works. Asked once per client.
+  Future<String?> homeBase() => _homeBase ??= _findHomeBase();
+
+  Future<String?> _findHomeBase() async {
+    if (isHomeHost(Uri.parse(_base).host)) return null;
+    try {
+      final res = await _http.get(Uri.parse('$_base/System/Info/Public')).timeout(const Duration(seconds: 5));
+      final info = jsonDecode(res.body) as Map<String, dynamic>;
+      final local = info['LocalAddress'] as String?;
+      final host = local == null ? null : Uri.tryParse(local)?.host;
+      if (local == null || host == null || !isHomeHost(host)) return null;
+      final home = normalizeBaseUrl(local);
+      // The phone on the same Wi-Fi as the TV reaches it too; elsewhere it is not this server.
+      final there = await publicId(home, client: _http).timeout(const Duration(seconds: 3), onTimeout: () => null);
+      return there != null && there == info['Id'] ? home : null;
+    } catch (e) {
+      debugPrint('homeplay home address not found: $e');
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> _send(String method, String path, {Map<String, String>? query, Object? body}) async {
     final req = http.Request(method, Uri.parse('$_base$path').replace(queryParameters: query))
       ..headers.addAll({...headers, 'Content-Type': 'application/json'});
@@ -962,6 +989,11 @@ class JellyfinClient {
         reporter: _reporter(item, versionId, null, 'DirectPlay'),
         favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
         container: item.container,
+        tvUrl: () async {
+          final url = streamUrl(item, versionId: versionId);
+          final home = await homeBase();
+          return home == null ? url : rebaseUrl(url, _base, home);
+        },
       );
 }
 

@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/api/common.dart';
 import 'package:homeplay/api/dlna.dart';
+import 'package:homeplay/api/jellyfin.dart';
+import 'package:homeplay/models/account.dart';
 import 'package:homeplay/screens/tv_screen.dart';
 import 'package:homeplay/services/tv_cast.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:xml/xml.dart';
 
 /// An LG TV's description, cut down: the renderer is a subdevice of the root.
@@ -272,4 +276,65 @@ void main() {
     expect(reports.log.last, startsWith('stopped'));
     expect(tester.takeException(), isNull);
   });
+
+  test('home addresses a TV can reach, and links moved to them', () {
+    for (final h in ['192.168.1.10', '10.0.0.5', '172.20.1.1', 'nas.local', '169.254.3.4']) {
+      expect(isHomeHost(h), isTrue, reason: h);
+    }
+    for (final h in ['100.121.58.29', 'nas-3d.tailc91480.ts.net', '172.32.0.1', '8.8.8.8', 'localhost', '192.168.1']) {
+      expect(isHomeHost(h), isFalse, reason: h);
+    }
+    final url = Uri.parse('https://nas.ts.net/Videos/1/stream?static=true&ApiKey=k');
+    expect(rebaseUrl(url, 'https://nas.ts.net', 'http://192.168.1.10:8096/'),
+        Uri.parse('http://192.168.1.10:8096/Videos/1/stream?static=true&ApiKey=k'));
+    expect(rebaseUrl(Uri.parse('https://nas.ts.net.evil/x'), 'https://nas.ts.net', 'http://h'), Uri.parse('https://nas.ts.net.evil/x'));
+  });
+
+  group('the TV gets the server at its home address', () {
+    const remote = Account(
+        id: 'a', kind: ServerKind.jellyfin, baseUrl: 'https://nas.ts.net', username: 'u', serverName: 'NAS', token: 't', userId: 'u1');
+    final movie = JellyfinItem(const {'Id': 'm1', 'Name': 'Movie', 'Type': 'Movie', 'MediaType': 'Video', 'Container': 'mkv'});
+
+    JellyfinClient client({String? local = 'http://192.168.1.10:8096', String homeId = 'S1', bool homeAnswers = true}) =>
+        JellyfinClient(remote, 'dev', client: MockClient((r) async {
+          if (r.url.host == 'nas.ts.net') {
+            return http.Response('{"Id":"S1","ServerName":"NAS"${local == null ? '' : ',"LocalAddress":"$local"'}}', 200);
+          }
+          if (!homeAnswers) throw const SocketExceptionLike();
+          return http.Response('{"Id":"$homeId"}', 200);
+        }));
+
+    test('when the phone reaches the same server there', () async {
+      final url = await client().toPlayItem(movie).tvUrl!();
+      expect(url.toString(), startsWith('http://192.168.1.10:8096/Videos/m1/stream'));
+      expect(url.queryParameters['ApiKey'], 't');
+    });
+
+    test('otherwise the address the phone uses', () async {
+      for (final c in [
+        client(homeAnswers: false), // the phone is away from home
+        client(homeId: 'OTHER'), // another server answers at that address
+        client(local: 'http://100.121.58.29:8096'), // a Tailscale address
+        client(local: null),
+      ]) {
+        expect((await c.toPlayItem(movie).tvUrl!()).host, 'nas.ts.net');
+      }
+    });
+
+    test('a server added by its home address is left as it is', () async {
+      const home = Account(
+          id: 'h', kind: ServerKind.jellyfin, baseUrl: 'http://192.168.1.10:8096', username: 'u', serverName: 'NAS', token: 't', userId: 'u1');
+      var asked = 0;
+      final c = JellyfinClient(home, 'dev', client: MockClient((r) async {
+        asked++;
+        return http.Response('{}', 200);
+      }));
+      expect((await c.toPlayItem(movie).tvUrl!()).host, '192.168.1.10');
+      expect(asked, 0);
+    });
+  });
+}
+
+class SocketExceptionLike implements Exception {
+  const SocketExceptionLike();
 }

@@ -38,6 +38,7 @@ class PlayItem {
     this.subtitles = const [],
     this.favorite,
     this.container,
+    this.tvUrl,
   });
 
   final String title;
@@ -75,6 +76,10 @@ class PlayItem {
   /// The file's container as the server names it ("mkv", "mp4"), for telling a TV its type.
   final String? container;
 
+  /// The link to give a TV instead of [url]: the same file at the server's home address, which
+  /// the TV can reach when the phone uses an internet one. Null when [url] will do.
+  final Future<Uri> Function()? tvUrl;
+
   PlayItem copyWith({
     Uri? url,
     String? audioTrackId,
@@ -99,6 +104,7 @@ class PlayItem {
         subtitles: subtitles ?? this.subtitles,
         favorite: favorite,
         container: container,
+        tvUrl: tvUrl,
       );
 }
 

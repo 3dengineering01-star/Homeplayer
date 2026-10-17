@@ -18,7 +18,8 @@ Future<void> playOnTv(BuildContext context, PlayItem item, {Duration startAt = D
   }
   final device = await pickTv(context);
   if (device == null) return;
-  final cast = TvCast(tv: DlnaTv(device), tvName: device.name, item: item);
+  final url = await item.tvUrl?.call().catchError((_) => item.url) ?? item.url;
+  final cast = TvCast(tv: DlnaTv(device), tvName: device.name, item: item.copyWith(url: url));
   final route = MaterialPageRoute<void>(builder: (_) => TvRemoteScreen(cast: cast, startAt: startAt));
   await (replace ? nav.pushReplacement(route) : nav.push(route));
 }

@@ -176,6 +176,24 @@ Map<String, String> parseSoapAnswer(String body, String action) {
   return {for (final c in answer.childElements) c.localName: c.innerText};
 }
 
+/// Whether a TV at home can reach [host] directly: a private address of the home network or a
+/// ".local" name. Tailscale's addresses (100.64.0.0/10) and internet names are not.
+bool isHomeHost(String host) {
+  if (host.endsWith('.local')) return true;
+  final p = host.split('.').map(int.tryParse).toList();
+  if (p.length != 4 || p.any((n) => n == null || n < 0 || n > 255)) return false;
+  final a = p[0]!, b = p[1]!;
+  return a == 10 || (a == 172 && b >= 16 && b <= 31) || (a == 192 && b == 168) || (a == 169 && b == 254);
+}
+
+/// [url] under [from] moved to the same place under [to], e.g. a stream link from the server's
+/// internet address to its home address; [url] itself when it is not under [from].
+Uri rebaseUrl(Uri url, String from, String to) {
+  String trim(String s) => s.endsWith('/') ? s.substring(0, s.length - 1) : s;
+  final f = trim(from), t = trim(to), u = '$url';
+  return u.startsWith(f) && (u.length == f.length || '/?#'.contains(u[f.length])) ? Uri.parse('$t${u.substring(f.length)}') : url;
+}
+
 /// What the app asks of a TV; [DlnaTv] over the network, a fake in tests.
 abstract interface class TvControl {
   Future<void> open(Uri url, String metadata);
