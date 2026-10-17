@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/api/common.dart';
@@ -210,6 +212,25 @@ void main() {
     cast.dispose();
   });
 
+  test('a TV that stops answering is shown as gone, and back when it answers again', () async {
+    final tv = _FlakyTv(), reports = _Reports();
+    final cast = _cast(tv, _movie(reports));
+    await cast.start();
+    tv.down = true;
+    for (var i = 0; i < TvCast.missedToLost - 1; i++) {
+      await cast.poll();
+    }
+    expect(cast.error, isNull, reason: 'one slow answer is not a lost TV');
+    await cast.poll();
+    expect(cast.error, TvCast.lostMessage);
+    expect(cast.ended, isFalse);
+    tv.down = false;
+    await cast.poll();
+    expect(cast.error, isNull);
+    expect(cast.state, TvState.playing);
+    cast.dispose();
+  });
+
   test('a file the TV cannot open is an error, and nothing is reported', () async {
     final tv = _FakeTv()..states = [TvState.stopped];
     final reports = _Reports();
@@ -351,4 +372,11 @@ void main() {
 
 class SocketExceptionLike implements Exception {
   const SocketExceptionLike();
+}
+
+class _FlakyTv extends _FakeTv {
+  bool down = false;
+
+  @override
+  Future<TvState> state() => down ? Future.error(TimeoutException('no answer')) : super.state();
 }

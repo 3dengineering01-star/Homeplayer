@@ -46,6 +46,14 @@ class TvCast extends ChangeNotifier {
   bool _reportedStart = false, _reportedStop = false, _polling = false, _disposed = false;
   int _polls = 0;
 
+  /// Polls in a row the TV did not answer.
+  int _missed = 0;
+
+  /// After this many unanswered polls the remote says the TV is gone (it may come back).
+  static const missedToLost = 3;
+
+  static const lostMessage = 'The TV stopped answering. It may have closed the video, gone to standby or lost the Wi-Fi.';
+
   /// Sends the file to the TV and starts it at [startAt]. On failure [error] says why.
   Future<void> start({Duration startAt = Duration.zero}) async {
     try {
@@ -106,6 +114,8 @@ class TvCast extends ChangeNotifier {
       state = s;
       if (p.position != null) position = p.position!;
       if (p.duration != null && p.duration! > Duration.zero) duration = p.duration;
+      _missed = 0;
+      if (error == lostMessage) error = null;
       if (s == TvState.stopped || s == TvState.noMedia) {
         _ended = true;
         _timer?.cancel();
@@ -116,6 +126,11 @@ class TvCast extends ChangeNotifier {
       _notify();
     } catch (e) {
       debugPrint('homeplay TV poll failed: $e');
+      if (++_missed == missedToLost) {
+        error = lostMessage;
+        state = TvState.unknown;
+        _notify();
+      }
     } finally {
       _polling = false;
     }

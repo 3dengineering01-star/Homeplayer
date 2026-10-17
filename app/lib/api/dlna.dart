@@ -223,7 +223,7 @@ class DlnaTv implements TvControl {
           },
           body: utf8.encode(soapEnvelope(action, {'InstanceID': '0', ...args})),
         )
-        .timeout(const Duration(seconds: 8));
+        .timeout(const Duration(seconds: 5));
     if (res.statusCode != 200 && res.statusCode != 500) {
       throw DlnaException('The TV answered ${res.statusCode} to $action');
     }
