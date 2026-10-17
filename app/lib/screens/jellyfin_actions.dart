@@ -167,6 +167,12 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
 
   /// Plays [item] on a TV on this Wi-Fi, the phone becoming its remote.
   Future<void> playOnTvItem(JellyfinItem item) async {
+    // Already on the TV: its remote, not a restart from an older resume point.
+    if (await showTvRemote(context, client.streamUrl(item))) {
+      if (mounted) refresh();
+      return;
+    }
+    if (!mounted) return;
     final choice = await _chooseStart(item);
     if (choice == null || !mounted) return;
     await playOnTv(context, client.toPlayItem(item, versionId: choice.versionId), startAt: choice.startAt ?? Duration.zero);

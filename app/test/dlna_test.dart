@@ -9,6 +9,7 @@ import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/models/account.dart';
 import 'package:homeplay/screens/tv_screen.dart';
 import 'package:homeplay/services/tv_cast.dart';
+import 'package:homeplay/widgets/mini_player.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:xml/xml.dart';
@@ -99,6 +100,11 @@ TvCast _cast(_FakeTv tv, PlayItem item) => TvCast(
     );
 
 void main() {
+  tearDown(() {
+    TvCast.active.value?.release();
+    TvCast.remoteShown.value = false;
+  });
+
   test('SSDP answers give their headers; requests are not answers', () {
     final h = parseSsdp('HTTP/1.1 200 OK\r\nCACHE-CONTROL: max-age=1800\r\nLocation: http://192.168.1.20:1527/\r\n'
         'ST: urn:schemas-upnp-org:device:MediaRenderer:1\r\n\r\n');
@@ -367,6 +373,56 @@ void main() {
       expect((await c.toPlayItem(movie).tvUrl!()).host, '192.168.1.10');
       expect(asked, 0);
     });
+  });
+
+  test('one cast at a time, followed until the TV stops; the same file is found again', () async {
+    final tv1 = _FakeTv(), tv2 = _FakeTv(), r1 = _Reports(), r2 = _Reports();
+    final first = _cast(tv1, _movie(r1));
+    await first.start();
+    expect(TvCast.active.value, first);
+    // The same file at another address of the server is the same cast.
+    expect(TvCast.playing(Uri.parse('https://pc.ts.net/Videos/abc/stream?static=true&ApiKey=k')), first);
+    expect(TvCast.playing(Uri.parse('http://192.168.1.5:8096/Videos/other/stream')), isNull);
+
+    final second = _cast(tv2, _movie(r2, url: Uri.parse('http://192.168.1.5:8096/Videos/xyz/stream')));
+    await second.start();
+    expect(TvCast.active.value, second);
+    expect(r1.log.last, startsWith('stopped'), reason: 'the first one reports where it was');
+    expect(tv1.closed, isTrue);
+
+    tv2.states = [TvState.stopped];
+    await second.poll();
+    expect(TvCast.active.value, isNull);
+    expect(sameFile(Uri.parse('http://a/Videos/1/stream'), Uri.parse('https://b/x/Videos/1/stream?k=1')), isTrue);
+    expect(sameFile(Uri.parse('http://a/Videos/1/stream'), Uri.parse('http://a/Videos/2/stream')), isFalse);
+  });
+
+  testWidgets('after the remote closes, a bar brings it back without starting over', (tester) async {
+    final tv = _FakeTv(), reports = _Reports();
+    final cast = _cast(tv, _movie(reports));
+    TvCast? opened;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: const SizedBox.expand(), bottomNavigationBar: TvBar(onOpen: (c) => opened = c)),
+    ));
+    expect(find.text('Tom & Jerry <1940>'), findsNothing);
+    await tester.runAsync(cast.start);
+    await tester.pump();
+    expect(find.text('Tom & Jerry <1940>'), findsOneWidget);
+    expect(find.text('On Living room'), findsOneWidget);
+    await tester.tap(find.text('Tom & Jerry <1940>'));
+    expect(opened, cast);
+
+    // The remote of a running cast sends nothing to the TV again, and hides the bar meanwhile.
+    final calls = tv.calls.length;
+    await tester.pumpWidget(MaterialApp(home: TvRemoteScreen(cast: cast, start: false)));
+    await tester.pump();
+    expect(tv.calls.length, calls);
+    expect(TvCast.remoteShown.value, isTrue);
+    await tester.pumpWidget(const SizedBox());
+    expect(TvCast.remoteShown.value, isFalse);
+    expect(TvCast.active.value, cast, reason: 'closing the remote keeps the cast');
+    expect(reports.log, ['started 0']);
+    cast.release(); // its timer must not outlive the test
   });
 }
 

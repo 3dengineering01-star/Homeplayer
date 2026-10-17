@@ -5,8 +5,16 @@ import 'package:flutter/foundation.dart';
 import '../api/common.dart';
 import '../api/dlna.dart';
 
+/// Whether [a] and [b] lead to the same file on the server, whatever address each uses: the
+/// stream links end in `/<item id>/stream`.
+bool sameFile(Uri a, Uri b) {
+  List<String> tail(Uri u) => u.pathSegments.length < 2 ? u.pathSegments : u.pathSegments.sublist(u.pathSegments.length - 2);
+  return listEquals(tail(a), tail(b));
+}
+
 /// One video or track playing on a TV: starts it there, follows where it is, sends the
-/// remote's buttons and tells the server how far it got, as the phone's own player does.
+/// remote's buttons and tells the server how far it got, as the phone's own player does. It
+/// goes on after the remote screen closes, until the TV stops or another cast starts.
 class TvCast extends ChangeNotifier {
   TvCast({
     required this.tv,
@@ -31,6 +39,18 @@ class TvCast extends ChangeNotifier {
   /// they could not open the file.
   final Duration stoppedGrace;
 
+  /// The cast the app follows now; null when nothing plays on a TV.
+  static final active = ValueNotifier<TvCast?>(null);
+
+  /// Whether the remote screen is open: the bar at the bottom of the app then hides.
+  static final remoteShown = ValueNotifier<bool>(false);
+
+  /// The cast of [url]'s file, if one plays on a TV now.
+  static TvCast? playing(Uri url) {
+    final c = active.value;
+    return c != null && !c.ended && sameFile(c.item.url, url) ? c : null;
+  }
+
   TvState state = TvState.loading;
   Duration position = Duration.zero;
   Duration? duration;
@@ -43,7 +63,7 @@ class TvCast extends ChangeNotifier {
   bool _ended = false;
 
   Timer? _timer;
-  bool _reportedStart = false, _reportedStop = false, _polling = false, _disposed = false;
+  bool _reportedStart = false, _reportedStop = false, _polling = false, _disposed = false, _released = false;
   int _polls = 0;
 
   /// Polls in a row the TV did not answer.
@@ -56,6 +76,10 @@ class TvCast extends ChangeNotifier {
 
   /// Sends the file to the TV and starts it at [startAt]. On failure [error] says why.
   Future<void> start({Duration startAt = Duration.zero}) async {
+    // One cast at a time: the one before stops being followed (and reports where it was).
+    final before = active.value;
+    if (before != null && before != this) before.release();
+    active.value = this;
     try {
       final metadata = didlLite(
         title: item.title,
@@ -94,7 +118,7 @@ class TvCast extends ChangeNotifier {
 
   Future<bool> _waitPlaying() async {
     final watch = Stopwatch()..start();
-    while (watch.elapsed < openTimeout && !_disposed) {
+    while (watch.elapsed < openTimeout && !_released) {
       final s = await tv.state().catchError((_) => TvState.unknown);
       state = s;
       if (s == TvState.playing) return true;
@@ -106,7 +130,7 @@ class TvCast extends ChangeNotifier {
 
   /// Asks the TV where it is; called every [pollEvery].
   Future<void> poll() async {
-    if (_polling || _ended || _disposed) return;
+    if (_polling || _ended || _released) return;
     _polling = true;
     try {
       final s = await tv.state();
@@ -118,8 +142,7 @@ class TvCast extends ChangeNotifier {
       if (error == lostMessage) error = null;
       if (s == TvState.stopped || s == TvState.noMedia) {
         _ended = true;
-        _timer?.cancel();
-        await _reportStop();
+        release();
       } else if (++_polls % 5 == 0) {
         unawaited(item.reporter?.progress(position, paused: s == TvState.paused));
       }
@@ -158,6 +181,7 @@ class TvCast extends ChangeNotifier {
     _ended = true;
     state = TvState.stopped;
     await _reportStop();
+    release();
     _notify();
   }
 
@@ -182,6 +206,7 @@ class TvCast extends ChangeNotifier {
     error = message;
     state = TvState.stopped;
     _ended = true;
+    release();
     _notify();
   }
 
@@ -189,13 +214,21 @@ class TvCast extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
-  /// Leaving the remote keeps the TV playing; the server gets the last place it knows.
-  @override
-  void dispose() {
-    _disposed = true;
+  /// Stops following the TV, which may go on playing: the server gets the last place known,
+  /// and the app no longer shows this cast.
+  void release() {
+    if (_released) return;
+    _released = true;
     _timer?.cancel();
     unawaited(_reportStop());
     tv.close();
+    if (active.value == this) active.value = null;
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    release();
     super.dispose();
   }
 }

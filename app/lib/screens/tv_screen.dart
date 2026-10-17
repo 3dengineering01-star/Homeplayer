@@ -6,9 +6,12 @@ import '../services/tv_cast.dart';
 
 /// Picks a TV and opens the remote for [item] on it, from [startAt]. With [replace] the remote
 /// takes the place of the current screen (the player).
+/// When the same file already plays on a TV, its remote opens instead: nothing starts over.
 Future<void> playOnTv(BuildContext context, PlayItem item, {Duration startAt = Duration.zero, bool replace = false}) async {
   final nav = Navigator.of(context);
   final messenger = ScaffoldMessenger.of(context);
+  if (await showTvRemote(context, item.url, replace: replace)) return;
+  if (!context.mounted) return;
   if (!canPlayOnTv(item)) {
     messenger.showSnackBar(SnackBar(
         content: Text(item.url.scheme == 'file'
@@ -22,6 +25,16 @@ Future<void> playOnTv(BuildContext context, PlayItem item, {Duration startAt = D
   final cast = TvCast(tv: DlnaTv(device), tvName: device.name, item: item.copyWith(url: url));
   final route = MaterialPageRoute<void>(builder: (_) => TvRemoteScreen(cast: cast, startAt: startAt));
   await (replace ? nav.pushReplacement(route) : nav.push(route));
+}
+
+/// Opens the remote of what plays on a TV, if it is [url]'s file; false when it is not.
+Future<bool> showTvRemote(BuildContext context, Uri url, {bool replace = false}) async {
+  final cast = TvCast.playing(url);
+  if (cast == null) return false;
+  final route = MaterialPageRoute<void>(builder: (_) => TvRemoteScreen(cast: cast, start: false));
+  final nav = Navigator.of(context);
+  await (replace ? nav.pushReplacement(route) : nav.push(route));
+  return true;
 }
 
 /// Only a file the server sends as it is: a TV cannot open a download on the phone, and a
@@ -107,12 +120,16 @@ class _TvPickerState extends State<_TvPicker> {
   }
 }
 
-/// The phone as a remote for what plays on the TV. Leaving it keeps the TV playing.
+/// The phone as a remote for what plays on the TV. Leaving it keeps the TV playing, and the
+/// bar at the bottom of the app brings it back.
 class TvRemoteScreen extends StatefulWidget {
-  const TvRemoteScreen({super.key, required this.cast, this.startAt = Duration.zero});
+  const TvRemoteScreen({super.key, required this.cast, this.startAt = Duration.zero, this.start = true});
 
   final TvCast cast;
   final Duration startAt;
+
+  /// Whether to send the file to the TV; false to open the remote of a cast already playing.
+  final bool start;
 
   @override
   State<TvRemoteScreen> createState() => _TvRemoteScreenState();
@@ -127,12 +144,13 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
   @override
   void initState() {
     super.initState();
-    _cast.start(startAt: widget.startAt);
+    if (widget.start) _cast.start(startAt: widget.startAt);
+    TvCast.remoteShown.value = true;
   }
 
   @override
   void dispose() {
-    _cast.dispose();
+    TvCast.remoteShown.value = false;
     super.dispose();
   }
 
@@ -257,7 +275,7 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
             ),
             if (!_cast.ended) ...[
               const SizedBox(height: 12),
-              Text('Going back keeps it playing on the TV.',
+              Text('Going back keeps it playing on the TV. The bar at the bottom brings this remote back.',
                   textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             ],
           ]);
