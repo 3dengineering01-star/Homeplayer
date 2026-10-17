@@ -183,6 +183,17 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(color: _cast.error != null ? theme.colorScheme.error : theme.colorScheme.primary),
             ),
+            const SizedBox(height: 4),
+            Text(
+              // The TV fetches the file itself: over the home network at full speed, or through the
+              // internet (the server's internet address), where large videos may stop to load.
+              isHomeHost(item.url.host)
+                  ? 'The TV takes the video from the server over your home network'
+                  : 'The TV takes the video over the internet: large videos may pause to load. '
+                      'At home, the phone finds the server on the Wi-Fi when both are on it.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            ),
             const SizedBox(height: 16),
             Slider(
               value: at,

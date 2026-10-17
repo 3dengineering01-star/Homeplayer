@@ -7,6 +7,7 @@ import '../models/account.dart';
 import '../services/quality.dart';
 import '../services/search_filters.dart';
 import 'common.dart';
+import 'discovery.dart';
 import 'dlna.dart';
 import 'sharing.dart';
 
@@ -209,11 +210,16 @@ MediaVersion? chooseVersion(List<MediaVersion> versions, String? resolution) =>
     resolution == null ? null : versions.where((v) => v.resolution == resolution).firstOrNull;
 
 class JellyfinClient {
-  JellyfinClient(this.account, this.deviceId, {http.Client? client}) : _http = client ?? http.Client();
+  JellyfinClient(this.account, this.deviceId, {http.Client? client, Future<List<DiscoveredServer>> Function()? discover})
+      : _http = client ?? http.Client(),
+        _discover = discover ?? discoverJellyfin;
 
   final Account account;
   final String deviceId;
   final http.Client _http;
+
+  /// Servers on the phone's Wi-Fi that answer the search; a stand-in in tests.
+  final Future<List<DiscoveredServer>> Function() _discover;
 
   String get _base => account.baseUrl;
 
@@ -613,9 +619,10 @@ class JellyfinClient {
   Future<String?>? _homeBase;
 
   /// The server's address in its home network, for a TV there, when the phone knows it by an
-  /// internet or Tailscale address: the address the server gives for itself, if the phone gets
-  /// the same server there (that is, the phone is at home too). Null when the phone's address will
-  /// do or no home address works. Asked once per client.
+  /// internet or Tailscale address. First the address the server answers the Wi-Fi search with
+  /// (it picks the one of the phone's network), then the address it gives for itself, each only
+  /// if the phone gets the same server there (that is, the phone is at home too). Null when the
+  /// phone's address will do or no home address works. Asked once per client.
   Future<String?> homeBase() => _homeBase ??= _findHomeBase();
 
   Future<String?> _findHomeBase() async {
@@ -623,13 +630,23 @@ class JellyfinClient {
     try {
       final res = await _http.get(Uri.parse('$_base/System/Info/Public')).timeout(const Duration(seconds: 5));
       final info = jsonDecode(res.body) as Map<String, dynamic>;
-      final local = info['LocalAddress'] as String?;
-      final host = local == null ? null : Uri.tryParse(local)?.host;
-      if (local == null || host == null || !isHomeHost(host)) return null;
-      final home = normalizeBaseUrl(local);
-      // The phone on the same Wi-Fi as the TV reaches it too; elsewhere it is not this server.
-      final there = await publicId(home, client: _http).timeout(const Duration(seconds: 3), onTimeout: () => null);
-      return there != null && there == info['Id'] ? home : null;
+      final id = info['Id'] as String?;
+      if (id == null) return null;
+      final found = await _discover().catchError((_) => <DiscoveredServer>[]);
+      final candidates = [
+        for (final s in found)
+          if (s.id == id) s.address,
+        ?info['LocalAddress'] as String?,
+      ];
+      for (final c in candidates) {
+        final host = Uri.tryParse(c)?.host;
+        if (host == null || !isHomeHost(host)) continue;
+        final home = normalizeBaseUrl(c);
+        // The phone on the same Wi-Fi as the TV reaches it too; elsewhere it is not this server.
+        final there = await publicId(home, client: _http).timeout(const Duration(seconds: 3), onTimeout: () => null);
+        if (there == id) return home;
+      }
+      return null;
     } catch (e) {
       debugPrint('homeplay home address not found: $e');
       return null;

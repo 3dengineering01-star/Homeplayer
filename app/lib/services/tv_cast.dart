@@ -12,7 +12,7 @@ class TvCast extends ChangeNotifier {
     required this.tv,
     required this.tvName,
     required this.item,
-    this.pollEvery = const Duration(seconds: 1),
+    this.pollEvery = const Duration(seconds: 2),
     this.waitStep = const Duration(milliseconds: 500),
     this.openTimeout = const Duration(seconds: 20),
     this.stoppedGrace = const Duration(seconds: 5),
@@ -110,7 +110,7 @@ class TvCast extends ChangeNotifier {
         _ended = true;
         _timer?.cancel();
         await _reportStop();
-      } else if (++_polls % 10 == 0) {
+      } else if (++_polls % 5 == 0) {
         unawaited(item.reporter?.progress(position, paused: s == TvState.paused));
       }
       _notify();

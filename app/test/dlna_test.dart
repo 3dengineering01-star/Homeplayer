@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/api/common.dart';
+import 'package:homeplay/api/discovery.dart';
 import 'package:homeplay/api/dlna.dart';
 import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/models/account.dart';
@@ -295,8 +296,13 @@ void main() {
         id: 'a', kind: ServerKind.jellyfin, baseUrl: 'https://nas.ts.net', username: 'u', serverName: 'NAS', token: 't', userId: 'u1');
     final movie = JellyfinItem(const {'Id': 'm1', 'Name': 'Movie', 'Type': 'Movie', 'MediaType': 'Video', 'Container': 'mkv'});
 
-    JellyfinClient client({String? local = 'http://192.168.1.10:8096', String homeId = 'S1', bool homeAnswers = true}) =>
-        JellyfinClient(remote, 'dev', client: MockClient((r) async {
+    JellyfinClient client({
+      String? local = 'http://192.168.1.10:8096',
+      String homeId = 'S1',
+      bool homeAnswers = true,
+      List<DiscoveredServer> onWifi = const [],
+    }) =>
+        JellyfinClient(remote, 'dev', discover: () async => onWifi, client: MockClient((r) async {
           if (r.url.host == 'nas.ts.net') {
             return http.Response('{"Id":"S1","ServerName":"NAS"${local == null ? '' : ',"LocalAddress":"$local"'}}', 200);
           }
@@ -319,6 +325,14 @@ void main() {
       ]) {
         expect((await c.toPlayItem(movie).tvUrl!()).host, 'nas.ts.net');
       }
+    });
+
+    test('the Wi-Fi search finds it when the server names a Tailscale address for itself', () async {
+      final c = client(local: 'http://100.121.58.29:8096', onWifi: const [
+        DiscoveredServer(name: 'Other', address: 'http://192.168.1.20:8096', id: 'OTHER'),
+        DiscoveredServer(name: 'NAS', address: 'http://192.168.1.10:8096', id: 'S1'),
+      ]);
+      expect((await c.toPlayItem(movie).tvUrl!()).host, '192.168.1.10');
     });
 
     test('a server added by its home address is left as it is', () async {

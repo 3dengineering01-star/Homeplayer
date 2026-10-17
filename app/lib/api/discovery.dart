@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 
 class DiscoveredServer {
-  const DiscoveredServer({required this.name, required this.address});
+  const DiscoveredServer({required this.name, required this.address, this.id});
   final String name;
   final String address;
+
+  /// The server's id, which tells whether it is a server the app knows by another address.
+  final String? id;
 }
 
 /// Jellyfin answers a UDP broadcast on port 7359 with its name and address.
@@ -25,7 +28,7 @@ Future<List<DiscoveredServer>> discoverJellyfin({Duration timeout = const Durati
         final address = j['Address'] as String?;
         if (address == null) return;
         found[(j['Id'] as String?) ?? address] =
-            DiscoveredServer(name: (j['Name'] as String?) ?? d.address.address, address: address);
+            DiscoveredServer(name: (j['Name'] as String?) ?? d.address.address, address: address, id: j['Id'] as String?);
       } catch (_) {}
     });
     s.send(utf8.encode('who is JellyfinServer?'), InternetAddress('255.255.255.255'), 7359);
