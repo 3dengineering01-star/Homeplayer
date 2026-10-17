@@ -22,7 +22,7 @@ path:
     <div class="hero-visual">
       <div class="float-chip glass chip-a"><span class="ic i-orange">{{icon:play}}</span><span>Direct play<small>MKV · HEVC · DTS · ASS</small></span></div>
       <div class="phone">
-        <img src="{{root}}img/screens/servers.webp" width="600" height="1300" alt="OwnMedia: the list of your servers" fetchpriority="high">
+        <img src="{{root}}img/screens/home.webp" width="600" height="1300" alt="OwnMedia: the libraries of a home server as glass tiles, with the mini player" fetchpriority="high">
       </div>
       <div class="float-chip glass chip-b"><span class="ic i-cyan">{{icon:globe}}</span><span>Away from home<small>no port forwarding</small></span></div>
       <div class="float-chip glass chip-c"><span class="ic i-violet">{{icon:users}}</span><span>Invite friends<small>one link, no password</small></span></div>
@@ -162,23 +162,26 @@ path:
     </div>
     <div class="gallery">
       <div class="gallery-track" tabindex="0" aria-label="Screenshots, scroll sideways">
-        <figure class="shot"><div class="phone"><img src="{{root}}img/screens/servers.webp" width="600" height="1300" alt="The list of servers" loading="lazy"></div>
-          <figcaption>Your servers<span>Big cards, online status, the one you opened last</span></figcaption></figure>
+        <figure class="shot"><div class="phone"><img src="{{root}}img/screens/home.webp" width="600" height="1300" alt="The libraries of a server as glass tiles" loading="lazy"></div>
+          <figcaption>Your server<span>Libraries as big glass tiles, the mini player below</span></figcaption></figure>
         <figure class="shot"><div class="phone"><img src="{{root}}img/screens/library.webp" width="600" height="1300" alt="A movie library as a grid of posters" loading="lazy"></div>
           <figcaption>Libraries<span>Posters, sorting and “Continue watching”</span></figcaption></figure>
-        <figure class="shot"><div class="phone"><img src="{{root}}img/screens/player.webp" width="600" height="1300" alt="The video player with the audio track menu" loading="lazy"></div>
-          <figcaption>Video player<span>Gestures, audio and subtitle tracks, speed</span></figcaption></figure>
-        <figure class="shot"><div class="phone"><img src="{{root}}img/screens/music.webp" width="600" height="1300" alt="The music player with a large cover" loading="lazy"></div>
-          <figcaption>Music player<span>Swipe the cover, queue, equalizer</span></figcaption></figure>
+        <figure class="shot"><div class="phone"><img src="{{root}}img/screens/movie.webp" width="600" height="1300" alt="The page of the movie Sintel with Play and Play on TV buttons" loading="lazy"></div>
+          <figcaption>Movie page<span>Play, resume or send it to your TV</span></figcaption></figure>
+        <figure class="shot shot-wide"><div class="phone landscape"><img src="{{root}}img/screens/player.webp" width="1300" height="566" alt="The video player over a sunset scene from Sintel, with controls and subtitles" loading="lazy"></div>
+          <figcaption>Video player<span>Gestures, audio and subtitle tracks, speed, picture-in-picture</span></figcaption></figure>
+        <figure class="shot"><div class="phone"><img src="{{root}}img/screens/music.webp" width="600" height="1300" alt="The music player with a large album cover" loading="lazy"></div>
+          <figcaption>Music player<span>Swipe the cover, queue, equalizer, sleep timer</span></figcaption></figure>
         <figure class="shot"><div class="phone"><img src="{{root}}img/screens/photos.webp" width="600" height="1300" alt="Photos from the server as a grid" loading="lazy"></div>
           <figcaption>Photos<span>Your server’s photos in a grid, full screen, zoom</span></figcaption></figure>
-        <figure class="shot"><div class="phone"><img src="{{root}}img/screens/share.webp" width="600" height="1300" alt="Sharing the server with a friend" loading="lazy"></div>
-          <figcaption>Share with friends<span>Pick libraries, send an invite link</span></figcaption></figure>
       </div>
       <div class="gallery-nav" hidden>
         <button class="glass" type="button" data-dir="prev" aria-label="Previous screenshots">{{icon:left}}</button>
         <button class="glass" type="button" data-dir="next" aria-label="Next screenshots">{{icon:right}}</button>
       </div>
+      <p class="credits">Screenshots on a demo server with open content: <i>Sintel</i>, <i>Big Buck Bunny</i>,
+        <i>Elephants Dream</i>, <i>Tears of Steel</i> and <i>Caminandes</i> © Blender Foundation (CC BY), music from
+        <i>Tears of Steel</i> © Joram Letwory (CC BY-ND 3.0), photos NASA. <a href="{{root}}legal/#credits">Details</a>.</p>
     </div>
   </div>
 </section>

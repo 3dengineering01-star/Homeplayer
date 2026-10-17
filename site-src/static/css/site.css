@@ -288,7 +288,7 @@ section { padding: 72px 0; }
 .float-chip .ic svg { width: 19px; height: 19px; }
 .chip-a { left: -4%; top: 16%; }
 .chip-b { right: -6%; top: 46%; }
-.chip-c { left: 2%; bottom: 10%; }
+.chip-c { left: 2%; bottom: 24%; }
 @media (max-width: 900px) {
   .hero .wrap { grid-template-columns: 1fr; gap: 36px; }
   .hero-text { text-align: center; }
@@ -619,3 +619,12 @@ button:disabled { opacity: 0.6; cursor: default; }
   .copy { flex-direction: column; }
   .copy button { align-self: flex-start; }
 }
+
+/* The video player is a landscape screenshot. */
+.phone.landscape { width: min(560px, 86vw); aspect-ratio: 1300 / 566; padding: 9px; border-radius: 30px; }
+.phone.landscape img { border-radius: 18px; }
+.phone.landscape::after { top: 50%; left: 16px; margin: -6px 0 0; width: 11px; height: 11px; }
+.shot-wide { align-self: center; margin-top: -40px; }
+.shot-wide figcaption span { max-width: 360px; }
+.gallery-track { align-items: flex-start; }
+.credits { text-align: center; font-size: 0.85rem; color: var(--muted); max-width: 760px; margin: 18px auto 0; }
