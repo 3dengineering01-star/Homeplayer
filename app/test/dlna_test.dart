@@ -210,8 +210,11 @@ void main() {
     final tv = _FakeTv(), reports = _Reports();
     final cast = _cast(tv, _movie(reports));
     await cast.start();
-    tv.states = [TvState.stopped];
     tv.at = const Duration(minutes: 89);
+    await cast.poll();
+    // Stopped, the TV says 0:00; the place is the last one it gave.
+    tv.states = [TvState.stopped];
+    tv.at = Duration.zero;
     await cast.poll();
     expect(cast.ended, isTrue);
     expect(reports.log, ['started 0', 'stopped 5340']);
@@ -235,6 +238,34 @@ void main() {
     expect(cast.error, isNull);
     expect(cast.state, TvState.playing);
     cast.dispose();
+  });
+
+  test('a movie that ends while the phone sleeps is reported as played to the end', () async {
+    var now = DateTime(2026, 10, 17, 20);
+    final tv = _FakeTv(), reports = _Reports();
+    final cast = TvCast(
+      tv: tv,
+      tvName: 'Living room',
+      item: _movie(reports),
+      pollEvery: const Duration(hours: 1),
+      waitStep: Duration.zero,
+      stoppedGrace: Duration.zero,
+      clock: () => now,
+    );
+    await cast.start();
+    tv.at = const Duration(minutes: 80);
+    await cast.poll();
+    // The phone sleeps for 20 minutes; the TV plays the last 10 and stops.
+    now = now.add(const Duration(minutes: 20));
+    tv.states = [TvState.stopped];
+    tv.at = Duration.zero;
+    await cast.poll();
+    expect(reports.log.last, 'stopped 5400', reason: 'the end, not minute 80');
+
+    expect(estimatedPlace(const Duration(minutes: 5), const Duration(seconds: 4), null, silence: const Duration(seconds: 6)),
+        const Duration(minutes: 5), reason: 'an ordinary stop keeps its place');
+    expect(estimatedPlace(const Duration(minutes: 5), const Duration(minutes: 2), const Duration(hours: 1), silence: const Duration(seconds: 6)),
+        const Duration(minutes: 7));
   });
 
   test('a file the TV cannot open is an error, and nothing is reported', () async {

@@ -24,7 +24,8 @@ class TvCast extends ChangeNotifier {
     this.waitStep = const Duration(milliseconds: 500),
     this.openTimeout = const Duration(seconds: 20),
     this.stoppedGrace = const Duration(seconds: 5),
-  });
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
 
   final TvControl tv;
   final String tvName;
@@ -38,6 +39,13 @@ class TvCast extends ChangeNotifier {
   /// Some TVs report "stopped" for a moment before they start loading; after this it means
   /// they could not open the file.
   final Duration stoppedGrace;
+
+  final DateTime Function() _clock;
+
+  /// When the TV last answered, and whether it was playing then: a phone asleep hears nothing
+  /// for a while, and the TV may finish the video meanwhile.
+  DateTime? _heard;
+  bool _wasPlaying = false;
 
   /// The cast the app follows now; null when nothing plays on a TV.
   static final active = ValueNotifier<TvCast?>(null);
@@ -71,6 +79,9 @@ class TvCast extends ChangeNotifier {
 
   /// After this many unanswered polls the remote says the TV is gone (it may come back).
   static const missedToLost = 3;
+
+  /// Longer than the TV ever takes to answer: without an answer for this long, the phone slept.
+  static const silence = Duration(seconds: 20);
 
   static const lostMessage = 'The TV stopped answering. It may have closed the video, gone to standby or lost the Wi-Fi.';
 
@@ -136,11 +147,21 @@ class TvCast extends ChangeNotifier {
       final s = await tv.state();
       final p = await tv.position();
       state = s;
-      if (p.position != null) position = p.position!;
+      final stopped = s == TvState.stopped || s == TvState.noMedia;
+      // A stopped TV says 0:00: the place is the last one heard.
+      if (p.position != null && !stopped) position = p.position!;
       if (p.duration != null && p.duration! > Duration.zero) duration = p.duration;
       _missed = 0;
       if (error == lostMessage) error = null;
-      if (s == TvState.stopped || s == TvState.noMedia) {
+      final now = _clock(), heard = _heard;
+      if (stopped && _wasPlaying && heard != null) {
+        // After a long silence (the phone was asleep) the TV went on playing meanwhile: the
+        // server gets where it must have got to, up to the end.
+        position = estimatedPlace(position, now.difference(heard), duration, silence: silence);
+      }
+      _heard = now;
+      _wasPlaying = s == TvState.playing;
+      if (stopped) {
         _ended = true;
         release();
       } else if (++_polls % 5 == 0) {
@@ -231,4 +252,12 @@ class TvCast extends ChangeNotifier {
     release();
     super.dispose();
   }
+}
+
+/// Where a TV that was playing at [last] must have got to after [gap] without an answer; [last]
+/// itself when the gap is no longer than [silence] (an ordinary stop). Never past [duration].
+Duration estimatedPlace(Duration last, Duration gap, Duration? duration, {required Duration silence}) {
+  if (gap <= silence) return last;
+  final guess = last + gap;
+  return duration != null && guess > duration ? duration : guess;
 }
