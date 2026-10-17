@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
@@ -72,12 +73,16 @@ class Playback extends BaseAudioHandler with SeekHandler {
       debugPrint('homeplay stream cache folder not set: $e');
     }
     try {
-      await native.setProperty('ao', 'audiotrack,opensles');
       // mpv's default 0.2 s ran dry now and then on the phone ("Audio device underrun"), a click.
       await native.setProperty('audio-buffer', '0.5');
-      // Its own audio session, so Android's equalizer can work on it.
-      _eqSession = await NativeEq.session();
-      if (_eqSession != null) await native.setProperty('audiotrack-session-id', '$_eqSession');
+      // iOS keeps mpv's own output (Audio Unit): the Android outputs do not exist there, and mpv
+      // would play no sound at all without falling back to another one.
+      if (Platform.isAndroid) {
+        await native.setProperty('ao', 'audiotrack,opensles');
+        // Its own audio session, so Android's equalizer can work on it.
+        _eqSession = await NativeEq.session();
+        if (_eqSession != null) await native.setProperty('audiotrack-session-id', '$_eqSession');
+      }
     } catch (e) {
       debugPrint('homeplay audio output not changed: $e');
     }

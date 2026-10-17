@@ -213,7 +213,7 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
               title: const Text('Add to playlist'),
               onTap: () => Navigator.pop(context, 'playlist'),
             ),
-          if (item.type == 'Audio' || item.type == 'MusicAlbum')
+          if ((item.type == 'Audio' || item.type == 'MusicAlbum') && SaveToPhone.available)
             ListTile(
               leading: const Icon(Icons.save_alt),
               title: const Text("Save to phone's Music"),

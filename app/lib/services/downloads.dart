@@ -221,7 +221,8 @@ class Downloads {
   /// Queues [items] (playable ones not on the phone yet). Returns how many were added.
   Future<int> add(JellyfinClient client, List<JellyfinItem> items, {String? group}) async {
     await init();
-    if (Platform.isAndroid) await FileDownloader().permissions.request(PermissionType.notifications);
+    // The notification shows the progress; Android 13+ and iOS ask the user first.
+    await FileDownloader().permissions.request(PermissionType.notifications);
     var added = 0;
     for (final item in items.where((i) => i.isPlayable && find(i.id) == null)) {
       final entry = await _sidecars(client, item, group);

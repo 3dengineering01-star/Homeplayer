@@ -1,0 +1,74 @@
+# Сборка iPhone-версии на Mac от GitHub: компилирует приложение, запускает его в симуляторе
+# iPhone и проверяет, что оно открывается и не падает. Подписи и App Store здесь нет.
+name: iOS
+
+on:
+  push:
+    paths: ['app/**', '.github/workflows/ios.yml']
+  pull_request:
+    paths: ['app/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Xcode 26
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Release build without signing
+        run: flutter build ios --release --no-codesign
+
+      - name: Build for the simulator
+        run: flutter build ios --simulator --debug
+
+      - name: Start in the iPhone simulator
+        run: |
+          set -euo pipefail
+          device=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = [d for runtime, ds in devices.items() if "iOS" in runtime for d in ds if d["name"].startswith("iPhone")]
+          print(phones[-1]["udid"])')
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl install "$device" build/ios/iphonesimulator/Runner.app
+          xcrun simctl launch "$device" dev.homeplay.homeplay
+          sleep 30
+          mkdir -p ../shots
+          xcrun simctl io "$device" screenshot ../shots/start.png
+          # Still running after 30 s, and no crash report for it.
+          xcrun simctl spawn "$device" launchctl list | grep -q dev.homeplay.homeplay
+          if ls ~/Library/Logs/DiagnosticReports/Runner* 2>/dev/null; then
+            echo "::error::The app crashed in the simulator"
+            exit 1
+          fi
+          echo "The app is running in the simulator"
+
+      - name: Screenshot
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ios-simulator
+          path: shots/
+          if-no-files-found: ignore

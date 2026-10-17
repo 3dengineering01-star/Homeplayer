@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
+import '../services/device_name.dart';
 import '../services/quality.dart';
 import '../services/search_filters.dart';
 import 'common.dart';
@@ -224,7 +225,7 @@ class JellyfinClient {
   String get _base => account.baseUrl;
 
   static String _authHeader(String deviceId, [String? token]) =>
-      'MediaBrowser Client="OwnMedia", Device="Android", DeviceId="$deviceId", Version="$_appVersion"'
+      'MediaBrowser Client="OwnMedia", Device="$platformName", DeviceId="$deviceId", Version="$_appVersion"'
       '${token != null ? ', Token="$token"' : ''}';
 
   Map<String, String> get headers => {'Authorization': _authHeader(deviceId, account.token)};

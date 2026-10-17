@@ -1,10 +1,10 @@
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../models/account.dart';
 import '../services/account_store.dart';
+import '../services/device_name.dart';
 import '../services/invite_link.dart';
 import '../widgets/own_server_guide.dart';
 import 'accounts_screen.dart';
@@ -39,16 +39,7 @@ class _JoinScreenState extends State<JoinScreen> {
     });
   }
 
-  Future<String> _deviceName() async {
-    try {
-      // "Google Pixel 10a", "samsung SM-S911B": the owner sees it in the list of who joined.
-      final info = await DeviceInfoPlugin().androidInfo;
-      final maker = info.manufacturer.trim();
-      return maker.isEmpty || info.model.toLowerCase().startsWith(maker.toLowerCase()) ? info.model : '$maker ${info.model}';
-    } catch (_) {
-      return 'Phone';
-    }
-  }
+  Future<String> _deviceName() => deviceName();
 
   Future<void> _join() async {
     setState(() {
