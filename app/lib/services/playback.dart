@@ -365,6 +365,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// The queue changes at once (lists follow it without a flicker); mpv follows.
   Future<void> moveQueueItem(int from, int to) async {
     if (from == to || from < 0 || to < 0 || from >= items.value.length || to >= items.value.length) return;
+    if (_pending != null) return _editPending(moved(items.value, from, to), indexAfterMove(current.value, from, to));
     _editing++;
     _remapIndexes((i) => indexAfterMove(i, from, to));
     items.value = moved(items.value, from, to);
@@ -381,6 +382,9 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// Takes the entry at [index] out of the queue; not the one playing.
   Future<void> removeFromQueue(int index) async {
     if (index == current.value || index < 0 || index >= items.value.length) return;
+    if (_pending != null) {
+      return _editPending([...items.value]..removeAt(index), indexAfterRemove(current.value, index) ?? current.value);
+    }
     _editing++;
     _remapIndexes((i) => indexAfterRemove(i, index));
     items.value = [...items.value]..removeAt(index);
@@ -402,6 +406,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   Future<void> _insert(List<PlayItem> more, {required bool next}) async {
     if (more.isEmpty) return;
+    if (_pending != null && !more.any((i) => i.isVideo)) {
+      final at = next ? current.value + 1 : items.value.length;
+      return _editPending([...items.value]..insertAll(at, more), current.value);
+    }
     if (items.value.isEmpty || !_isMusic || more.any((i) => i.isVideo)) {
       await start(more, 0);
       return;
@@ -426,6 +434,15 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
     queue.add([for (final i in items.value) _mediaItem(i)]);
     _broadcast();
+  }
+
+  /// An edit of the restored queue before it is played: only the lists change.
+  Future<void> _editPending(List<PlayItem> list, int index) async {
+    final p = _pending!;
+    _pending = (items: list, index: index, position: p.position);
+    current.value = index;
+    items.value = list;
+    _scheduleSave();
   }
 
   /// Puts the queue in [target] order (the same entries) with mpv moves, without a pause.
@@ -453,12 +470,11 @@ class Playback extends BaseAudioHandler with SeekHandler {
     current.value = after(current.value) ?? current.value;
   }
 
-  /// Plays [queueItems] from [index], optionally from [startAt] (a resume point).
-  ///
-  /// [paused]: the queue saved when the app was closed. It opens in its own order without
-  /// playing, without taking the sound from other apps and without telling the server, until
-  /// the user presses Play.
-  Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt, bool paused = false}) async {
+  /// Plays [queueItems] from [index], optionally from [startAt] (a resume point). [keepOrder]:
+  /// a queue that is already in its played order (the restored one) is not shuffled again.
+  Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt, bool keepOrder = false}) async {
+    _pending = null;
+    restored.value = false;
     _endReport(current.value, player.state.position);
     audioInfo.value = null;
     _tracksApplied.clear();
@@ -466,7 +482,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     _stopReported.clear();
     final music = !queueItems.any((i) => i.isVideo);
     _unshuffledOrder = queueItems;
-    if (music && shuffle.value && queueItems.length > 1 && !paused) {
+    if (music && shuffle.value && queueItems.length > 1 && !keepOrder) {
       queueItems = [for (final i in shuffledOrder(queueItems.length, index, _random)) queueItems[i]];
       index = 0;
     }
@@ -477,7 +493,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     await _applySound();
     queue.add([for (final i in queueItems) _mediaItem(i)]);
     mediaItem.add(_mediaItem(queueItems[index]));
-    if (!paused) await _session?.setActive(true);
+    await _session?.setActive(true);
     await _keepControls();
     // media_kit keeps video off (vid=no) until a video output is attached; a file without
     // sound would otherwise end at once with "no audio or video streams selected".
@@ -502,19 +518,15 @@ class Playback extends BaseAudioHandler with SeekHandler {
     } catch (e) {
       debugPrint('homeplay prefetch not set: $e');
     }
-    await player.open(
-      Playlist(
+    await player.open(Playlist(
         [
           for (var n = 0; n < queueItems.length; n++)
             Media(queueItems[n].url.toString(), httpHeaders: queueItems[n].headers, start: n == index ? startAt : null),
         ],
         index: index,
-      ),
-      play: !paused,
-    );
+      ));
     _notice();
-    _reportOnPlay = paused;
-    if (!paused) _beginReport(startAt ?? Duration.zero);
+    _beginReport(startAt ?? Duration.zero);
     // Also while paused: Android may recreate the service then, and the notification's Play must work.
     _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) {
       _reportProgress();
@@ -647,18 +659,12 @@ class Playback extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> removeQueueItemAt(int index) => removeFromQueue(index);
 
-  // The restored queue has not told the server yet; the first Play does.
-  bool _reportOnPlay = false;
-
   @override
   Future<void> play() async {
+    if (_pending case final p?) return start(p.items, p.index, startAt: p.position, keepOrder: true);
     await _session?.setActive(true);
     await _keepControls();
     await player.play();
-    if (_reportOnPlay) {
-      _reportOnPlay = false;
-      _beginReport(player.state.position);
-    }
   }
 
   @override
@@ -666,6 +672,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> seek(Duration position) async {
+    if (_pending case final p?) {
+      _pending = (items: p.items, index: p.index, position: position);
+      return;
+    }
     await player.seek(position);
     playbackState.add(playbackState.value.copyWith(updatePosition: position));
     _reportProgress(position);
@@ -673,20 +683,30 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToNext() {
+    if (_pending != null) return _startPending(current.value + 1);
     _endReport(current.value, player.state.position);
     return player.next();
   }
 
   @override
   Future<void> skipToPrevious() {
+    if (_pending != null) return _startPending(current.value - 1);
     _endReport(current.value, player.state.position);
     return player.previous();
   }
 
   @override
   Future<void> skipToQueueItem(int index) {
+    if (_pending != null) return _startPending(index);
     _endReport(current.value, player.state.position);
     return player.jump(index);
+  }
+
+  /// Plays the restored queue from [index], from its start.
+  Future<void> _startPending(int index) async {
+    final p = _pending!;
+    if (index < 0 || index >= p.items.length) return;
+    await start(p.items, index, keepOrder: true);
   }
 
   @override
@@ -697,7 +717,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
     _cacheLog?.cancel();
     _cacheLog = null;
     setSleepTimer(null);
-    _reportOnPlay = false;
+    _pending = null;
+    restored.value = false;
     _saveTimer?.cancel();
     await _prefs?.remove(_savedQueueKey);
     audioInfo.value = null;
@@ -734,21 +755,19 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
   }
 
-  // Nothing goes to the server for a restored queue until it is played (see [_reportOnPlay]).
   void _beginReport(Duration position) {
-    if (_reportOnPlay) return;
     _stopReported.remove(current.value); // it may be played again after going back
     currentItem?.reporter?.started(position);
   }
 
   void _reportProgress([Duration? position]) {
-    if (_reportOnPlay || currentItem == null || _stopReported.contains(current.value)) return;
+    if (currentItem == null || _stopReported.contains(current.value)) return;
     currentItem?.reporter?.progress(position ?? player.state.position, paused: !player.state.playing);
   }
 
   /// Once per queue entry: when it is left, skipped or finished.
   void _endReport(int index, Duration position) {
-    if (_reportOnPlay || index >= items.value.length || !_stopReported.add(index)) return;
+    if (index >= items.value.length || !_stopReported.add(index)) return;
     _lastStopReport =
         items.value[index].reporter?.stopped(position, duration: mediaItem.value?.duration) ?? Future.value();
   }
@@ -917,7 +936,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
   void _saveQueue() {
     final prefs = _prefs;
     if (prefs == null || items.value.isEmpty) return;
-    final saved = SavedQueue.of(items.value, current.value, _player?.state.position ?? Duration.zero);
+    final position = _pending?.position ?? _player?.state.position ?? Duration.zero;
+    final saved = SavedQueue.of(items.value, current.value, position);
     // A video, or music that cannot be found again: an older queue would come back instead.
     if (saved == null) {
       prefs.remove(_savedQueueKey);
@@ -926,18 +946,34 @@ class Playback extends BaseAudioHandler with SeekHandler {
     prefs.setString(_savedQueueKey, jsonEncode(saved.toJson()));
   }
 
-  /// Brings back the music queue the app had when it was closed, paused where it was. Tracks
-  /// the servers no longer have are left out. Does nothing if something plays already.
+  /// The restored queue until it is played: shown in the mini player, nothing opened yet.
+  ({List<PlayItem> items, int index, Duration position})? _pending;
+
+  /// True while the queue in [items] is the restored one, not opened in the player yet.
+  final ValueNotifier<bool> restored = ValueNotifier(false);
+
+  /// Where the restored queue will start.
+  Duration? get pendingPosition => _pending?.position;
+
+  /// Brings back the music queue the app had when it was closed, where it was. Tracks the
+  /// servers no longer have are left out. Does nothing if something plays already.
+  ///
+  /// Only the lists are filled: mpv and the media notification start with Play, as for any
+  /// other queue. Android also starts this app without a screen, for its media service; a
+  /// player made there outlived it, and the notification's buttons stopped working.
   Future<void> restoreQueue() async {
     final raw = _prefs?.getString(_savedQueueKey);
     if (raw == null || items.value.isNotEmpty) return;
     try {
       final saved = SavedQueue.fromJson(jsonDecode(raw));
       if (saved == null) return;
-      final restored = saved.restore(await TrackLookup.rebuild(saved.refs));
+      final back = saved.restore(await TrackLookup.rebuild(saved.refs));
       // The user may have started something while the servers answered.
-      if (restored == null || items.value.isNotEmpty) return;
-      await start(restored.items, restored.index, startAt: restored.position, paused: true);
+      if (back == null || items.value.isNotEmpty) return;
+      _pending = back;
+      restored.value = true;
+      current.value = back.index;
+      items.value = back.items;
     } catch (e) {
       debugPrint('homeplay saved queue not restored: $e');
     }

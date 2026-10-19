@@ -19,7 +19,7 @@ class MiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final pb = Playback.instance;
     return ListenableBuilder(
-      listenable: Listenable.merge([pb.items, pb.current, pb.screenOpen]),
+      listenable: Listenable.merge([pb.items, pb.current, pb.screenOpen, pb.restored]),
       builder: (context, _) {
         final item = pb.currentItem;
         if (item == null || item.isVideo || pb.screenOpen.value) return const SizedBox.shrink();
@@ -56,18 +56,25 @@ class MiniPlayer extends StatelessWidget {
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.primary)),
                       ]),
                     ),
-                    StreamBuilder<bool>(
-                      stream: pb.player.stream.playing,
-                      initialData: pb.player.state.playing,
-                      builder: (context, s) => IconButton.filled(
-                        icon: Icon(s.data! ? Icons.pause : Icons.play_arrow, semanticLabel: s.data! ? 'Pause' : 'Play'),
-                        onPressed: s.data! ? pb.pause : pb.play,
+                    // The queue from the last run is not in the player yet (see Playback.restoreQueue).
+                    if (pb.restored.value)
+                      IconButton.filled(
+                        icon: const Icon(Icons.play_arrow, semanticLabel: 'Play'),
+                        onPressed: pb.play,
+                      )
+                    else
+                      StreamBuilder<bool>(
+                        stream: pb.player.stream.playing,
+                        initialData: pb.player.state.playing,
+                        builder: (context, s) => IconButton.filled(
+                          icon: Icon(s.data! ? Icons.pause : Icons.play_arrow, semanticLabel: s.data! ? 'Pause' : 'Play'),
+                          onPressed: s.data! ? pb.pause : pb.play,
+                        ),
                       ),
-                    ),
                     IconButton(icon: const Icon(Icons.close, semanticLabel: 'Stop'), onPressed: pb.stop),
                   ]),
                 ),
-                _Progress(pb: pb),
+                if (!pb.restored.value) _Progress(pb: pb),
               ]),
             ),
           ),
