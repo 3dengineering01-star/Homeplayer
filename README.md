@@ -22,6 +22,10 @@
 Без терминала: двойной щелчок по `install-on-phone.cmd` в корне проекта скачивает свежую версию текущей ветки
 (`git pull`), собирает её и ставит на подключённый по USB Android-телефон (`./app/build.sh run`).
 
+`publish-app.cmd` (двойной щелчок, нужен `app/android/key.properties`) — выпуск для людей: свежая версия с
+GitHub, подписанный APK (`./app/build.sh apk`), копия рядом с модулем Homeplay Backup на этом компьютере
+(приглашения и QR-код сразу раздают новую версию) и `app/dist/site/OwnMedia.apk` для загрузки на сайт.
+
 ## Что умеет версия 0.1
 
 - Вход на Jellyfin (логин и пароль) и на Navidrome/Subsonic (token auth). Пароль не хранится.
