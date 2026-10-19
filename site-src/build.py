@@ -63,7 +63,7 @@ SETTINGS = {
     # (too big for git, like the installer). APK_VERSION is the versionName of that build.
     "APK_URL": "{{root}}download/OwnMedia.apk",
     "APK_FILE": r"D:\APP\OwnMedia\app\dist\site\OwnMedia.apk",
-    "APK_VERSION": "0.3.14",
+    "APK_VERSION": "0.3.15",
     # The Jellyfin plugin catalogue for NAS, Docker and Linux (jellyfin-repo/manifest.json).
     "CATALOG_URL": "https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/manifest.json",
     # The plugin's public source code (GPL).
