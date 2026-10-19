@@ -219,6 +219,7 @@ class SubsonicClient {
         reporter: _Scrobbler(this, song),
         favorite: ServerFavorite(song.starred, (on) => _call(on ? 'star' : 'unstar', {'id': song.id})),
         ref: TrackRef(TrackSource.subsonic, song.id, accountId: account.id),
+        duration: song.duration,
       );
 
   Future<void> _scrobble(String id, {required bool submission}) async {

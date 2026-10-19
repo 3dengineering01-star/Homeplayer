@@ -40,6 +40,7 @@ class PlayItem {
     this.container,
     this.tvUrl,
     this.ref,
+    this.duration,
   });
 
   final String title;
@@ -85,6 +86,10 @@ class PlayItem {
   /// lyrics or similar songs; null for videos and what cannot be found again.
   final TrackRef? ref;
 
+  /// The length the server gives for the file. mpv's own guess is wrong for a stream the server
+  /// converts (it estimates from the bitrate).
+  final Duration? duration;
+
   PlayItem copyWith({
     Uri? url,
     String? audioTrackId,
@@ -111,6 +116,7 @@ class PlayItem {
         container: container,
         tvUrl: tvUrl,
         ref: ref,
+        duration: duration,
       );
 }
 

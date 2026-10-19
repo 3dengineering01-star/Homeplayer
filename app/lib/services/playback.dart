@@ -821,9 +821,19 @@ class Playback extends BaseAudioHandler with SeekHandler {
         items.value[index].reporter?.stopped(position, duration: mediaItem.value?.duration) ?? Future.value();
   }
 
+  /// The playing track's length: the server's, else [fromPlayer] (mpv's). mpv only estimates
+  /// the length of a stream the server converts (music on mobile data), often a minute off.
+  Duration lengthOf(Duration fromPlayer) {
+    final item = currentItem;
+    return item != null && !item.isVideo && item.duration != null && item.duration! > Duration.zero
+        ? item.duration!
+        : fromPlayer;
+  }
+
   MediaItem _mediaItem(PlayItem i) => MediaItem(
         id: i.url.toString(),
         title: i.title,
+        duration: i.isVideo ? null : i.duration,
         artist: i.subtitle,
         artUri: i.artwork,
         artHeaders: i.headers.isEmpty ? null : i.headers,
@@ -854,7 +864,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     s.position.listen((p) => _lastPosition = p);
     s.duration.listen((d) {
       final m = mediaItem.value;
-      if (m != null && d > Duration.zero) mediaItem.add(m.copyWith(duration: d));
+      if (m != null && d > Duration.zero) mediaItem.add(m.copyWith(duration: lengthOf(d)));
       if (kDebugMode && d > Duration.zero) _logDecoders();
       // Once per file, when its audio output is open.
       if (d > Duration.zero) {

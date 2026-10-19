@@ -45,17 +45,23 @@ class LrcLib {
   }
 }
 
-/// The best of LRCLIB's search results: within 3 seconds of [duration] when it is known, timed
-/// lyrics before plain ones, then the closest length. Null when none fits.
+/// The best of LRCLIB's search results: the ones within 3 seconds of [duration] when there are
+/// (the same recording), else all of them; timed lyrics before plain ones, then the closest
+/// length. The same song in another edition has the same words, so a length that does not match
+/// still gets lyrics.
 Map<String, dynamic>? pickLrcLib(Object? results, Duration? duration) {
   if (results is! List) return null;
-  final fits = <Map<String, dynamic>>[
+  final all = <Map<String, dynamic>>[
     for (final r in results)
       if (r is Map<String, dynamic> &&
-          (r['syncedLyrics'] is String || r['plainLyrics'] is String || r['instrumental'] == true) &&
-          (duration == null || r['duration'] is! num || ((r['duration'] as num) - duration.inMilliseconds / 1000).abs() <= 3))
+          (r['syncedLyrics'] is String || r['plainLyrics'] is String || r['instrumental'] == true))
         r,
   ];
+  final same = [
+    for (final r in all)
+      if (duration != null && r['duration'] is num && ((r['duration'] as num) - duration.inMilliseconds / 1000).abs() <= 3) r,
+  ];
+  final fits = same.isNotEmpty ? same : all;
   if (fits.isEmpty) return null;
   double off(Map<String, dynamic> r) =>
       duration == null || r['duration'] is! num ? 0 : ((r['duration'] as num) - duration.inMilliseconds / 1000).abs();

@@ -242,7 +242,7 @@ class _Progress extends StatelessWidget {
         stream: pb.player.stream.position,
         initialData: pb.player.state.position,
         builder: (context, pos) {
-          final total = pb.player.state.duration.inMilliseconds;
+          final total = pb.lengthOf(pb.player.state.duration).inMilliseconds;
           final value = total > 0 ? (pos.data!.inMilliseconds / total).clamp(0.0, 1.0) : 0.0;
           return LinearProgressIndicator(value: value, minHeight: 3, backgroundColor: Colors.transparent);
         },

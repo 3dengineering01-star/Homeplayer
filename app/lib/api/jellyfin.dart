@@ -1084,6 +1084,7 @@ class JellyfinClient {
         favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
         container: item.container,
         ref: item.isVideo ? null : TrackRef(TrackSource.jellyfin, item.id, accountId: account.id),
+        duration: item.runTime,
         tvUrl: () async {
           final url = streamUrl(item, versionId: versionId);
           final home = await homeBase();

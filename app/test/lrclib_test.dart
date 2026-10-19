@@ -29,8 +29,8 @@ void main() {
     expect(pickLrcLib([_live, _studio], const Duration(seconds: 469))?['trackName'], 'Time (live)');
     // Length unknown: the timed ones.
     expect(pickLrcLib([_live, _studio], null)?['trackName'], 'Time');
-    // Nothing near that length.
-    expect(pickLrcLib([_live, _studio], const Duration(seconds: 200)), isNull);
+    // Nothing near that length (a converted stream's guess): the closest timed lyrics anyway.
+    expect(pickLrcLib([_live, _studio], const Duration(seconds: 364))?['trackName'], 'Time');
     expect(pickLrcLib('nonsense', null), isNull);
   });
 
