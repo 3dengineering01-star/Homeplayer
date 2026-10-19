@@ -44,12 +44,16 @@ public static class PhoneLink
     public const string PlayStoreUrl = "https://play.google.com/store/apps/details?id=dev.homeplay.homeplay";
 
     /// <summary>
-    /// Where a phone gets the app: the file on this server when it has one, else Google Play.
+    /// The newest app on the OwnMedia website. Every release goes there (publish-app.cmd), so a
+    /// friend always gets the latest version, whatever an older setup put next to the plugin.
     /// </summary>
-    /// <param name="server">The server's address as the phone reaches it.</param>
-    /// <param name="hasApk">Whether the app file lies next to the plugin.</param>
-    /// <returns>The address.</returns>
-    public static string AppUrl(string server, bool hasApk) => hasApk ? $"{server.TrimEnd('/')}/Homeplay/App" : PlayStoreUrl;
+    public const string SiteApkUrl = "https://ownmedia.app/download/OwnMedia.apk";
+
+    /// <summary>
+    /// Where a phone gets the app: the website. The file next to the plugin (/Homeplay/App) still
+    /// answers for links and QR codes made before.
+    /// </summary>
+    public const string AppUrl = SiteApkUrl;
 
     /// <summary>
     /// The address of this computer in the home network: on an adapter with a router (not a
@@ -117,14 +121,14 @@ public static class PhoneLink
     /// </summary>
     /// <param name="serverName">The server's name, as the app will find it.</param>
     /// <param name="serverUrl">The server address, for typing it in by hand.</param>
-    /// <param name="qrPng">The QR code of the app's address, as PNG; null when there is no app file.</param>
+    /// <param name="qrPng">The QR code of the app's address, as PNG; null when it could not be made.</param>
     /// <returns>The HTML page.</returns>
     public static string Page(string serverName, string serverUrl, byte[]? qrPng)
     {
         var name = WebUtility.HtmlEncode(serverName);
         var url = WebUtility.HtmlEncode(serverUrl);
         var qr = qrPng is null
-            ? "<p class=\"warn\">No QR code could be made. Get OwnMedia from Google Play on the phone.</p>"
+            ? "<p class=\"warn\">No QR code could be made. On the phone, open ownmedia.app and download OwnMedia for Android.</p>"
             : $"<img class=\"qr\" alt=\"QR code: the OwnMedia app for Android\" src=\"data:image/png;base64,{Convert.ToBase64String(qrPng)}\">";
         return $$"""
             <!doctype html>

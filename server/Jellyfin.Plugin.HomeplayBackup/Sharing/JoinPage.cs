@@ -71,7 +71,7 @@ public static class JoinPage
     /// <param name="libraries">The names of the libraries the invite opens.</param>
     /// <param name="server">The server's internet address.</param>
     /// <param name="code">The invite's code.</param>
-    /// <param name="appUrl">Where the app comes from: the file on the server, or Google Play.</param>
+    /// <param name="appUrl">Where the app comes from: the OwnMedia website, or Google Play.</param>
     /// <param name="setupUrl">Where the server installer downloads from; null when this server has none.</param>
     /// <returns>The HTML page.</returns>
     public static string Html(InviteState state, string serverName, IReadOnlyList<string> libraries, string server, string code, string appUrl, string? setupUrl = null)

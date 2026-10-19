@@ -78,6 +78,6 @@ public sealed class PhoneLinkTests : IDisposable
         Assert.Contains("Anna&#39;s &lt;PC&gt;", page, StringComparison.Ordinal);
         Assert.Contains("http://192.168.1.108:8096", page, StringComparison.Ordinal);
         Assert.DoesNotContain("<PC>", page, StringComparison.Ordinal);
-        Assert.Contains("Google Play", PhoneLink.Page("PC", "http://x:8096", null), StringComparison.Ordinal);
+        Assert.Contains("ownmedia.app", PhoneLink.Page("PC", "http://x:8096", null), StringComparison.Ordinal);
     }
 }
