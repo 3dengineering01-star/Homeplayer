@@ -15,11 +15,26 @@
       status.textContent = text;
       status.className = kind;
     };
+    var emailError = document.getElementById("email-error");
+    var emailOk = function () {
+      return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.value.trim());
+    };
+    var setEmailError = function (text) {
+      emailError.textContent = text;
+      emailError.hidden = !text;
+      if (text) form.email.setAttribute("aria-invalid", "true");
+      else form.email.removeAttribute("aria-invalid");
+    };
+    // Checked when the person leaves the field (not while typing); cleared on the next keystroke.
+    form.email.addEventListener("blur", function () {
+      if (form.email.value.trim() && !emailOk()) setEmailError("Enter an email like name@example.com.");
+    });
+    form.email.addEventListener("input", function () { setEmailError(""); });
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var email = form.email.value.trim();
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-        show("Please enter a valid email.", "err");
+      if (!emailOk()) {
+        setEmailError("Enter an email like name@example.com.");
         form.email.focus();
         return;
       }
@@ -45,7 +60,7 @@
         form.reset();
         show("You're on the list. Thanks! We'll write when the beta opens.", "ok");
       }).catch(function () {
-        show("Something went wrong. Please try again in a minute.", "err");
+        show("The sign-up didn’t reach us. Check your connection, then select Join the beta again.", "err");
       }).then(function () {
         button.disabled = false;
       });
@@ -56,6 +71,7 @@
   var track = document.querySelector(".gallery-track");
   var nav = document.querySelector(".gallery-nav");
   if (track && nav) {
+    var calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var step = function () {
       var shot = track.querySelector(".shot");
       return shot ? shot.getBoundingClientRect().width + 26 : 280;
@@ -64,10 +80,10 @@
       nav.hidden = track.scrollWidth <= track.clientWidth + 4;
     };
     nav.querySelector("[data-dir=prev]").addEventListener("click", function () {
-      track.scrollBy({ left: -step(), behavior: "smooth" });
+      track.scrollBy({ left: -step(), behavior: calm ? "auto" : "smooth" });
     });
     nav.querySelector("[data-dir=next]").addEventListener("click", function () {
-      track.scrollBy({ left: step(), behavior: "smooth" });
+      track.scrollBy({ left: step(), behavior: calm ? "auto" : "smooth" });
     });
     window.addEventListener("resize", update);
     update();

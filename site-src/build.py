@@ -182,7 +182,7 @@ def header(root, path):
       <a class="btn btn-small" href="{root}#beta">Get the app</a>
     </nav>
     <details class="menu">
-      <summary aria-label="Menu">{icon("menu")}</summary>
+      <summary class="tip-below" aria-label="Open menu" data-tip="Open menu">{icon("menu")}</summary>
       <nav class="menu-panel" aria-label="Main">
         <a href="{root}">Home</a>
         {links}

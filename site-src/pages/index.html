@@ -20,7 +20,7 @@ path:
       </ul>
     </div>
     <div class="hero-visual">
-      <div class="float-chip glass chip-a"><span class="ic i-orange">{{icon:play}}</span><span>Direct play<small>MKV · HEVC · DTS · ASS</small></span></div>
+      <div class="float-chip glass chip-a"><span class="ic i-orange">{{icon:play}}</span><span>Direct play<small>MKV, HEVC, DTS, ASS</small></span></div>
       <div class="phone">
         <img src="{{root}}img/screens/home.webp" width="600" height="1300" alt="OwnMedia: the libraries of a home server as glass tiles, with the mini player" fetchpriority="high">
       </div>
@@ -211,8 +211,8 @@ path:
           <figcaption>Photos<span>Your server’s photos in a grid, full screen, zoom</span></figcaption></figure>
       </div>
       <div class="gallery-nav" hidden>
-        <button class="glass" type="button" data-dir="prev" aria-label="Previous screenshots">{{icon:left}}</button>
-        <button class="glass" type="button" data-dir="next" aria-label="Next screenshots">{{icon:right}}</button>
+        <button class="glass" type="button" data-dir="prev" aria-label="Show previous screenshots" data-tip="Show previous screenshots">{{icon:left}}</button>
+        <button class="glass" type="button" data-dir="next" aria-label="Show next screenshots" data-tip="Show next screenshots">{{icon:right}}</button>
       </div>
       <p class="credits">Screenshots on a demo server with open content: <i>Sintel</i>, <i>Big Buck Bunny</i>,
         <i>Elephants Dream</i>, <i>Tears of Steel</i> and <i>Caminandes</i> © Blender Foundation (CC BY), music from
@@ -313,7 +313,8 @@ path:
     <form id="beta-form" class="glass" novalidate>
       <div class="field">
         <label for="email">Email</label>
-        <input id="email" name="email" type="email" required autocomplete="email" placeholder="you@example.com">
+        <input id="email" name="email" type="email" required autocomplete="email" placeholder="name@example.com" aria-describedby="email-error">
+        <p class="field-error" id="email-error" hidden></p>
       </div>
       <fieldset class="field choices">
         <legend>What server do you run? <span class="hint">(pick all that apply)</span></legend>
