@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
@@ -36,6 +38,8 @@ Future<void> main() async {
     ?..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(text), duration: const Duration(seconds: 6))));
   runApp(const HomeplayApp());
+  // The music that played when the app was closed, paused, for the mini player.
+  unawaited(Playback.instance.restoreQueue());
   // A friend's invite opens the app: its page comes up over whatever is on screen.
   AppLinks.listen(_openLink);
 }

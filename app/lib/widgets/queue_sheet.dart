@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import '../api/common.dart';
 import '../services/playback.dart';
 import 'artwork.dart';
+import 'instant_mix.dart';
 
-/// "Play next" or "Add to queue" for [tracks] named [title].
+/// "Play next" or "Add to queue" for [tracks] named [title]; for one track, also a mix of
+/// songs like it.
 Future<void> showQueueMenu(BuildContext context, String title, List<PlayItem> tracks) async {
   final messenger = ScaffoldMessenger.of(context);
+  final single = tracks.length == 1 && tracks.first.ref != null ? tracks.first : null;
   final action = await showModalBottomSheet<String>(
     context: context,
     builder: (context) => SafeArea(
@@ -22,10 +25,21 @@ Future<void> showQueueMenu(BuildContext context, String title, List<PlayItem> tr
           title: const Text('Add to queue'),
           onTap: () => Navigator.pop(context, 'queue'),
         ),
+        if (single != null)
+          ListTile(
+            leading: const Icon(Icons.radio_outlined),
+            title: const Text('Instant mix'),
+            subtitle: const Text('This song, then similar ones from the server'),
+            onTap: () => Navigator.pop(context, 'mix'),
+          ),
       ]),
     ),
   );
   if (action == null) return;
+  if (action == 'mix') {
+    if (context.mounted) await playInstantMixOf(context, single!);
+    return;
+  }
   final pb = Playback.instance;
   final wasPlaying = pb.currentItem != null && !pb.currentItem!.isVideo;
   action == 'next' ? await pb.playNext(tracks) : await pb.addToQueue(tracks);

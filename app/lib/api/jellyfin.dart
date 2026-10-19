@@ -9,6 +9,7 @@ import '../services/quality.dart';
 import '../services/search_filters.dart';
 import 'common.dart';
 import 'discovery.dart';
+import 'lyrics.dart';
 import 'dlna.dart';
 import 'sharing.dart';
 
@@ -462,6 +463,46 @@ class JellyfinClient {
       final total = (j['TotalRecordCount'] as num?)?.toInt() ?? all.length;
       if (items.isEmpty || all.length >= total) return all;
     }
+  }
+
+  /// Songs like [itemId] (a song, album, artist or playlist), the server's "Instant Mix".
+  Future<List<JellyfinItem>> instantMix(String itemId, {int limit = 100}) async =>
+      (await _list('/Items/$itemId/InstantMix', {
+        'userId': account.userId!,
+        'limit': '$limit',
+        'fields': 'MediaSourceCount,Path',
+        'enableUserData': 'true',
+      }))
+          .where((i) => i.type == 'Audio')
+          .toList();
+
+  /// Items by id in the order asked, without the ones the server no longer has: for a queue
+  /// saved before the app was closed.
+  Future<List<JellyfinItem>> itemsByIds(List<String> ids) async {
+    final byId = <String, JellyfinItem>{};
+    // A few hundred ids per request keep the address short enough for any proxy.
+    for (var at = 0; at < ids.length; at += 200) {
+      final chunk = ids.sublist(at, at + 200 > ids.length ? ids.length : at + 200);
+      for (final i in _items(await _get('/Items', {
+        'userId': account.userId!,
+        'ids': chunk.join(','),
+        'fields': 'MediaSourceCount,Path',
+        'enableUserData': 'true',
+      }))) {
+        byId[i.id] = i;
+      }
+    }
+    return [for (final id in ids) ?byId[id]];
+  }
+
+  /// The track's lyrics (Jellyfin 10.9+, from an .lrc or .txt next to the file or the tags);
+  /// null when it has none.
+  Future<Lyrics?> lyrics(String itemId) async {
+    final res = await _http.get(Uri.parse('$_base/Audio/$itemId/Lyrics'), headers: headers).timeout(_timeout);
+    if (res.statusCode == 404) return null;
+    if (_lostAccess(res.statusCode)) throw ApiException(signedOut);
+    if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for lyrics');
+    return lyricsFromJellyfin(jsonDecode(res.body));
   }
 
   // --- Playlists ---
@@ -1017,6 +1058,7 @@ class JellyfinClient {
         reporter: _reporter(item, versionId, null, 'DirectPlay'),
         favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
         container: item.container,
+        ref: item.isVideo ? null : TrackRef(TrackSource.jellyfin, item.id, accountId: account.id),
         tvUrl: () async {
           final url = streamUrl(item, versionId: versionId);
           final home = await homeBase();

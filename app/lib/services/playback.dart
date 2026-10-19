@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:io' show Platform;
 
@@ -15,13 +16,16 @@ import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../api/subsonic.dart';
 import 'account_store.dart';
+import 'audio_details.dart';
 import 'audio_effects.dart';
 import 'car_library.dart';
 import 'downloads.dart';
 import 'native_eq.dart';
 import 'quality.dart';
 import 'queue_edit.dart';
+import 'saved_queue.dart';
 import 'track_choice.dart';
+import 'track_lookup.dart';
 import 'video_tuning.dart';
 
 /// The one player of the app. It outlives the player screen, so music keeps going in the
@@ -133,6 +137,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
   void screenOpened() => screenOpen.value = ++_openScreens > 0;
 
   void screenClosed() => screenOpen.value = (_openScreens = (_openScreens - 1).clamp(0, 1 << 30)) > 0;
+
+  /// The sound of the music file playing, e.g. "FLAC · 24-bit · 96 kHz"; null for video and
+  /// until the file is open.
+  final ValueNotifier<String?> audioInfo = ValueNotifier(null);
 
   final _notices = StreamController<String>.broadcast();
   Stream<String> get notices => _notices.stream;
@@ -446,14 +454,19 @@ class Playback extends BaseAudioHandler with SeekHandler {
   }
 
   /// Plays [queueItems] from [index], optionally from [startAt] (a resume point).
-  Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt}) async {
+  ///
+  /// [paused]: the queue saved when the app was closed. It opens in its own order without
+  /// playing, without taking the sound from other apps and without telling the server, until
+  /// the user presses Play.
+  Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt, bool paused = false}) async {
     _endReport(current.value, player.state.position);
+    audioInfo.value = null;
     _tracksApplied.clear();
     _subtitlesAdded.clear();
     _stopReported.clear();
     final music = !queueItems.any((i) => i.isVideo);
     _unshuffledOrder = queueItems;
-    if (music && shuffle.value && queueItems.length > 1) {
+    if (music && shuffle.value && queueItems.length > 1 && !paused) {
       queueItems = [for (final i in shuffledOrder(queueItems.length, index, _random)) queueItems[i]];
       index = 0;
     }
@@ -464,7 +477,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     await _applySound();
     queue.add([for (final i in queueItems) _mediaItem(i)]);
     mediaItem.add(_mediaItem(queueItems[index]));
-    await _session?.setActive(true);
+    if (!paused) await _session?.setActive(true);
     await _keepControls();
     // media_kit keeps video off (vid=no) until a video output is attached; a file without
     // sound would otherwise end at once with "no audio or video streams selected".
@@ -482,19 +495,31 @@ class Playback extends BaseAudioHandler with SeekHandler {
     if (player.state.rate != rate) await player.setRate(rate);
     await player.setPlaylistMode(music ? repeat.value.mode : PlaylistMode.none);
     await _outputReady;
-    await player.open(Playlist(
-      [
-        for (var n = 0; n < queueItems.length; n++)
-          Media(queueItems[n].url.toString(), httpHeaders: queueItems[n].headers, start: n == index ? startAt : null),
-      ],
-      index: index,
-    ));
+    // Music: the next track is opened while this one plays, so albums go on without a gap.
+    // A video's next episode is not fetched ahead, it may never be watched.
+    try {
+      await (player.platform as NativePlayer).setProperty('prefetch-playlist', music ? 'yes' : 'no');
+    } catch (e) {
+      debugPrint('homeplay prefetch not set: $e');
+    }
+    await player.open(
+      Playlist(
+        [
+          for (var n = 0; n < queueItems.length; n++)
+            Media(queueItems[n].url.toString(), httpHeaders: queueItems[n].headers, start: n == index ? startAt : null),
+        ],
+        index: index,
+      ),
+      play: !paused,
+    );
     _notice();
-    _beginReport(startAt ?? Duration.zero);
+    _reportOnPlay = paused;
+    if (!paused) _beginReport(startAt ?? Duration.zero);
     // Also while paused: Android may recreate the service then, and the notification's Play must work.
     _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) {
       _reportProgress();
       _keepControls();
+      _saveQueue();
     });
     if (kDebugMode) _cacheLog ??= Timer.periodic(const Duration(seconds: 5), (_) => _logCache());
   }
@@ -622,11 +647,18 @@ class Playback extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> removeQueueItemAt(int index) => removeFromQueue(index);
 
+  // The restored queue has not told the server yet; the first Play does.
+  bool _reportOnPlay = false;
+
   @override
   Future<void> play() async {
     await _session?.setActive(true);
     await _keepControls();
     await player.play();
+    if (_reportOnPlay) {
+      _reportOnPlay = false;
+      _beginReport(player.state.position);
+    }
   }
 
   @override
@@ -665,6 +697,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
     _cacheLog?.cancel();
     _cacheLog = null;
     setSleepTimer(null);
+    _reportOnPlay = false;
+    _saveTimer?.cancel();
+    await _prefs?.remove(_savedQueueKey);
+    audioInfo.value = null;
     await _player?.stop();
     items.value = const [];
     current.value = 0;
@@ -698,19 +734,21 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
   }
 
+  // Nothing goes to the server for a restored queue until it is played (see [_reportOnPlay]).
   void _beginReport(Duration position) {
+    if (_reportOnPlay) return;
     _stopReported.remove(current.value); // it may be played again after going back
     currentItem?.reporter?.started(position);
   }
 
   void _reportProgress([Duration? position]) {
-    if (currentItem == null || _stopReported.contains(current.value)) return;
+    if (_reportOnPlay || currentItem == null || _stopReported.contains(current.value)) return;
     currentItem?.reporter?.progress(position ?? player.state.position, paused: !player.state.playing);
   }
 
   /// Once per queue entry: when it is left, skipped or finished.
   void _endReport(int index, Duration position) {
-    if (index >= items.value.length || !_stopReported.add(index)) return;
+    if (_reportOnPlay || index >= items.value.length || !_stopReported.add(index)) return;
     _lastStopReport =
         items.value[index].reporter?.stopped(position, duration: mediaItem.value?.duration) ?? Future.value();
   }
@@ -739,6 +777,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
       // Not reported yet means the previous entry played to its end.
       _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
       current.value = p.index;
+      audioInfo.value = null;
       mediaItem.add(_mediaItem(items.value[p.index]));
       _notice();
       _broadcast();
@@ -750,7 +789,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
       if (m != null && d > Duration.zero) mediaItem.add(m.copyWith(duration: d));
       if (kDebugMode && d > Duration.zero) _logDecoders();
       // Once per file, when its audio output is open.
-      if (d > Duration.zero) _logSound();
+      if (d > Duration.zero) {
+        _logSound();
+        _readAudioInfo();
+      }
     });
     // Switch away from an audio track this libmpv can't decode, once per queue entry.
     s.tracks.listen(_applyTrackChoice);
@@ -796,6 +838,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   /// Tells the notification and the lock screen what is going on.
   void _broadcast() {
+    _scheduleSave();
     final st = _player?.state ?? const PlayerState();
     final count = items.value.length;
     final hasPrev = current.value > 0;
@@ -831,6 +874,73 @@ class Playback extends BaseAudioHandler with SeekHandler {
       shuffleMode: shuffle.value ? AudioServiceShuffleMode.all : AudioServiceShuffleMode.none,
       queueIndex: count == 0 ? null : current.value,
     ));
+  }
+
+  /// The sound of the file just opened, for the music player. Read a moment later: mpv knows
+  /// the bitrate only once some of the file has been decoded.
+  Future<void> _readAudioInfo() async {
+    final item = currentItem;
+    if (item == null || item.isVideo) return;
+    await Future<void>.delayed(const Duration(seconds: 1));
+    if (!identical(currentItem, item)) return;
+    final native = player.platform as NativePlayer;
+    Future<String?> read(String name) async {
+      try {
+        final v = await native.getProperty(name);
+        return v.isEmpty ? null : v;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    audioInfo.value = audioDetails(
+      codec: await read('audio-codec-name'),
+      sampleRate: int.tryParse(await read('audio-params/samplerate') ?? ''),
+      format: await read('audio-params/format'),
+      bitrate: double.tryParse(await read('audio-bitrate') ?? '')?.round(),
+    );
+  }
+
+  // --- The queue kept between runs of the app ---
+
+  static const _savedQueueKey = 'saved_queue';
+  Timer? _saveTimer;
+
+  /// Saves soon: edits and track changes come in bursts.
+  void _scheduleSave() {
+    if (items.value.isEmpty) return;
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(seconds: 2), _saveQueue);
+  }
+
+  /// Keeps the music queue and the place in it for the next start of the app.
+  void _saveQueue() {
+    final prefs = _prefs;
+    if (prefs == null || items.value.isEmpty) return;
+    final saved = SavedQueue.of(items.value, current.value, _player?.state.position ?? Duration.zero);
+    // A video, or music that cannot be found again: an older queue would come back instead.
+    if (saved == null) {
+      prefs.remove(_savedQueueKey);
+      return;
+    }
+    prefs.setString(_savedQueueKey, jsonEncode(saved.toJson()));
+  }
+
+  /// Brings back the music queue the app had when it was closed, paused where it was. Tracks
+  /// the servers no longer have are left out. Does nothing if something plays already.
+  Future<void> restoreQueue() async {
+    final raw = _prefs?.getString(_savedQueueKey);
+    if (raw == null || items.value.isNotEmpty) return;
+    try {
+      final saved = SavedQueue.fromJson(jsonDecode(raw));
+      if (saved == null) return;
+      final restored = saved.restore(await TrackLookup.rebuild(saved.refs));
+      // The user may have started something while the servers answered.
+      if (restored == null || items.value.isNotEmpty) return;
+      await start(restored.items, restored.index, startAt: restored.position, paused: true);
+    } catch (e) {
+      debugPrint('homeplay saved queue not restored: $e');
+    }
   }
 
   /// Pause for calls and other apps, and when headphones are unplugged.

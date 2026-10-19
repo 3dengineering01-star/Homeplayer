@@ -463,4 +463,5 @@ PlayItem downloadedPlayItem(DownloadEntry e, String dir, {PlaybackReporter? repo
         for (final s in e.subtitles) ExternalSubtitle(url: Uri.file('$dir/${s.file}'), title: s.title, language: s.language),
       ],
       reporter: reporter,
+      ref: e.isVideo ? null : TrackRef(TrackSource.download, e.id, accountId: e.accountId),
     );

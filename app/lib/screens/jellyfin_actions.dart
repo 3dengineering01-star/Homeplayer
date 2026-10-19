@@ -18,6 +18,7 @@ import 'player_screen.dart';
 import 'playlist_picker.dart';
 import 'track_list_screen.dart';
 import 'tv_screen.dart';
+import '../widgets/instant_mix.dart';
 
 /// The page for a Jellyfin folder: a series has its details page, music its artists, albums and
 /// playlists, a movie or show library its poster grid, anything else (seasons, home videos) its
@@ -220,6 +221,13 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
               subtitle: const Text('The file itself, for any player on the phone'),
               onTap: () => Navigator.pop(context, 'phone'),
             ),
+          if (const {'Audio', 'MusicAlbum', 'MusicArtist'}.contains(item.type))
+            ListTile(
+              leading: const Icon(Icons.radio_outlined),
+              title: const Text('Instant mix'),
+              subtitle: const Text('Similar songs from the server'),
+              onTap: () => Navigator.pop(context, 'mix'),
+            ),
           if (item.type == 'Audio' || item.type == 'MusicAlbum') ...[
             ListTile(
               leading: const Icon(Icons.playlist_play),
@@ -273,6 +281,13 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
     final messenger = ScaffoldMessenger.of(context);
     if (action.startsWith('extra')) return extra[int.parse(action.substring(5))].run();
     switch (action) {
+      case 'mix':
+        await playInstantMix(
+          context,
+          from: item.name,
+          seed: item.type == 'Audio' ? client.toPlayItem(item) : null,
+          load: () async => [for (final i in await client.instantMix(item.id)) if (i.id != item.id) client.toPlayItem(i)],
+        );
       case 'tv':
         await playOnTvItem(item);
       case 'favorite':
