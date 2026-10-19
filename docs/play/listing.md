@@ -34,11 +34,28 @@ PHOTO BACKUP TO YOUR SERVER
 • New photos and videos go to your Jellyfin server within seconds of taking them, with their date and location. Needs the free Homeplay Backup plugin on the server.
 • Browse your photos on the server in a grid, full screen, with zoom.
 
+MUSIC, DONE PROPERLY
+• Home for your music: recently added, recently played, most played and favorites, and Shuffle all.
+• Instant Mix: one tap on a song, album or artist plays similar songs from your server.
+• Lyrics that follow the song: the line being sung lights up, tap a line to jump there. From your server, or from the free LRCLIB collection when it has none (can be turned off).
+• Albums play without gaps; the format shows under the seek bar (FLAC · 24-bit · 96 kHz).
+• The queue comes back after a restart, where you stopped. Swipe the mini player for the next song.
+• Equalizer, ReplayGain volume levelling, sleep timer, playback speed.
+
+BAD CONNECTION? THE MUSIC GOES ON
+• The next songs of the queue are saved on the phone while you listen, so they play through tunnels and dead zones.
+• A song is fetched ahead in full, and a broken download picks up where it stopped.
+• Data saver: music on mobile data at 320, 192 or 128 kbps.
+
+SHARE WITH FRIENDS
+• Send an invite link: a friend gets the app and joins your server with one tap, no password. You see who joined and can end access any time.
+• Play on your TV over the home Wi-Fi.
+
 IN THE CAR
 • Android Auto: your music from the server and from downloads, with voice search.
 
 NO STRINGS
-• No account, no ads, no analytics, no tracking. The app talks only to your servers.
+• No account, no ads, no analytics, no tracking. The app talks to your servers, and only if you allow it to LRCLIB for lyrics.
 
 OwnMedia is an independent app, not affiliated with Jellyfin, Navidrome or Tailscale.
 ```
@@ -74,11 +91,28 @@ OwnMedia играет музыку и фильмы с вашего собств�
 • Новые фото и видео уходят на ваш сервер Jellyfin через несколько секунд после съёмки, с датой и местом съёмки. Нужен бесплатный плагин Homeplay Backup на сервере.
 • Фото с сервера можно смотреть сеткой, на весь экран, с увеличением.
 
+МУЗЫКА КАК НАДО
+• Главная для музыки: недавно добавленное, недавно слушали, чаще всего, избранное и «Перемешать всё».
+• Instant Mix: одно нажатие на песню, альбом или исполнителя — и играют похожие песни с вашего сервера.
+• Тексты песен под музыку: поющаяся строка подсвечивается, нажатие на строку — перемотка к ней. С вашего сервера или из бесплатной коллекции LRCLIB, если на сервере текста нет (можно выключить).
+• Альбомы без пауз между треками; формат звука под полосой прокрутки (FLAC · 24-bit · 96 kHz).
+• Очередь возвращается после перезапуска с того же места. Смахните мини-плеер — следующая песня.
+• Эквалайзер, выравнивание громкости ReplayGain, таймер сна, скорость.
+
+ПЛОХАЯ СВЯЗЬ? МУЗЫКА ИГРАЕТ
+• Следующие песни очереди сохраняются на телефоне, пока вы слушаете, и играют в туннелях и без связи.
+• Песня скачивается наперёд целиком, оборванная загрузка продолжается с того же места.
+• Экономия трафика: музыка в мобильной сети в 320, 192 или 128 kbps.
+
+ПОДЕЛИТЕСЬ С ДРУЗЬЯМИ
+• Отправьте ссылку-приглашение: друг ставит приложение и входит на ваш сервер одним нажатием, без пароля. Вы видите, кто подключился, и закрываете доступ одной кнопкой.
+• Показ на телевизоре по домашнему Wi-Fi.
+
 В МАШИНЕ
 • Android Auto: музыка с сервера и из загрузок, голосовой поиск.
 
 БЕЗ ЛИШНЕГО
-• Без учётной записи, рекламы, аналитики и слежки. Приложение общается только с вашими серверами.
+• Без учётной записи, рекламы, аналитики и слежки. Приложение общается с вашими серверами и, если вы разрешите, с LRCLIB за текстами песен.
 
 OwnMedia — независимое приложение, не связанное с Jellyfin, Navidrome и Tailscale.
 ```
@@ -87,5 +121,5 @@ OwnMedia — независимое приложение, не связанно�
 
 - `icon-512.png` — значок 512×512 (Google сам скругляет углы).
 - `feature-graphic.png` — баннер 1024×500.
-- Скриншоты телефона: 2–8 штук, снимаются с Pixel 10a (список серверов, медиатека, плеер с меню дорожек, фото
-  сеткой, загрузки, копирование фото). Перед съёмкой убрать отладочную надпись DEBUG: снимать release-сборку.
+- Скриншоты телефона: 2–8 штук, снимаются с Pixel 10a (вкладка Home музыки, музыкальный плеер с текстом песни,
+  медиатека, плеер с меню дорожек, фото сеткой, приглашение друга, загрузки). Перед съёмкой убрать отладочную надпись DEBUG: снимать release-сборку.
