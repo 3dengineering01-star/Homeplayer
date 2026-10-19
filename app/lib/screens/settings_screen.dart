@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../api/lrclib.dart';
 import '../services/quality.dart';
 import '../services/track_cache.dart';
 import '../widgets/appearance_picker.dart';
@@ -27,7 +28,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     TrackCache.instance.start().then((_) {
       if (mounted) setState(() {});
     });
+    LrcLib.enabled().then((on) {
+      if (mounted) setState(() => _lrclib = on);
+    });
   }
+
+  bool _lrclib = true;
 
   Future<VideoQuality?> _pick(String title, VideoQuality current) => showDialog<VideoQuality>(
         context: context,
@@ -194,6 +200,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   'above. The oldest saved songs are deleted by themselves; downloads are kept apart.',
                   style: theme.textTheme.bodySmall,
                 ),
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.lyrics_outlined),
+                title: const Text('Lyrics from LRCLIB'),
+                subtitle: const Text('When your server has none, the song\'s title, artist and length are looked up '
+                    'on lrclib.net, a free collection of lyrics'),
+                value: _lrclib,
+                onChanged: (on) async {
+                  await LrcLib.setEnabled(on);
+                  setState(() => _lrclib = on);
+                },
               ),
               ListTile(
                 leading: const Icon(Icons.description_outlined),

@@ -7,8 +7,8 @@ import '../api/lyrics.dart';
 import '../services/playback.dart';
 import '../services/track_lookup.dart';
 
-/// The words of the song playing, from its server. Timed lyrics follow the music: the line
-/// sung now is lit and kept in view, a tap on a line jumps there.
+/// The words of the song playing, from its server or else from LRCLIB. Timed lyrics follow the
+/// music: the line sung now is lit and kept in view, a tap on a line jumps there.
 void showLyricsSheet(BuildContext context, Playback pb) {
   showModalBottomSheet(
     context: context,
@@ -63,7 +63,8 @@ class _LyricsViewState extends State<_LyricsView> {
   void _load() {
     final item = widget.pb.currentItem;
     if (item == null || identical(item, _item)) return;
-    final lyrics = _asked[item] ??= TrackLookup.lyrics(item);
+    final length = widget.pb.player.state.duration;
+    final lyrics = _asked[item] ??= TrackLookup.lyrics(item, duration: length > Duration.zero ? length : null);
     setState(() {
       _item = item;
       _lyrics = lyrics;
@@ -106,7 +107,8 @@ class _LyricsViewState extends State<_LyricsView> {
         final l = _shown ?? s.data;
         if (l == null) {
           return _message(context, 'No lyrics for this song',
-              'The server shows lyrics from an .lrc or .txt file next to the song, or from its tags.');
+              'Neither your server nor LRCLIB has them. The server shows lyrics from an .lrc or .txt file '
+                  'next to the song, or from its tags.');
         }
         final muted = theme.colorScheme.onSurface.withValues(alpha: l.synced ? 0.55 : 0.9);
         return SingleChildScrollView(
@@ -132,6 +134,11 @@ class _LyricsViewState extends State<_LyricsView> {
                     child: Text(line.text.isEmpty ? '♪' : line.text),
                   ),
                 ),
+              ),
+            if (l.source != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 24),
+                child: Text('Lyrics from ${l.source}', style: theme.textTheme.bodySmall),
               ),
           ]),
         );

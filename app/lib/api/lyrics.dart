@@ -9,9 +9,12 @@ class LyricLine {
 }
 
 class Lyrics {
-  const Lyrics(this.lines);
+  const Lyrics(this.lines, {this.source});
 
   final List<LyricLine> lines;
+
+  /// Where they came from when not from the music server ("LRCLIB"), to say so under them.
+  final String? source;
 
   /// The lines carry times: the player follows them and a tap jumps to one.
   bool get synced => lines.any((l) => l.start != null);

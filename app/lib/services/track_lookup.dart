@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
+import '../api/lrclib.dart';
 import '../api/lyrics.dart';
 import '../api/subsonic.dart';
 import '../models/account.dart';
@@ -26,8 +27,31 @@ class TrackLookup {
     return a == null || a.kind == ServerKind.jellyfin ? null : SubsonicClient(a);
   }
 
-  /// [item]'s lyrics from its server; null when it has none or the track has no server.
-  static Future<Lyrics?> lyrics(PlayItem item) async {
+  /// [item]'s lyrics from its server, else from LRCLIB unless that is turned off; null when
+  /// neither has any. [duration] (the song's length) helps LRCLIB find the right recording.
+  static Future<Lyrics?> lyrics(PlayItem item, {Duration? duration, LrcLib? lrclib}) async {
+    Object? serverError;
+    try {
+      final own = await _serverLyrics(item);
+      if (own != null) return own;
+    } catch (e) {
+      // The server failed: LRCLIB may still have them; the error shows if it has not.
+      serverError = e;
+    }
+    if (item.isVideo || !await LrcLib.enabled()) {
+      if (serverError != null) throw serverError;
+      return null;
+    }
+    try {
+      return await (lrclib ?? LrcLib()).find(title: item.title, artist: item.subtitle, duration: duration);
+    } catch (e) {
+      debugPrint('homeplay lrclib failed: $e');
+      if (serverError != null) throw serverError;
+      return null;
+    }
+  }
+
+  static Future<Lyrics?> _serverLyrics(PlayItem item) async {
     final ref = item.ref;
     if (ref == null) return null;
     switch (ref.source) {
