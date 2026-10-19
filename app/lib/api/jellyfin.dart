@@ -583,7 +583,9 @@ class JellyfinClient {
   }
 
   Future<http.Response> _sharingCall(String method, String path, [Object? body]) async {
-    final req = http.Request(method, Uri.parse('$_base$path'))..headers.addAll({...headers, 'Content-Type': 'application/json'});
+    final req = http.Request(method, Uri.parse('$_base$path'))
+      // Always the server's own answer, never one kept on the way: the list changes with each invite.
+      ..headers.addAll({...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache'});
     if (body != null) req.body = jsonEncode(body);
     final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
     if (res.statusCode < 300) return res;
