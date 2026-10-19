@@ -244,4 +244,86 @@ void main() {
     await expectLater(signedOut(friend, 403).views(), throwsA(predicate((e) => '$e'.contains('ended your access'))));
     await expectLater(signedOut(_owner, 401).views(), throwsA(predicate((e) => '$e'.contains('Session expired'))));
   });
+
+  testWidgets('a removed invite goes at once, even while the server is slow or answers with the old list',
+      (tester) async {
+    final sharing = {
+      'PublicUrl': 'https://pc.ts.net',
+      'Libraries': _libraries,
+      'Invites': [
+        {
+          'Code': 'C',
+          'Friend': 'Ivan',
+          'LibraryNames': ['Movies'],
+          'Created': '2026-10-01T10:00:00Z',
+          'Expires': '2099-10-08T10:00:00Z',
+          'State': 'Waiting',
+          'Link': 'https://pc.ts.net/Homeplay/Join/C',
+        },
+      ],
+    };
+    final client = JellyfinClient(
+      _owner,
+      'dev',
+      client: MockClient((r) async {
+        if (r.method == 'DELETE') {
+          // The server takes its time.
+          await Future<void>(() => null);
+          return http.Response('', 204);
+        }
+        return http.Response(jsonEncode(sharing), 200); // Never forgets: the old list.
+      }),
+    );
+    await tester.pumpWidget(MaterialApp(home: ShareScreen(client: client)));
+    await tester.pumpAndSettle();
+    expect(find.text('Ivan'), findsOneWidget);
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await tester.pump();
+    expect(find.text('Ivan'), findsNothing, reason: 'gone before the server answers');
+    await tester.pumpAndSettle();
+    expect(find.text('Ivan'), findsNothing, reason: 'an old list from the server does not bring it back');
+  });
+
+  testWidgets('a new invite shows its link at once, to send or copy, and is in the list', (tester) async {
+    final sharing = {'PublicUrl': 'https://pc.ts.net', 'Libraries': _libraries, 'Invites': <Object>[]};
+    final client = JellyfinClient(
+      _owner,
+      'dev',
+      client: MockClient((r) async => switch ((r.method, r.url.path)) {
+            ('POST', '/Homeplay/Invites') => http.Response(
+                jsonEncode({
+                  'Code': 'N',
+                  'Friend': 'Olga',
+                  'LibraryNames': ['Movies'],
+                  'Created': '2026-10-19T10:00:00.0000000Z',
+                  'Expires': '2026-10-26T10:00:00.0000000Z',
+                  'State': 'Waiting',
+                  'Link': 'https://pc.ts.net/Homeplay/Join/N',
+                }),
+                200),
+            _ => http.Response(jsonEncode(sharing), 200), // Slow to learn of the new one.
+          }),
+    );
+    await tester.pumpWidget(MaterialApp(home: ShareScreen(client: client)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Invite a friend').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Olga');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Make the link'));
+    await tester.pumpAndSettle();
+    expect(find.text('The link for Olga is ready'), findsOneWidget);
+    expect(find.text('https://pc.ts.net/Homeplay/Join/N'), findsOneWidget);
+    expect(find.text('Send the link'), findsOneWidget);
+    expect(find.text('Copy the link'), findsOneWidget);
+    await tester.tap(find.text('Copy the link'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Link copied'), findsOneWidget);
+    expect(find.text('Olga'), findsOneWidget, reason: 'in the list, though the server list did not have it yet');
+    expect(tester.takeException(), isNull);
+  });
 }

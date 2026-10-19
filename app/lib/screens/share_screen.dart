@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -19,9 +21,47 @@ class ShareScreen extends StatefulWidget {
 }
 
 class _ShareScreenState extends State<ShareScreen> {
-  late Future<SharingInfo> _sharing = widget.client.sharing();
+  /// What the server said last, with this screen's own changes on top: an invite made or taken
+  /// back shows at once, without waiting for the server to be asked again.
+  SharingInfo? _info;
+  Object? _error;
 
-  void _reload() => setState(() => _sharing = widget.client.sharing());
+  /// Invites being taken back: hidden already, brought back if the server refuses.
+  final Set<String> _removing = {};
+
+  /// Taken back and made on this screen: kept so, even if an answer from the server that left
+  /// before the change still has the old list.
+  final Set<String> _deleted = {};
+  final Map<String, ShareInvite> _created = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  /// Asks the server again. [quiet]: the list stays on screen meanwhile, and a failure only
+  /// keeps it as it is.
+  Future<void> _load({bool quiet = false}) async {
+    if (!quiet) setState(() => _error = null);
+    try {
+      var info = await _client.sharing();
+      if (!mounted) return;
+      for (final code in _deleted) {
+        info = info.withoutInvite(code);
+      }
+      for (final invite in _created.values) {
+        if (!info.invites.any((i) => i.code == invite.code)) info = info.withInvite(invite);
+      }
+      setState(() {
+        _info = info;
+        _error = null;
+      });
+    } catch (e) {
+      debugPrint('homeplay sharing load failed: $e');
+      if (mounted && (!quiet || _info == null)) setState(() => _error = e);
+    }
+  }
 
   JellyfinClient get _client => widget.client;
 
@@ -33,9 +73,9 @@ class _ShareScreenState extends State<ShareScreen> {
       builder: (_) => _AddressDialog(client: _client, current: current),
     );
     if (saved != true || !mounted) return;
-    _reload();
+    await _load(quiet: true);
     // The address was all that was missing: on to the first invite.
-    final info = await _sharing.then<SharingInfo?>((i) => i, onError: (_) => null);
+    final info = _info;
     if (info != null && info.publicUrl.isNotEmpty && info.invites.isEmpty && mounted) await _invite(info);
   }
 
@@ -47,12 +87,33 @@ class _ShareScreenState extends State<ShareScreen> {
       builder: (_) => _NewInvite(client: _client, libraries: info.libraries),
     );
     if (created == null || !mounted) return;
-    _reload();
-    await _send(created);
+    // In the list at once, then the link to send.
+    setState(() {
+      _created[created.code] = created;
+      _info = _info?.withInvite(created);
+    });
+    unawaited(_load(quiet: true));
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => _LinkReady(invite: created, onSend: () => _send(created), onCopy: () => _copy(created)),
+    );
   }
 
-  Future<void> _send(ShareInvite invite) =>
-      AppLinks.share(inviteMessage(_client.account.serverName, invite.link), title: 'Send the invite');
+  Future<void> _send(ShareInvite invite) async {
+    try {
+      await AppLinks.share(inviteMessage(_client.account.serverName, invite.link), title: 'Send the invite');
+    } catch (e) {
+      // No share sheet: the link goes to the clipboard instead, to paste anywhere.
+      debugPrint('homeplay share failed: $e');
+      _copy(invite);
+    }
+  }
+
+  void _copy(ShareInvite invite) {
+    Clipboard.setData(ClipboardData(text: invite.link));
+    _say('Link copied. Paste it in a message to ${invite.friend}.');
+  }
 
   Future<void> _remove(ShareInvite invite) async {
     final ok = await showDialog<bool>(
@@ -69,41 +130,51 @@ class _ShareScreenState extends State<ShareScreen> {
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true || !mounted) return;
+    // Gone from the list at once; back if the server says no.
+    setState(() => _removing.add(invite.code));
     try {
       await _client.deleteInvite(invite.code);
-      _reload();
+      if (!mounted) return;
+      setState(() {
+        _deleted.add(invite.code);
+        _created.remove(invite.code);
+        _info = _info?.withoutInvite(invite.code);
+        _removing.remove(invite.code);
+      });
     } catch (e) {
-      if (mounted) _say(describeError(e));
+      if (!mounted) return;
+      setState(() => _removing.remove(invite.code));
+      _say(describeError(e));
     }
+    unawaited(_load(quiet: true));
   }
 
   @override
   Widget build(BuildContext context) {
+    final loaded = _info;
     return Scaffold(
       appBar: AppBar(title: const Text('Share with friends')),
-      body: FutureBuilder<SharingInfo>(
-        future: _sharing,
-        builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
-          if (snap.hasError) {
+      body: Builder(
+        builder: (context) {
+          if (loaded == null && _error == null) return const Center(child: CircularProgressIndicator());
+          if (loaded == null) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(describeError(snap.error!), textAlign: TextAlign.center),
+                  Text(describeError(_error!), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
-                  FilledButton(onPressed: _reload, child: const Text('Retry')),
+                  FilledButton(onPressed: _load, child: const Text('Retry')),
                 ]),
               ),
             );
           }
-          final info = snap.data!;
+          final info = loaded.invites.any((i) => _removing.contains(i.code))
+              ? loaded.invites.where((i) => _removing.contains(i.code)).fold(loaded, (a, i) => a.withoutInvite(i.code))
+              : loaded;
           return RefreshIndicator(
-            onRefresh: () async {
-              _reload();
-              await _sharing.then((_) {}, onError: (_) {});
-            },
+            onRefresh: () => _load(quiet: true),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
               children: [
@@ -138,12 +209,10 @@ class _ShareScreenState extends State<ShareScreen> {
                     ),
                   ...() {
                     Widget tile(ShareInvite i) => _InviteTile(
+                          key: ValueKey(i.code),
                           invite: i,
                           onSend: () => _send(i),
-                          onCopy: () {
-                            Clipboard.setData(ClipboardData(text: i.link));
-                            _say('Link copied');
-                          },
+                          onCopy: () => _copy(i),
                           onRemove: () => _remove(i),
                         );
                     final newest = info.invites.reversed;
@@ -174,15 +243,63 @@ class _ShareScreenState extends State<ShareScreen> {
           );
         },
       ),
-      floatingActionButton: FutureBuilder<SharingInfo>(
-        future: _sharing,
-        builder: (context, snap) => snap.data == null || snap.data!.publicUrl.isEmpty
-            ? const SizedBox.shrink()
-            : FloatingActionButton.extended(
-                onPressed: () => _invite(snap.data!),
-                icon: const Icon(Icons.person_add),
-                label: const Text('Invite a friend'),
-              ),
+      floatingActionButton: loaded == null || loaded.publicUrl.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _invite(loaded),
+              icon: const Icon(Icons.person_add),
+              label: const Text('Invite a friend'),
+            ),
+    );
+  }
+}
+
+/// Right after an invite is made: the link itself, to send or copy at once.
+class _LinkReady extends StatelessWidget {
+  const _LinkReady({required this.invite, required this.onSend, required this.onCopy});
+
+  final ShareInvite invite;
+  final VoidCallback onSend;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Text('The link for ${invite.friend} is ready', style: theme.textTheme.titleLarge),
+          const SizedBox(height: 8),
+          const Text('Send it in a message. It works once, for whoever opens it first.'),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SelectableText(invite.link, style: theme.textTheme.bodyMedium),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              onSend();
+            },
+            icon: const Icon(Icons.send),
+            label: const Text('Send the link'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              onCopy();
+            },
+            icon: const Icon(Icons.copy),
+            label: const Text('Copy the link'),
+          ),
+        ]),
       ),
     );
   }
@@ -232,7 +349,7 @@ class _InternetSetup extends StatelessWidget {
 }
 
 class _InviteTile extends StatelessWidget {
-  const _InviteTile({required this.invite, required this.onSend, required this.onCopy, required this.onRemove});
+  const _InviteTile({super.key, required this.invite, required this.onSend, required this.onCopy, required this.onRemove});
 
   final ShareInvite invite;
   final VoidCallback onSend;
