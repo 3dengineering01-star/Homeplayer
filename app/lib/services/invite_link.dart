@@ -3,10 +3,25 @@ typedef InviteLink = ({String server, String code});
 
 final _webLink = RegExp(r'(https?://\S+?)/homeplay/join/([A-Za-z0-9]+)', caseSensitive: false);
 final _appLink = RegExp(r'homeplay://join\?\S+', caseSensitive: false);
+final _siteLink = RegExp(r'https://(?:www\.)?ownmedia\.app/join(?:\.html)?/?#(\S+)', caseSensitive: false);
 
-/// The invite in [text]: the app's own link (homeplay://join?server=…&code=…) or the page's
-/// address (https://…/Homeplay/Join/CODE), alone or inside a message. Null when there is none.
+/// The invite in [text]: the app's own link (homeplay://join?server=…&code=…), the website's page
+/// (https://ownmedia.app/join.html#s=…&c=…) or the server's page (https://…/Homeplay/Join/CODE),
+/// alone or inside a message. Null when there is none.
 InviteLink? parseInvite(String text) {
+  final site = _siteLink.firstMatch(text);
+  if (site != null) {
+    try {
+      final fields = Uri.splitQueryString(site.group(1)!);
+      final server = fields['s'];
+      final code = fields['c'];
+      if (server != null && code != null && _code.hasMatch(code) && _isSite(server)) {
+        return (server: _trimSlash(server), code: code);
+      }
+    } on Object {
+      // A broken escape in a copied link: not an invite.
+    }
+  }
   final app = _appLink.firstMatch(text);
   if (app != null) {
     final uri = Uri.tryParse(app.group(0)!);
@@ -20,6 +35,8 @@ InviteLink? parseInvite(String text) {
   if (web != null && _isSite(web.group(1)!)) return (server: _trimSlash(web.group(1)!), code: web.group(2)!);
   return null;
 }
+
+final _code = RegExp(r'^[A-Za-z0-9]{1,64}$');
 
 bool _isSite(String s) {
   final uri = Uri.tryParse(s);

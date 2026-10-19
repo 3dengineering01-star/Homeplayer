@@ -39,6 +39,23 @@ void main() {
       expect(parseInvite('homeplay://join?code=ABC'), isNull);
     });
 
+    test("the website's invite page carries the server and the code after #", () {
+      expect(
+        parseInvite('https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net%2F&n=Anna%27s%20%D0%BA%D0%B8%D0%BD%D0%BE&c=ABC'),
+        (server: 'https://pc.ts.net', code: 'ABC'),
+      );
+      expect(
+        parseInvite(inviteMessage('Anna', 'https://ownmedia.app/join.html#s=http%3A%2F%2F192.168.1.10%3A8096&c=Q7')),
+        (server: 'http://192.168.1.10:8096', code: 'Q7'),
+      );
+      expect(parseInvite('https://ownmedia.app/join#s=https%3A%2F%2Fpc.ts.net&c=Z9'), (server: 'https://pc.ts.net', code: 'Z9'));
+      // Cut short when copied, or not a site: not an invite.
+      expect(parseInvite('https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net'), isNull);
+      expect(parseInvite('https://ownmedia.app/join.html#s=javascript%3Aalert(1)&c=ABC'), isNull);
+      expect(parseInvite('https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net&c=A%2FB'), isNull);
+      expect(parseInvite('https://ownmedia.app/join.html#s=%E0%A4%A&c=ABC'), isNull);
+    });
+
     test('anything else is not an invite', () {
       expect(parseInvite('https://pc.ts.net/web/index.html'), isNull);
       expect(parseInvite('hello'), isNull);

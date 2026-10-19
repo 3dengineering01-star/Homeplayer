@@ -23,7 +23,8 @@ Flutter + media_kit (libmpv), direct play без транскодировани�
 - `server/` — плагин Jellyfin «Homeplay Backup» (C#, .NET 10, Jellyfin 12.1): принимает фото и видео
   с телефона. Логика хранения в `BackupStore.cs` (покрыта тестами), HTTP API в `Api/BackupController.cs`.
   Подробности в `server/README.md`.
-- `landing/index.html` — лендинг с листом ожидания (Formspree).
+- `landing/index.html` — лендинг с листом ожидания (Formspree); `landing/join.html` — страница приглашения
+  на сайте (`ownmedia.app/join.html#s=…&c=…`), на неё ведут ссылки модуля 1.9+.
 - `docs/validation.md` — план проверки спроса.
 - `tools/phone.sh` — управление телефоном через adb (только локально).
 - `jellyfin-repo/` — каталог модулей Jellyfin (manifest.json и zip модуля) для NAS, Docker и Linux; пересобирается

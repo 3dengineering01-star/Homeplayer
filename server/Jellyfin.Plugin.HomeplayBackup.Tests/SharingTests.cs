@@ -122,7 +122,17 @@ public sealed class SharingTests : IDisposable
         Assert.Equal("Anna 3", SharingStore.UserNameFor(" Anna ", taken.Contains));
         Assert.Equal("Friend", SharingStore.UserNameFor("<>/", _ => false));
         Assert.Equal("Пётр", SharingStore.UserNameFor("Пётр", _ => false));
-        Assert.Equal("https://pc.ts.net/Homeplay/Join/ABC", SharingStore.JoinLink("https://pc.ts.net/", "ABC"));
+    }
+
+    [Fact]
+    public void TheInviteLinkLeadsToTheWebsiteAndKeepsTheServerAfterTheHash()
+    {
+        Assert.Equal(
+            "https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net&n=Anna%27s%20%D0%BA%D0%B8%D0%BD%D0%BE&c=ABC",
+            SharingStore.JoinLink("https://pc.ts.net/", "Anna's кино", "ABC"));
+        Assert.Equal(
+            "https://ownmedia.app/join.html#s=http%3A%2F%2F192.168.1.10%3A8096&c=Q7",
+            SharingStore.JoinLink("http://192.168.1.10:8096", " ", "Q7"));
     }
 
     [Fact]

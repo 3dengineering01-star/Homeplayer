@@ -68,7 +68,7 @@ public class ShareController : ControllerBase
             i.Expires,
             i.Joined,
             SharingStore.StateOf(i, DateTime.UtcNow).ToString(),
-            state.PublicUrl.Length == 0 ? string.Empty : SharingStore.JoinLink(state.PublicUrl, i.Code),
+            state.PublicUrl.Length == 0 ? string.Empty : SharingStore.JoinLink(state.PublicUrl, _host.FriendlyName, i.Code),
             i.Device,
             activity.LastSeen,
             activity.Watching);
