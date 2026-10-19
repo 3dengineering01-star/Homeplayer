@@ -2,6 +2,16 @@
    above the page (header, buttons, chips, menu), with a light rim on top; the content itself
    sits on quiet, nearly opaque surfaces. Light and dark follow the system. No web fonts. */
 
+/* Headings: Bricolage Grotesque, served from this site (SIL OFL 1.1, fonts/OFL-BricolageGrotesque.txt).
+   Only the Latin set at the one weight the headings use. Body text stays on the system font. */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("../fonts/bricolage-grotesque-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light dark;
   --bg: #f1f3f7;
@@ -33,6 +43,7 @@
   --radius-sm: 14px;
   --wrap: 1120px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Bricolage Grotesque", var(--font);
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Roboto Mono", monospace;
 }
 
@@ -728,3 +739,6 @@ input[aria-invalid="true"] { border-color: var(--err); }
 
 /* Bold inside text uses the same semibold as headings: three weights in total. */
 b, strong { font-weight: 600; }
+
+/* The display face on headings and the wordmark. */
+h1, h2, h3, .h3, .brand, .not-found .big { font-family: var(--font-display); }

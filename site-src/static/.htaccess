@@ -27,6 +27,7 @@ Options -Indexes
   ExpiresByType application/javascript "access plus 1 year"
   ExpiresByType text/javascript "access plus 1 year"
   ExpiresByType image/webp "access plus 1 month"
+  ExpiresByType font/woff2 "access plus 1 year"
   ExpiresByType image/png "access plus 1 month"
   ExpiresByType image/jpeg "access plus 1 month"
   ExpiresByType image/x-icon "access plus 1 month"
@@ -38,3 +39,4 @@ Options -Indexes
 </IfModule>
 
 AddType image/webp .webp
+AddType font/woff2 .woff2

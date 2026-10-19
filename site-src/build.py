@@ -278,6 +278,7 @@ def page(meta, body, sn, asset_v):
 <link rel="icon" href="{root}favicon.ico" sizes="any">
 <link rel="icon" href="{root}img/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="{root}img/apple-touch-icon.png">
+<link rel="preload" href="{root}fonts/bricolage-grotesque-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{root}css/site.css?v={asset_v}">
 <script src="{root}js/site.js?v={asset_v}" defer></script>
 </head>
