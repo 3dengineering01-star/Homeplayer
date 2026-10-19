@@ -40,3 +40,13 @@ Options -Indexes
 
 AddType image/webp .webp
 AddType font/woff2 .woff2
+AddType application/vnd.android.package-archive .apk
+
+# The app and the installer keep the same address for every version: always download them (never
+# open in the browser), and check for a newer file each time instead of using a cached one.
+<FilesMatch "\.(apk|exe)$">
+  <IfModule mod_headers.c>
+    Header set Content-Disposition "attachment"
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</FilesMatch>

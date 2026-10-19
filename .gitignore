@@ -14,3 +14,4 @@ installer/dist/
 ownmedia-site.zip
 # The Windows installer the site serves: copied from the release folder by site-src/build.py.
 site/download/*.exe
+site/download/*.apk

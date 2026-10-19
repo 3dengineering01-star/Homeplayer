@@ -58,6 +58,12 @@ SETTINGS = {
     # too big for git: it stays in the release folder (git ignores the copy in site/).
     "INSTALLER_FILE": r"D:\APP\OwnMedia-release\0.3.13\OwnMediaSetup.exe",
     "INSTALLER_VERSION": "0.3.13",
+    # The Android app file the site serves at a fixed address, download/OwnMedia.apk. publish-app.cmd
+    # leaves the fresh signed build in app\dist\site\OwnMedia.apk; the build copies it from there
+    # (too big for git, like the installer). APK_VERSION is the versionName of that build.
+    "APK_URL": "{{root}}download/OwnMedia.apk",
+    "APK_FILE": r"D:\APP\OwnMedia\app\dist\site\OwnMedia.apk",
+    "APK_VERSION": "0.3.14",
     # The Jellyfin plugin catalogue for NAS, Docker and Linux (jellyfin-repo/manifest.json).
     "CATALOG_URL": "https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/manifest.json",
     # The plugin's public source code (GPL).
@@ -132,6 +138,22 @@ def snippets(s):
         out["INSTALLER_BUTTON"] = (f'<a class="btn" aria-disabled="true" role="link">{icon("download")} '
                                    'Download link coming soon</a>')
     out["INSTALLER_META"] = installer_meta(s)
+    apk = Path(s["APK_FILE"])
+    if s["APK_URL"] and apk.is_file():
+        out["APK_BUTTON"] = (f'<a class="btn" href="{e["APK_URL"]}" download type="application/vnd.android.package-archive">'
+                             f'{icon("download")} Download for Android</a>')
+        mb = round(apk.stat().st_size / 1_000_000)
+        sha = hashlib.sha256(apk.read_bytes()).hexdigest()
+        out["APK_META"] = (f'<p class="dl-meta">Version {html.escape(s["APK_VERSION"])}, {mb} MB. '
+                           f'SHA-256: <code class="sha">{sha}</code></p>'
+                           '<p class="dl-note">The file comes from us, not from Google Play, so your phone may warn '
+                           'about an unknown developer. Tap <i>More details</i>, then <i>Install anyway</i>. If it '
+                           'asks, allow installing apps from your browser.</p>')
+        out["ANDROID_STATE"] = "Download the app file and install it, or join the beta for Google Play."
+    else:
+        out["APK_BUTTON"] = ""
+        out["APK_META"] = ""
+        out["ANDROID_STATE"] = out["PLAY_STATE"]
     out["YEAR"] = str(date.today().year)
     return out
 
@@ -346,6 +368,12 @@ def main():
         shutil.copy2(installer, OUT / "download" / "OwnMediaSetup.exe")
     elif s["INSTALLER_URL"]:
         print(f"Installer not found: {installer}", file=sys.stderr)
+    apk = Path(s["APK_FILE"])
+    if s["APK_URL"] and apk.is_file():
+        (OUT / "download").mkdir(exist_ok=True)
+        shutil.copy2(apk, OUT / "download" / "OwnMedia.apk")
+    elif s["APK_URL"]:
+        print(f"Android app not found: {apk}", file=sys.stderr)
 
     digest = hashlib.sha1()
     for f in sorted((STATIC / "css").glob("*")) + sorted((STATIC / "js").glob("*")):

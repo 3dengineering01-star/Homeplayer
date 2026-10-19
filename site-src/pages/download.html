@@ -15,15 +15,16 @@ path: download/
       <article class="dl-card glass" id="android">
         <div class="icon i-orange">{{icon:phone}}</div>
         <h2 class="h3">Android app</h2>
-        <p class="muted">{{PLAY_STATE}}</p>
+        <p class="muted">{{ANDROID_STATE}}</p>
         <ul>
           <li>Android 7 and newer</li>
           <li>Jellyfin and Navidrome / Subsonic</li>
           <li>Free during the beta</li>
         </ul>
-        <p class="dl-note">Installed the app from the APK file rather than Google Play? Android Auto shows
+        {{APK_META}}
+        <p class="dl-note">Installed the app from the file rather than Google Play? Android Auto shows
           it only after you turn on <i>Unknown sources</i> in Android Auto’s developer settings.</p>
-        <div class="btn-row">{{PLAY_BUTTON}}</div>
+        <div class="btn-row">{{APK_BUTTON}}<a class="btn btn-glass" href="{{root}}#beta">Join the beta</a></div>
       </article>
 
       <article class="dl-card glass" id="windows">
