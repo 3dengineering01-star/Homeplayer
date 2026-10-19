@@ -13,6 +13,7 @@ import 'services/app_update.dart';
 import 'services/appearance.dart';
 import 'services/backup.dart';
 import 'services/downloads.dart';
+import 'services/invite_inbox.dart';
 import 'services/invite_link.dart';
 import 'services/pip.dart';
 import 'services/playback.dart';
@@ -61,6 +62,8 @@ Future<void> _offerUpdate() async {
 void _openLink(String link) {
   final invite = parseInvite(link);
   if (invite == null) return;
+  // Opened by its link: the same invite copied by the website is not offered again.
+  unawaited(InviteInbox.markOffered(invite.code));
   final nav = navigatorKey.currentState;
   if (nav == null) {
     // Started by the link: the first screen is not there yet.

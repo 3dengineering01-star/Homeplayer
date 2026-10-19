@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/models/account.dart';
@@ -8,6 +9,7 @@ import 'package:homeplay/screens/accounts_screen.dart';
 import 'package:homeplay/services/server_status.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const _jellyfin = Account(
     id: 'j', kind: ServerKind.jellyfin, baseUrl: 'http://192.168.1.5:8096', username: 'anna', serverName: 'GOODMAN', token: 't', userId: 'u');
@@ -66,6 +68,35 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: AccountsScreen()));
     await tester.pumpAndSettle();
     expect(find.text('Add your server'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an invite the website copied opens by itself on the first start, once', (tester) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    SharedPreferences.setMockInitialValues({});
+    var reads = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.hasStrings') return {'value': true};
+      if (call.method == 'Clipboard.getData') {
+        reads++;
+        return {'text': 'https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net&n=Anna&c=ABC'};
+      }
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    await tester.pumpWidget(const MaterialApp(home: AccountsScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Add to OwnMedia'), findsOneWidget);
+    expect(find.text('pc.ts.net'), findsWidgets);
+    // Back without adding: the same invite does not come up again.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(const MaterialApp(home: AccountsScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text('Add to OwnMedia'), findsNothing);
+    expect(find.text('Add your server'), findsOneWidget);
+    expect(reads, 2);
     expect(tester.takeException(), isNull);
   });
 }
