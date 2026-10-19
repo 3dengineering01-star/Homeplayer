@@ -31,7 +31,7 @@ String _trimSlash(String s) => s.endsWith('/') ? s.substring(0, s.length - 1) : 
 /// What a friend receives: who shares, and the link to open on the phone.
 String inviteMessage(String serverName, String link) =>
     '$serverName: I share my movies and music with you in OwnMedia. '
-    'Open this link on your Android phone: $link';
+    'Open this link on your phone: $link';
 
 /// The server's internet address as typed, made into a site address: https:// added when
 /// missing, no trailing slash. Null when it is not one (empty, no dot in the name).

@@ -10,7 +10,8 @@ Flutter + media_kit (libmpv), direct play без транскодировани�
 
 ## Структура
 
-- `app/` — Flutter-приложение (пакет `homeplay`), целевая платформа Android.
+- `app/` — Flutter-приложение (пакет `homeplay`), платформы Android и iOS. iPhone-версия: `app/ios/`,
+  сборка на Mac от GitHub `.github/workflows/ios.yml`, установка и отличия от Android — `docs/ios.md`.
   - `lib/api/` — клиенты серверов: `jellyfin.dart`, `subsonic.dart`, общее в `common.dart`
     (`PlayItem`, `PlaybackReporter`, список кодеков, которые декодирует libmpv), автопоиск Jellyfin в `discovery.dart`.
   - `lib/services/playback.dart` — единственный плеер приложения (`Playback`, audio_service): очередь,

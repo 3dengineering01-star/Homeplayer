@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// How video reaches the phone: the original file, a cap the app measures before playing,
@@ -110,7 +113,55 @@ class QualitySettings {
     } catch (_) {
       return s.wifi;
     }
-    final local = net.contains(ConnectivityResult.wifi) || net.contains(ConnectivityResult.ethernet);
-    return !local && net.contains(ConnectivityResult.mobile) ? s.mobile : s.wifi;
+    return onMobileData(net) ? s.mobile : s.wifi;
+  }
+}
+
+/// Whether the phone is on mobile data only. Ethernet counts as Wi-Fi.
+bool onMobileData(List<ConnectivityResult> net) {
+  final local = net.contains(ConnectivityResult.wifi) || net.contains(ConnectivityResult.ethernet);
+  return !local && net.contains(ConnectivityResult.mobile);
+}
+
+/// Music on mobile data: the original files, or converted by the server down to a bitrate, to
+/// spend less of the data plan. Wi-Fi always gets the original. Kept up to date with the
+/// network, so the queue made on mobile data asks for smaller files.
+class MusicQuality {
+  /// kbit/s; 0 is the original file.
+  static const choices = [0, 320, 192, 128];
+  static const _key = 'music_mobile_kbps';
+
+  static int _mobileKbps = 0;
+  static bool _onMobile = false;
+  static StreamSubscription<List<ConnectivityResult>>? _watch;
+
+  /// The choice for mobile data, kbit/s; 0 is the original.
+  static int get mobileKbps => _mobileKbps;
+
+  /// The cap in kbit/s for music started now; null for the original file.
+  static int? get capKbps => _onMobile && _mobileKbps > 0 ? _mobileKbps : null;
+
+  static String label(int kbps) => kbps == 0 ? 'Original' : '$kbps kbps';
+
+  /// Reads the choice and starts following the network.
+  static Future<void> init() async {
+    try {
+      _mobileKbps = (await SharedPreferences.getInstance()).getInt(_key) ?? 0;
+      _onMobile = onMobileData(await Connectivity().checkConnectivity());
+      _watch ??= Connectivity().onConnectivityChanged.listen((net) => _onMobile = onMobileData(net));
+    } catch (e) {
+      debugPrint('homeplay network check failed: $e');
+    }
+  }
+
+  static Future<void> setMobile(int kbps) async {
+    _mobileKbps = kbps;
+    await (await SharedPreferences.getInstance()).setInt(_key, kbps);
+  }
+
+  @visibleForTesting
+  static void debugSet({required bool onMobile, required int kbps}) {
+    _onMobile = onMobile;
+    _mobileKbps = kbps;
   }
 }

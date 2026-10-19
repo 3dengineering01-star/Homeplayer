@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
@@ -13,6 +15,7 @@ import 'services/downloads.dart';
 import 'services/invite_link.dart';
 import 'services/pip.dart';
 import 'services/playback.dart';
+import 'services/quality.dart';
 import 'widgets/backdrop.dart';
 import 'widgets/mini_player.dart';
 
@@ -24,6 +27,8 @@ Future<void> main() async {
   MediaKit.ensureInitialized();
   await AppearanceStore.load();
   await Playback.init();
+  // Music on mobile data may come converted to a smaller size (Settings).
+  await MusicQuality.init();
   await Backup.init();
   // Picks up downloads that went on while the app was closed.
   await Downloads.instance.init();
@@ -36,6 +41,8 @@ Future<void> main() async {
     ?..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(text), duration: const Duration(seconds: 6))));
   runApp(const HomeplayApp());
+  // The music that played when the app was closed, paused, for the mini player.
+  unawaited(Playback.instance.restoreQueue());
   // A friend's invite opens the app: its page comes up over whatever is on screen.
   AppLinks.listen(_openLink);
 }

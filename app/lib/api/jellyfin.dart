@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
+import '../services/device_name.dart';
 import '../services/quality.dart';
 import '../services/search_filters.dart';
 import 'common.dart';
 import 'discovery.dart';
+import 'lyrics.dart';
 import 'dlna.dart';
 import 'sharing.dart';
 
@@ -40,6 +42,12 @@ class JellyfinItem {
   Map<String, dynamic> get _user => (_j['UserData'] as Map<String, dynamic>?) ?? const {};
   bool get played => (_user['Played'] as bool?) ?? false;
   bool get isFavorite => (_user['IsFavorite'] as bool?) ?? false;
+
+  /// When this user last played it, if ever.
+  DateTime? get lastPlayed => DateTime.tryParse((_user['LastPlayedDate'] as String?) ?? '');
+
+  /// How many times this user played it.
+  int get playCount => (_user['PlayCount'] as num?)?.toInt() ?? 0;
 
   /// Where playback stopped last time; zero when there is nothing to resume.
   Duration get resumePosition => Duration(microseconds: ((_user['PlaybackPositionTicks'] as num?) ?? 0).toInt() ~/ 10);
@@ -224,7 +232,7 @@ class JellyfinClient {
   String get _base => account.baseUrl;
 
   static String _authHeader(String deviceId, [String? token]) =>
-      'MediaBrowser Client="OwnMedia", Device="Android", DeviceId="$deviceId", Version="$_appVersion"'
+      'MediaBrowser Client="OwnMedia", Device="$platformName", DeviceId="$deviceId", Version="$_appVersion"'
       '${token != null ? ', Token="$token"' : ''}';
 
   Map<String, String> get headers => {'Authorization': _authHeader(deviceId, account.token)};
@@ -461,6 +469,46 @@ class JellyfinClient {
       final total = (j['TotalRecordCount'] as num?)?.toInt() ?? all.length;
       if (items.isEmpty || all.length >= total) return all;
     }
+  }
+
+  /// Songs like [itemId] (a song, album, artist or playlist), the server's "Instant Mix".
+  Future<List<JellyfinItem>> instantMix(String itemId, {int limit = 100}) async =>
+      (await _list('/Items/$itemId/InstantMix', {
+        'userId': account.userId!,
+        'limit': '$limit',
+        'fields': 'MediaSourceCount,Path',
+        'enableUserData': 'true',
+      }))
+          .where((i) => i.type == 'Audio')
+          .toList();
+
+  /// Items by id in the order asked, without the ones the server no longer has: for a queue
+  /// saved before the app was closed.
+  Future<List<JellyfinItem>> itemsByIds(List<String> ids) async {
+    final byId = <String, JellyfinItem>{};
+    // A few hundred ids per request keep the address short enough for any proxy.
+    for (var at = 0; at < ids.length; at += 200) {
+      final chunk = ids.sublist(at, at + 200 > ids.length ? ids.length : at + 200);
+      for (final i in _items(await _get('/Items', {
+        'userId': account.userId!,
+        'ids': chunk.join(','),
+        'fields': 'MediaSourceCount,Path',
+        'enableUserData': 'true',
+      }))) {
+        byId[i.id] = i;
+      }
+    }
+    return [for (final id in ids) ?byId[id]];
+  }
+
+  /// The track's lyrics (Jellyfin 10.9+, from an .lrc or .txt next to the file or the tags);
+  /// null when it has none.
+  Future<Lyrics?> lyrics(String itemId) async {
+    final res = await _http.get(Uri.parse('$_base/Audio/$itemId/Lyrics'), headers: headers).timeout(_timeout);
+    if (res.statusCode == 404) return null;
+    if (_lostAccess(res.statusCode)) throw ApiException(signedOut);
+    if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for lyrics');
+    return lyricsFromJellyfin(jsonDecode(res.body));
   }
 
   // --- Playlists ---
@@ -1006,16 +1054,36 @@ class JellyfinClient {
     }
   }
 
+  /// A track converted by the server to at most [kbps] when the file is larger (Jellyfin's
+  /// "universal" stream): MP3, which every phone plays. Smaller files come as they are.
+  Uri cappedAudioUrl(JellyfinItem item, int kbps) => Uri.parse('$_base/Audio/${item.id}/universal').replace(queryParameters: {
+        'UserId': account.userId!,
+        'DeviceId': deviceId,
+        'ApiKey': account.token!,
+        'MaxStreamingBitrate': '${kbps * 1000}',
+        'Container': 'mp3,aac,m4a|aac,m4b|aac,opus,ogg|opus,ogg|vorbis,webma,webm|webma,flac,wav',
+        'TranscodingContainer': 'mp3',
+        'TranscodingProtocol': 'http',
+        'AudioCodec': 'mp3',
+        'MaxAudioChannels': '2',
+        // Its own session per track: the next track opened ahead does not stop this one's conversion.
+        'PlaySessionId': '${item.id}-${DateTime.now().microsecondsSinceEpoch}',
+      });
+
   PlayItem toPlayItem(JellyfinItem item, {String? versionId}) => PlayItem(
         title: item.name,
         subtitle: item.subtitle,
-        url: streamUrl(item, versionId: versionId),
+        url: switch (MusicQuality.capKbps) {
+          final kbps? when item.type == 'Audio' => cappedAudioUrl(item, kbps),
+          _ => streamUrl(item, versionId: versionId),
+        },
         artwork: imageUrl(item, height: 600),
         isVideo: item.isVideo,
         headers: headers,
         reporter: _reporter(item, versionId, null, 'DirectPlay'),
         favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
         container: item.container,
+        ref: item.isVideo ? null : TrackRef(TrackSource.jellyfin, item.id, accountId: account.id),
         tvUrl: () async {
           final url = streamUrl(item, versionId: versionId);
           final home = await homeBase();

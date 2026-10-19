@@ -3,11 +3,13 @@
 The artwork is a dark rounded tile on black. Out of it come:
 - Android adaptive icon: the picture as the foreground layer, a flat dark background, and a
   one-colour version for themed icons (Android 13+);
-- Android icons for old phones (rounded tile), Google Play's 512 px icon, the installer's .ico.
+- Android icons for old phones (rounded tile), Google Play's 512 px icon, the installer's .ico;
+- iPhone and iPad icons (full squares, iOS rounds the corners itself).
 
 Run from the repository root: python3 tools/make_icons.py (needs Pillow and NumPy).
 """
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +18,7 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / 'docs/brand/ownmedia-icon-source.jpg'
 RES = ROOT / 'app/android/app/src/main/res'
+IOS_ICONS = ROOT / 'app/ios/Runner/Assets.xcassets/AppIcon.appiconset'
 
 # Where the tile and the picture on it are in the artwork (pixels).
 TILE_LEFT, TILE_RIGHT = 58, 724
@@ -90,6 +93,12 @@ def main() -> None:
 
     # Google Play: a full square, Play rounds the corners itself.
     flat.crop(window).resize((512, 512), Image.LANCZOS).save(ROOT / 'docs/play/icon-512.png', optimize=True)
+
+    # iPhone and iPad: full squares with no transparency (the App Store refuses it), every size
+    # the asset catalogue lists.
+    for image in json.loads((IOS_ICONS / 'Contents.json').read_text())['images']:
+        px = round(float(image['size'].split('x')[0]) * int(image['scale'].rstrip('x')))
+        flat.crop(window).resize((px, px), Image.LANCZOS).save(IOS_ICONS / image['filename'], optimize=True)
 
     # Windows installer and its Start menu link: the rounded tile.
     big = flat.crop(window).resize((256, 256), Image.LANCZOS).convert('RGBA')

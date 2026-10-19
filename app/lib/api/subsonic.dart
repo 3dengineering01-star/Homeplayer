@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
+import 'lyrics.dart';
 import '../services/account_store.dart';
+import '../services/quality.dart';
 import 'common.dart';
 
 const _timeout = Duration(seconds: 15);
@@ -124,34 +126,81 @@ class SubsonicClient {
   Future<List<SubsonicEntry>> songs(String albumId) async {
     final r = await _call('getAlbum', {'id': albumId});
     final list = ((r['album'] as Map?)?['song'] as List?) ?? const [];
+    return [for (final s in list) _song(s as Map)];
+  }
+
+  /// Albums from one of the server's lists: 'newest' (added last), 'recent' (played last),
+  /// 'frequent' (played most), 'starred' (favorites) or 'random'.
+  Future<List<SubsonicEntry>> albumList(String type, {int size = 20}) async {
+    final r = await _call('getAlbumList2', {'type': type, 'size': '$size'});
     return [
-      for (final s in list)
+      for (final a in ((r['albumList2'] as Map?)?['album'] as List?) ?? const [])
         SubsonicEntry(
-          id: '${s['id']}',
-          title: '${s['title']}'.trim(),
-          subtitle: (s['artist'] as String?)?.trim(),
-          coverArt: s['coverArt'] as String?,
-          duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
-          starred: s['starred'] != null,
+          id: '${a['id']}',
+          title: '${a['name'] ?? a['title']}'.trim(),
+          subtitle: (a['artist'] as String?)?.trim(),
+          coverArt: a['coverArt'] as String?,
+          starred: a['starred'] != null,
         ),
     ];
+  }
+
+  /// Songs picked at random from the whole library, for "Shuffle all".
+  Future<List<SubsonicEntry>> randomSongs({int size = 100}) async {
+    final r = await _call('getRandomSongs', {'size': '$size'});
+    return [for (final s in ((r['randomSongs'] as Map?)?['song'] as List?) ?? const []) _song(s as Map)];
+  }
+
+  /// The songs marked as favorites.
+  Future<List<SubsonicEntry>> starredSongs() async {
+    final r = await _call('getStarred2');
+    return [for (final s in ((r['starred2'] as Map?)?['song'] as List?) ?? const []) _song(s as Map)];
+  }
+
+  static SubsonicEntry _song(Map s) => SubsonicEntry(
+        id: '${s['id']}',
+        title: '${s['title']}'.trim(),
+        subtitle: (s['artist'] as String?)?.trim(),
+        coverArt: s['coverArt'] as String?,
+        duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
+        starred: s['starred'] != null,
+      );
+
+  /// One song by id; null when the server no longer has it.
+  Future<SubsonicEntry?> song(String id) async {
+    try {
+      final s = (await _call('getSong', {'id': id}))['song'];
+      return s is Map ? _song(s) : null;
+    } on ApiException {
+      return null;
+    }
+  }
+
+  /// Songs like [id] (a song, album or artist): the server's similar-songs radio. Navidrome
+  /// needs an artist info agent (Last.fm) for it, and answers with nothing without one.
+  Future<List<SubsonicEntry>> similarSongs(String id, {int count = 50}) async {
+    final r = await _call('getSimilarSongs', {'id': id, 'count': '$count'});
+    return [for (final s in ((r['similarSongs'] as Map?)?['song'] as List?) ?? const []) _song(s as Map)];
+  }
+
+  /// The song's lyrics: OpenSubsonic's timed ones by id (Navidrome 0.53+), else the classic
+  /// lookup by artist and title. Null when there are none.
+  Future<Lyrics?> lyrics(String id, {String? artist, required String title}) async {
+    try {
+      final found = lyricsFromOpenSubsonic((await _call('getLyricsBySongId', {'id': id}))['lyricsList']);
+      if (found != null) return found;
+    } on ApiException {
+      // Not an OpenSubsonic server.
+    }
+    final r = await _call('getLyrics', {'artist': ?artist, 'title': title});
+    return lyricsFromText((r['lyrics'] as Map?)?['value'] as String?);
   }
 
   /// Songs matching [query] (title, artist, album), for voice search in the car.
   Future<List<SubsonicEntry>> searchSongs(String query) async {
     final r = await _call('search3', {'query': query, 'songCount': '50', 'albumCount': '0', 'artistCount': '0'});
     final list = ((r['searchResult3'] as Map?)?['song'] as List?) ?? const [];
-    return [
-      for (final s in list)
-        SubsonicEntry(
-          id: '${s['id']}',
-          title: '${s['title']}'.trim(),
-          subtitle: (s['artist'] as String?)?.trim(),
-          coverArt: s['coverArt'] as String?,
-          duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
-          starred: s['starred'] != null,
-        ),
-    ];
+    return [for (final s in list) _song(s as Map)];
   }
 
   Uri? coverUrl(String? coverArt, {int size = 300}) =>
@@ -160,11 +209,16 @@ class SubsonicClient {
   PlayItem toPlayItem(SubsonicEntry song) => PlayItem(
         title: song.title,
         subtitle: song.subtitle,
-        url: _uri('stream', {'id': song.id}),
+        // On mobile data with a cap chosen, the server converts larger files to MP3.
+        url: _uri('stream', {
+          'id': song.id,
+          if (MusicQuality.capKbps case final kbps?) ...{'maxBitRate': '$kbps', 'format': 'mp3'},
+        }),
         artwork: coverUrl(song.coverArt, size: 600),
         isVideo: false,
         reporter: _Scrobbler(this, song),
         favorite: ServerFavorite(song.starred, (on) => _call(on ? 'star' : 'unstar', {'id': song.id})),
+        ref: TrackRef(TrackSource.subsonic, song.id, accountId: account.id),
       );
 
   Future<void> _scrobble(String id, {required bool submission}) async {

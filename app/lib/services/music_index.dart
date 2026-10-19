@@ -178,6 +178,34 @@ List<ArtistGroup> sortArtists(List<ArtistGroup> artists, ArtistSort by) => [...a
   );
 
 
+/// What the music library's Home tab shows, from the library's own tracks.
+typedef MusicHome = ({
+  List<AlbumGroup> added,
+  List<AlbumGroup> played,
+  List<JellyfinItem> mostPlayed,
+  List<JellyfinItem> favorites,
+});
+
+/// The newest albums, the albums played last, the tracks played most and the favorite tracks,
+/// [limit] of each. [isFavorite] counts hearts set while the app runs.
+MusicHome musicHome(List<AlbumGroup> albums, List<JellyfinItem> tracks,
+    {required bool Function(JellyfinItem) isFavorite, int limit = 20}) {
+  DateTime? lastPlayed(AlbumGroup a) =>
+      a.tracks.map((t) => t.lastPlayed).whereType<DateTime>().fold<DateTime?>(null, (x, y) => x == null || y.isAfter(x) ? y : x);
+  final real = albums.where((a) => !a.loose);
+  final played = [for (final a in real) (album: a, at: lastPlayed(a))].where((p) => p.at != null).toList()
+    ..sort((a, b) => b.at!.compareTo(a.at!));
+  return (
+    added: (real.where((a) => a.added != null).toList()..sort((a, b) => _newer(a.added, b.added))).take(limit).toList(),
+    played: [for (final p in played.take(limit)) p.album],
+    mostPlayed: (tracks.where((t) => t.playCount > 0).toList()
+          ..sort((a, b) => _then(b.playCount.compareTo(a.playCount), () => _newer(a.lastPlayed, b.lastPlayed))))
+        .take(limit)
+        .toList(),
+    favorites: tracks.where(isFavorite).take(limit).toList(),
+  );
+}
+
 int _then(int first, int Function() next) => first != 0 ? first : next();
 
 /// Newer first; unknown dates last.

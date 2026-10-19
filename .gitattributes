@@ -3,3 +3,5 @@
 *.png binary
 *.jpg binary
 *.ttf binary
+# Windows batch files need CRLF: with LF cmd.exe misreads labels and jumps.
+*.cmd text eol=crlf

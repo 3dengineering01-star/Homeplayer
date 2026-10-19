@@ -19,6 +19,10 @@ class SaveToPhone {
   /// The download group of these files, apart from the app's own downloads.
   static const group = 'save-to-phone';
 
+  /// Only Android has a Music folder that other players read. On iOS songs for listening without
+  /// the internet go through Download, so the app offers no Save to phone there.
+  static bool get available => defaultTargetPlatform == TargetPlatform.android;
+
   /// Queues [tracks] (non-tracks are skipped); each one moves into the Music folder when it
   /// is down. Tracks already there, or already on their way, are left alone: Android would
   /// save a second copy as "01 Gripir (1).flac". Returns how many were queued and how many

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -63,6 +65,10 @@ enum Backdrop {
   /// A fixed blend's colours, top left to bottom right; empty for the others.
   final List<Color> colors;
 }
+
+/// Whether this phone can show its home screen wallpaper through the app: only Android lets an
+/// app's window be see-through.
+bool get wallpaperBackdropAvailable => defaultTargetPlatform == TargetPlatform.android;
 
 /// How the home screen shows the server's libraries.
 enum LibraryLayout {
@@ -329,6 +335,8 @@ ThemeData buildTheme(ColorScheme scheme, {bool seeThrough = false, bool glass = 
     pageTransitionsTheme: PageTransitionsTheme(builders: {
       TargetPlatform.android:
           seeThrough ? const _SeeThroughTransitions() : const PredictiveBackPageTransitionsBuilder(),
+      // The usual iPhone slide, except over a picture or colour blend, which must stay visible.
+      TargetPlatform.iOS: seeThrough ? const _SeeThroughTransitions() : const CupertinoPageTransitionsBuilder(),
     }),
     extensions: [look],
   );
@@ -389,6 +397,9 @@ class AppearanceStore {
   static Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     current.value = Appearance.fromPrefs(p.get);
+    if (current.value.backdrop == Backdrop.wallpaper && !wallpaperBackdropAvailable) {
+      current.value = current.value.copyWith(backdrop: Backdrop.plain);
+    }
     if (current.value.backdrop == Backdrop.picture &&
         current.value.picture != null &&
         !File(current.value.picture!).existsSync()) {

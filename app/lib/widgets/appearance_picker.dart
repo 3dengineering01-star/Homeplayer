@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/appearance.dart';
@@ -47,7 +48,7 @@ class AppearancePicker extends StatelessWidget {
                     onTap: () => AppearanceStore.set(look.copyWith(palette: p)),
                   ),
               ]),
-              if (look.palette == Palette.wallpaper)
+              if (look.palette == Palette.wallpaper && defaultTargetPlatform == TargetPlatform.android)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text('Colours follow your wallpaper (Android 12 and newer).', style: theme.textTheme.bodySmall),
@@ -85,7 +86,7 @@ class AppearancePicker extends StatelessWidget {
               Wrap(spacing: 10, runSpacing: 12, children: [
                 // Glass needs something behind it: no plain background with glass.
                 for (final b in Backdrop.values)
-                  if (!(look.glass && b == Backdrop.plain))
+                  if (!(look.glass && b == Backdrop.plain) && (b != Backdrop.wallpaper || wallpaperBackdropAvailable))
                     _BackdropChoice(
                       look: look,
                       backdrop: b,

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
+import 'dart:io' show Platform;
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
@@ -14,13 +16,18 @@ import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../api/subsonic.dart';
 import 'account_store.dart';
+import 'audio_details.dart';
 import 'audio_effects.dart';
 import 'car_library.dart';
 import 'downloads.dart';
 import 'native_eq.dart';
 import 'quality.dart';
 import 'queue_edit.dart';
+import 'saved_queue.dart';
+import 'stream_cache.dart';
+import 'track_cache.dart';
 import 'track_choice.dart';
+import 'track_lookup.dart';
 import 'video_tuning.dart';
 
 /// The one player of the app. It outlives the player screen, so music keeps going in the
@@ -51,6 +58,17 @@ class Playback extends BaseAudioHandler with SeekHandler {
     );
     await instance._initSession();
     await instance._keepControls();
+    // A keyboard's own Pause and Play keys, from MainActivity: what they say, not a toggle.
+    _channel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'pause':
+          await instance.pause();
+        case 'play':
+          await instance.play();
+      }
+    });
+    instance.items.addListener(instance._cacheAhead);
+    instance.current.addListener(instance._cacheAhead);
     final prefs = instance._prefs = await SharedPreferences.getInstance();
     instance.adjust.value = VideoAdjust.fromPrefs(prefs.get);
     instance.sound.value = SoundSettings.fromPrefs(prefs.get);
@@ -72,12 +90,16 @@ class Playback extends BaseAudioHandler with SeekHandler {
       debugPrint('homeplay stream cache folder not set: $e');
     }
     try {
-      await native.setProperty('ao', 'audiotrack,opensles');
       // mpv's default 0.2 s ran dry now and then on the phone ("Audio device underrun"), a click.
       await native.setProperty('audio-buffer', '0.5');
-      // Its own audio session, so Android's equalizer can work on it.
-      _eqSession = await NativeEq.session();
-      if (_eqSession != null) await native.setProperty('audiotrack-session-id', '$_eqSession');
+      // iOS keeps mpv's own output (Audio Unit): the Android outputs do not exist there, and mpv
+      // would play no sound at all without falling back to another one.
+      if (Platform.isAndroid) {
+        await native.setProperty('ao', 'audiotrack,opensles');
+        // Its own audio session, so Android's equalizer can work on it.
+        _eqSession = await NativeEq.session();
+        if (_eqSession != null) await native.setProperty('audiotrack-session-id', '$_eqSession');
+      }
     } catch (e) {
       debugPrint('homeplay audio output not changed: $e');
     }
@@ -128,6 +150,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
   void screenOpened() => screenOpen.value = ++_openScreens > 0;
 
   void screenClosed() => screenOpen.value = (_openScreens = (_openScreens - 1).clamp(0, 1 << 30)) > 0;
+
+  /// The sound of the music file playing, e.g. "FLAC · 24-bit · 96 kHz"; null for video and
+  /// until the file is open.
+  final ValueNotifier<String?> audioInfo = ValueNotifier(null);
 
   final _notices = StreamController<String>.broadcast();
   Stream<String> get notices => _notices.stream;
@@ -352,6 +378,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// The queue changes at once (lists follow it without a flicker); mpv follows.
   Future<void> moveQueueItem(int from, int to) async {
     if (from == to || from < 0 || to < 0 || from >= items.value.length || to >= items.value.length) return;
+    if (_pending != null) return _editPending(moved(items.value, from, to), indexAfterMove(current.value, from, to));
     _editing++;
     _remapIndexes((i) => indexAfterMove(i, from, to));
     items.value = moved(items.value, from, to);
@@ -368,6 +395,9 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// Takes the entry at [index] out of the queue; not the one playing.
   Future<void> removeFromQueue(int index) async {
     if (index == current.value || index < 0 || index >= items.value.length) return;
+    if (_pending != null) {
+      return _editPending([...items.value]..removeAt(index), indexAfterRemove(current.value, index) ?? current.value);
+    }
     _editing++;
     _remapIndexes((i) => indexAfterRemove(i, index));
     items.value = [...items.value]..removeAt(index);
@@ -389,6 +419,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   Future<void> _insert(List<PlayItem> more, {required bool next}) async {
     if (more.isEmpty) return;
+    if (_pending != null && !more.any((i) => i.isVideo)) {
+      final at = next ? current.value + 1 : items.value.length;
+      return _editPending([...items.value]..insertAll(at, more), current.value);
+    }
     if (items.value.isEmpty || !_isMusic || more.any((i) => i.isVideo)) {
       await start(more, 0);
       return;
@@ -397,7 +431,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     for (final item in more) {
       _editing++;
       try {
-        await player.add(Media(item.url.toString(), httpHeaders: item.headers));
+        await player.add(_media(item));
         await Future<void>.delayed(Duration.zero);
       } finally {
         _editing--;
@@ -413,6 +447,31 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
     queue.add([for (final i in items.value) _mediaItem(i)]);
     _broadcast();
+  }
+
+  /// What mpv opens for [item]: a song through the song cache, else the server's address.
+  Media _media(PlayItem item, {Duration? start}) {
+    final cached = item.isVideo ? null : TrackCache.instance.urlFor(item);
+    return cached != null
+        ? Media(cached.toString(), start: start)
+        : Media(item.url.toString(), httpHeaders: item.headers, start: start);
+  }
+
+  /// Saves the songs after the playing one on the phone (see TrackCache); not for video or a
+  /// restored queue not played yet.
+  void _cacheAhead() {
+    final list = items.value;
+    final music = list.isNotEmpty && !list.any((i) => i.isVideo);
+    TrackCache.instance.follow(music && _pending == null ? list : const [], current.value);
+  }
+
+  /// An edit of the restored queue before it is played: only the lists change.
+  Future<void> _editPending(List<PlayItem> list, int index) async {
+    final p = _pending!;
+    _pending = (items: list, index: index, position: p.position);
+    current.value = index;
+    items.value = list;
+    _scheduleSave();
   }
 
   /// Puts the queue in [target] order (the same entries) with mpv moves, without a pause.
@@ -440,18 +499,24 @@ class Playback extends BaseAudioHandler with SeekHandler {
     current.value = after(current.value) ?? current.value;
   }
 
-  /// Plays [queueItems] from [index], optionally from [startAt] (a resume point).
-  Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt}) async {
+  /// Plays [queueItems] from [index], optionally from [startAt] (a resume point). [keepOrder]:
+  /// a queue that is already in its played order (the restored one) is not shuffled again.
+  Future<void> start(List<PlayItem> queueItems, int index, {Duration? startAt, bool keepOrder = false}) async {
+    _pending = null;
+    restored.value = false;
     _endReport(current.value, player.state.position);
+    audioInfo.value = null;
     _tracksApplied.clear();
     _subtitlesAdded.clear();
     _stopReported.clear();
     final music = !queueItems.any((i) => i.isVideo);
     _unshuffledOrder = queueItems;
-    if (music && shuffle.value && queueItems.length > 1) {
+    if (music && shuffle.value && queueItems.length > 1 && !keepOrder) {
       queueItems = [for (final i in shuffledOrder(queueItems.length, index, _random)) queueItems[i]];
       index = 0;
     }
+    // Music goes through the song cache, which keeps the next songs on the phone.
+    if (music) await TrackCache.instance.start();
     items.value = queueItems;
     current.value = index;
     // The audio output and its equalizer session come with the player, made on first use.
@@ -477,19 +542,32 @@ class Playback extends BaseAudioHandler with SeekHandler {
     if (player.state.rate != rate) await player.setRate(rate);
     await player.setPlaylistMode(music ? repeat.value.mode : PlaylistMode.none);
     await _outputReady;
+    // Music: the next track is opened while this one plays, so albums go on without a gap.
+    // A video's next episode is not fetched ahead, it may never be watched.
+    try {
+      final native = player.platform as NativePlayer;
+      await native.setProperty('prefetch-playlist', music ? 'yes' : 'no');
+      // Rides out a bad connection (see streamCacheOptions).
+      for (final MapEntry(:key, :value) in streamCacheOptions(music: music).entries) {
+        await native.setProperty(key, value);
+      }
+    } catch (e) {
+      debugPrint('homeplay stream cache not set: $e');
+    }
     await player.open(Playlist(
-      [
-        for (var n = 0; n < queueItems.length; n++)
-          Media(queueItems[n].url.toString(), httpHeaders: queueItems[n].headers, start: n == index ? startAt : null),
-      ],
-      index: index,
-    ));
+        [
+          for (var n = 0; n < queueItems.length; n++)
+            _media(queueItems[n], start: n == index ? startAt : null),
+        ],
+        index: index,
+      ));
     _notice();
     _beginReport(startAt ?? Duration.zero);
     // Also while paused: Android may recreate the service then, and the notification's Play must work.
     _heartbeat ??= Timer.periodic(const Duration(seconds: 10), (_) {
       _reportProgress();
       _keepControls();
+      _saveQueue();
     });
     if (kDebugMode) _cacheLog ??= Timer.periodic(const Duration(seconds: 5), (_) => _logCache());
   }
@@ -619,16 +697,26 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> play() async {
+    _control('play');
+    if (_pending case final p?) return start(p.items, p.index, startAt: p.position, keepOrder: true);
     await _session?.setActive(true);
     await _keepControls();
     await player.play();
   }
 
   @override
-  Future<void> pause() async => _player?.pause();
+  Future<void> pause() async {
+    _control('pause');
+    await _player?.pause();
+  }
 
   @override
   Future<void> seek(Duration position) async {
+    _control('seek');
+    if (_pending case final p?) {
+      _pending = (items: p.items, index: p.index, position: position);
+      return;
+    }
     await player.seek(position);
     playbackState.add(playbackState.value.copyWith(updatePosition: position));
     _reportProgress(position);
@@ -636,30 +724,53 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToNext() {
+    _control('next');
+    if (_pending != null) return _startPending(current.value + 1);
     _endReport(current.value, player.state.position);
     return player.next();
   }
 
   @override
   Future<void> skipToPrevious() {
+    _control('previous');
+    if (_pending != null) return _startPending(current.value - 1);
     _endReport(current.value, player.state.position);
     return player.previous();
   }
 
   @override
   Future<void> skipToQueueItem(int index) {
+    if (_pending != null) return _startPending(index);
     _endReport(current.value, player.state.position);
     return player.jump(index);
   }
 
+  /// Each command that reaches the player, from the app, the notification or a headset: the
+  /// phone's log then shows whether a button press got here at all.
+  void _control(String command) => debugPrint('homeplay control: $command (player ${_player == null ? 'not made' : 'ready'}'
+      '${_pending == null ? '' : ', restored queue'})');
+
+  /// Plays the restored queue from [index], from its start.
+  Future<void> _startPending(int index) async {
+    final p = _pending!;
+    if (index < 0 || index >= p.items.length) return;
+    await start(p.items, index, keepOrder: true);
+  }
+
   @override
   Future<void> stop() async {
+    _control('stop');
     _endReport(current.value, _player?.state.position ?? Duration.zero);
     _heartbeat?.cancel();
     _heartbeat = null;
     _cacheLog?.cancel();
     _cacheLog = null;
     setSleepTimer(null);
+    _pending = null;
+    restored.value = false;
+    _saveTimer?.cancel();
+    await _prefs?.remove(_savedQueueKey);
+    audioInfo.value = null;
     await _player?.stop();
     items.value = const [];
     current.value = 0;
@@ -687,7 +798,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// MainActivity.keepControls). Called whenever playback starts.
   Future<void> _keepControls() async {
     try {
-      await _channel.invokeMethod('keepControls');
+      if (await _channel.invokeMethod<bool>('keepControls') == true) debugPrint('homeplay media controls reconnected');
     } catch (_) {
       // Started without the activity (Android Auto): the channel is not there.
     }
@@ -734,6 +845,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
       // Not reported yet means the previous entry played to its end.
       _endReport(current.value, mediaItem.value?.duration ?? _lastPosition);
       current.value = p.index;
+      audioInfo.value = null;
       mediaItem.add(_mediaItem(items.value[p.index]));
       _notice();
       _broadcast();
@@ -745,7 +857,10 @@ class Playback extends BaseAudioHandler with SeekHandler {
       if (m != null && d > Duration.zero) mediaItem.add(m.copyWith(duration: d));
       if (kDebugMode && d > Duration.zero) _logDecoders();
       // Once per file, when its audio output is open.
-      if (d > Duration.zero) _logSound();
+      if (d > Duration.zero) {
+        _logSound();
+        _readAudioInfo();
+      }
     });
     // Switch away from an audio track this libmpv can't decode, once per queue entry.
     s.tracks.listen(_applyTrackChoice);
@@ -791,6 +906,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   /// Tells the notification and the lock screen what is going on.
   void _broadcast() {
+    _scheduleSave();
     final st = _player?.state ?? const PlayerState();
     final count = items.value.length;
     final hasPrev = current.value > 0;
@@ -826,6 +942,90 @@ class Playback extends BaseAudioHandler with SeekHandler {
       shuffleMode: shuffle.value ? AudioServiceShuffleMode.all : AudioServiceShuffleMode.none,
       queueIndex: count == 0 ? null : current.value,
     ));
+  }
+
+  /// The sound of the file just opened, for the music player. Read a moment later: mpv knows
+  /// the bitrate only once some of the file has been decoded.
+  Future<void> _readAudioInfo() async {
+    final item = currentItem;
+    if (item == null || item.isVideo) return;
+    await Future<void>.delayed(const Duration(seconds: 1));
+    if (!identical(currentItem, item)) return;
+    final native = player.platform as NativePlayer;
+    Future<String?> read(String name) async {
+      try {
+        final v = await native.getProperty(name);
+        return v.isEmpty ? null : v;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    audioInfo.value = audioDetails(
+      codec: await read('audio-codec-name'),
+      sampleRate: int.tryParse(await read('audio-params/samplerate') ?? ''),
+      format: await read('audio-params/format'),
+      bitrate: double.tryParse(await read('audio-bitrate') ?? '')?.round(),
+    );
+  }
+
+  // --- The queue kept between runs of the app ---
+
+  static const _savedQueueKey = 'saved_queue';
+  Timer? _saveTimer;
+
+  /// Saves soon: edits and track changes come in bursts.
+  void _scheduleSave() {
+    if (items.value.isEmpty) return;
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(seconds: 2), _saveQueue);
+  }
+
+  /// Keeps the music queue and the place in it for the next start of the app.
+  void _saveQueue() {
+    final prefs = _prefs;
+    if (prefs == null || items.value.isEmpty) return;
+    final position = _pending?.position ?? _player?.state.position ?? Duration.zero;
+    final saved = SavedQueue.of(items.value, current.value, position);
+    // A video, or music that cannot be found again: an older queue would come back instead.
+    if (saved == null) {
+      prefs.remove(_savedQueueKey);
+      return;
+    }
+    prefs.setString(_savedQueueKey, jsonEncode(saved.toJson()));
+  }
+
+  /// The restored queue until it is played: shown in the mini player, nothing opened yet.
+  ({List<PlayItem> items, int index, Duration position})? _pending;
+
+  /// True while the queue in [items] is the restored one, not opened in the player yet.
+  final ValueNotifier<bool> restored = ValueNotifier(false);
+
+  /// Where the restored queue will start.
+  Duration? get pendingPosition => _pending?.position;
+
+  /// Brings back the music queue the app had when it was closed, where it was. Tracks the
+  /// servers no longer have are left out. Does nothing if something plays already.
+  ///
+  /// Only the lists are filled: mpv and the media notification start with Play, as for any
+  /// other queue. Android also starts this app without a screen, for its media service; a
+  /// player made there outlived it, and the notification's buttons stopped working.
+  Future<void> restoreQueue() async {
+    final raw = _prefs?.getString(_savedQueueKey);
+    if (raw == null || items.value.isNotEmpty) return;
+    try {
+      final saved = SavedQueue.fromJson(jsonDecode(raw));
+      if (saved == null) return;
+      final back = saved.restore(await TrackLookup.rebuild(saved.refs));
+      // The user may have started something while the servers answered.
+      if (back == null || items.value.isNotEmpty) return;
+      _pending = back;
+      restored.value = true;
+      current.value = back.index;
+      items.value = back.items;
+    } catch (e) {
+      debugPrint('homeplay saved queue not restored: $e');
+    }
   }
 
   /// Pause for calls and other apps, and when headphones are unplugged.

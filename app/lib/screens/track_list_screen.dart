@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../services/music_index.dart';
+import '../services/save_to_phone.dart';
 import '../widgets/media_cards.dart';
 import '../widgets/track_tile.dart';
 import '../widgets/vinyl_art.dart';
@@ -174,7 +175,7 @@ class _TrackListScreenState extends State<TrackListScreen> with JellyfinActions 
               tracks: tracks,
               onPlay: () => playAll(tracks),
               onShuffle: () => playAll(tracks, shuffle: true),
-              onSave: tracks.any((t) => t.type == 'Audio') ? () => saveToPhone(tracks) : null,
+              onSave: SaveToPhone.available && tracks.any((t) => t.type == 'Audio') ? () => saveToPhone(tracks) : null,
               onAddAll: widget.playlist != null || tracks.isEmpty
                   ? null
                   : () => addToPlaylist(context, client, items: tracks),
