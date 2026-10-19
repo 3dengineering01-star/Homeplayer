@@ -661,6 +661,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> play() async {
+    _control('play');
     if (_pending case final p?) return start(p.items, p.index, startAt: p.position, keepOrder: true);
     await _session?.setActive(true);
     await _keepControls();
@@ -668,10 +669,14 @@ class Playback extends BaseAudioHandler with SeekHandler {
   }
 
   @override
-  Future<void> pause() async => _player?.pause();
+  Future<void> pause() async {
+    _control('pause');
+    await _player?.pause();
+  }
 
   @override
   Future<void> seek(Duration position) async {
+    _control('seek');
     if (_pending case final p?) {
       _pending = (items: p.items, index: p.index, position: position);
       return;
@@ -683,6 +688,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToNext() {
+    _control('next');
     if (_pending != null) return _startPending(current.value + 1);
     _endReport(current.value, player.state.position);
     return player.next();
@@ -690,6 +696,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToPrevious() {
+    _control('previous');
     if (_pending != null) return _startPending(current.value - 1);
     _endReport(current.value, player.state.position);
     return player.previous();
@@ -702,6 +709,11 @@ class Playback extends BaseAudioHandler with SeekHandler {
     return player.jump(index);
   }
 
+  /// Each command that reaches the player, from the app, the notification or a headset: the
+  /// phone's log then shows whether a button press got here at all.
+  void _control(String command) => debugPrint('homeplay control: $command (player ${_player == null ? 'not made' : 'ready'}'
+      '${_pending == null ? '' : ', restored queue'})');
+
   /// Plays the restored queue from [index], from its start.
   Future<void> _startPending(int index) async {
     final p = _pending!;
@@ -711,6 +723,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> stop() async {
+    _control('stop');
     _endReport(current.value, _player?.state.position ?? Duration.zero);
     _heartbeat?.cancel();
     _heartbeat = null;
@@ -749,7 +762,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
   /// MainActivity.keepControls). Called whenever playback starts.
   Future<void> _keepControls() async {
     try {
-      await _channel.invokeMethod('keepControls');
+      if (await _channel.invokeMethod<bool>('keepControls') == true) debugPrint('homeplay media controls reconnected');
     } catch (_) {
       // Started without the activity (Android Auto): the channel is not there.
     }
