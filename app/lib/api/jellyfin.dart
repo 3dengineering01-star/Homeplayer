@@ -43,6 +43,12 @@ class JellyfinItem {
   bool get played => (_user['Played'] as bool?) ?? false;
   bool get isFavorite => (_user['IsFavorite'] as bool?) ?? false;
 
+  /// When this user last played it, if ever.
+  DateTime? get lastPlayed => DateTime.tryParse((_user['LastPlayedDate'] as String?) ?? '');
+
+  /// How many times this user played it.
+  int get playCount => (_user['PlayCount'] as num?)?.toInt() ?? 0;
+
   /// Where playback stopped last time; zero when there is nothing to resume.
   Duration get resumePosition => Duration(microseconds: ((_user['PlaybackPositionTicks'] as num?) ?? 0).toInt() ~/ 10);
 
@@ -1048,10 +1054,29 @@ class JellyfinClient {
     }
   }
 
+  /// A track converted by the server to at most [kbps] when the file is larger (Jellyfin's
+  /// "universal" stream): MP3, which every phone plays. Smaller files come as they are.
+  Uri cappedAudioUrl(JellyfinItem item, int kbps) => Uri.parse('$_base/Audio/${item.id}/universal').replace(queryParameters: {
+        'UserId': account.userId!,
+        'DeviceId': deviceId,
+        'ApiKey': account.token!,
+        'MaxStreamingBitrate': '${kbps * 1000}',
+        'Container': 'mp3,aac,m4a|aac,m4b|aac,opus,ogg|opus,ogg|vorbis,webma,webm|webma,flac,wav',
+        'TranscodingContainer': 'mp3',
+        'TranscodingProtocol': 'http',
+        'AudioCodec': 'mp3',
+        'MaxAudioChannels': '2',
+        // Its own session per track: the next track opened ahead does not stop this one's conversion.
+        'PlaySessionId': '${item.id}-${DateTime.now().microsecondsSinceEpoch}',
+      });
+
   PlayItem toPlayItem(JellyfinItem item, {String? versionId}) => PlayItem(
         title: item.name,
         subtitle: item.subtitle,
-        url: streamUrl(item, versionId: versionId),
+        url: switch (MusicQuality.capKbps) {
+          final kbps? when item.type == 'Audio' => cappedAudioUrl(item, kbps),
+          _ => streamUrl(item, versionId: versionId),
+        },
         artwork: imageUrl(item, height: 600),
         isVideo: item.isVideo,
         headers: headers,

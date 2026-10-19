@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:homeplay/api/jellyfin.dart';
+import 'package:homeplay/api/subsonic.dart';
 import 'package:homeplay/models/account.dart';
 import 'package:homeplay/services/quality.dart';
 import 'package:http/http.dart' as http;
@@ -104,5 +106,43 @@ void main() {
     expect(measured, greaterThan(5e6));
     final failing = JellyfinClient(_account, 'dev', client: MockClient((_) async => http.Response('', 500)));
     expect(await failing.measureBitrate(), isNull);
+  });
+
+  test('mobile data means mobile without Wi-Fi or a cable', () {
+    expect(onMobileData([ConnectivityResult.mobile]), isTrue);
+    expect(onMobileData([ConnectivityResult.mobile, ConnectivityResult.wifi]), isFalse);
+    expect(onMobileData([ConnectivityResult.ethernet]), isFalse);
+    expect(onMobileData([ConnectivityResult.none]), isFalse);
+  });
+
+  group('music on mobile data', () {
+    tearDown(() => MusicQuality.debugSet(onMobile: false, kbps: 0));
+    final track = JellyfinItem({'Id': 't1', 'Name': 'Gripir', 'Type': 'Audio'});
+    const subsonic = Account(
+        id: 'b', kind: ServerKind.subsonic, baseUrl: 'http://nas:4533', username: 'u', serverName: 'M', token: 'tok', salt: 's');
+
+    test('on Wi-Fi, or with Original chosen, the file comes as it is', () {
+      MusicQuality.debugSet(onMobile: false, kbps: 192);
+      expect(JellyfinClient(_account, 'dev').toPlayItem(track).url.path, '/Audio/t1/stream');
+      MusicQuality.debugSet(onMobile: true, kbps: 0);
+      expect(JellyfinClient(_account, 'dev').toPlayItem(track).url.path, '/Audio/t1/stream');
+      expect(SubsonicClient(subsonic).toPlayItem(const SubsonicEntry(id: 's1', title: 'G')).url.queryParameters,
+          isNot(contains('maxBitRate')));
+    });
+
+    test('on mobile data with a cap, the server converts larger files to MP3', () {
+      MusicQuality.debugSet(onMobile: true, kbps: 192);
+      final url = JellyfinClient(_account, 'dev').toPlayItem(track).url;
+      expect(url.path, '/Audio/t1/universal');
+      expect(url.queryParameters['MaxStreamingBitrate'], '192000');
+      expect(url.queryParameters['AudioCodec'], 'mp3');
+      expect(url.queryParameters['DeviceId'], 'dev');
+      final s = SubsonicClient(subsonic).toPlayItem(const SubsonicEntry(id: 's1', title: 'G')).url.queryParameters;
+      expect(s['maxBitRate'], '192');
+      expect(s['format'], 'mp3');
+      // Video keeps its own quality setting.
+      final video = JellyfinItem({'Id': 'v1', 'Name': 'Film', 'Type': 'Movie', 'MediaType': 'Video'});
+      expect(JellyfinClient(_account, 'dev').toPlayItem(video).url.path, '/Videos/v1/stream');
+    });
   });
 }

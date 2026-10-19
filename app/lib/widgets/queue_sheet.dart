@@ -51,7 +51,8 @@ Future<void> showQueueMenu(BuildContext context, String title, List<PlayItem> tr
               : 'Added to the queue')));
 }
 
-/// The queue: tap to play, drag the handle to reorder, swipe to remove.
+/// The queue: tap to play, drag the handle to reorder, swipe to remove. What already played
+/// stays above the playing track, dimmed, so it can be played again.
 void showQueueSheet(BuildContext context, Playback pb) {
   showModalBottomSheet(
     context: context,
@@ -99,7 +100,11 @@ class _QueueListState extends State<_QueueList> {
             padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
             child: Row(children: [
               Expanded(
-                child: Text('Queue · ${list.length} ${list.length == 1 ? 'track' : 'tracks'}',
+                child: Text(
+                    [
+                      'Queue · ${list.length} ${list.length == 1 ? 'track' : 'tracks'}',
+                      if (playing > 0 && playing < list.length) '$playing played',
+                    ].join(' · '),
                     style: theme.textTheme.titleMedium),
               ),
               FilterChip(
@@ -121,19 +126,24 @@ class _QueueListState extends State<_QueueList> {
               itemBuilder: (context, i) {
                 final item = list[i];
                 final now = i == playing;
+                final played = i < playing;
                 final tile = ListTile(
                   minTileHeight: 64,
                   selected: now,
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: SizedBox.square(
-                      dimension: 44,
-                      child: now
-                          ? ColoredBox(
-                              color: theme.colorScheme.primaryContainer,
-                              child: Icon(Icons.graphic_eq, color: theme.colorScheme.onPrimaryContainer),
-                            )
-                          : artworkImage(item, fallback: const Icon(Icons.music_note)),
+                  textColor: played ? theme.colorScheme.onSurface.withValues(alpha: 0.5) : null,
+                  leading: Opacity(
+                    opacity: played ? 0.5 : 1,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: SizedBox.square(
+                        dimension: 44,
+                        child: now
+                            ? ColoredBox(
+                                color: theme.colorScheme.primaryContainer,
+                                child: Icon(Icons.graphic_eq, color: theme.colorScheme.onPrimaryContainer),
+                              )
+                            : artworkImage(item, fallback: const Icon(Icons.music_note)),
+                      ),
                     ),
                   ),
                   title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),

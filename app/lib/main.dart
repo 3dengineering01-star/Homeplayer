@@ -15,6 +15,7 @@ import 'services/downloads.dart';
 import 'services/invite_link.dart';
 import 'services/pip.dart';
 import 'services/playback.dart';
+import 'services/quality.dart';
 import 'widgets/backdrop.dart';
 import 'widgets/mini_player.dart';
 
@@ -26,6 +27,8 @@ Future<void> main() async {
   MediaKit.ensureInitialized();
   await AppearanceStore.load();
   await Playback.init();
+  // Music on mobile data may come converted to a smaller size (Settings).
+  await MusicQuality.init();
   await Backup.init();
   // Picks up downloads that went on while the app was closed.
   await Downloads.instance.init();

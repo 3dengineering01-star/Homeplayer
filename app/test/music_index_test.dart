@@ -130,4 +130,29 @@ void main() {
     expect(gripir.single.inside.single.name, 'Gripir');
     expect(findPlaylists(lists, '').length, 2);
   });
+
+  test('the Home tab: newest albums, albums played last, tracks played most, favorites', () {
+    JellyfinItem played(String name, String albumId, {String? at, int count = 0, bool heart = false, String? added}) =>
+        JellyfinItem({
+          'Id': name,
+          'Name': name,
+          'Type': 'Audio',
+          'Album': 'Album $albumId',
+          'AlbumId': albumId,
+          'AlbumArtist': 'A',
+          'DateCreated': ?added,
+          'UserData': {'LastPlayedDate': ?at, 'PlayCount': count, 'IsFavorite': heart},
+        });
+    final tracks = [
+      played('a1', 'a', at: '2026-10-01T10:00:00Z', count: 3, added: '2026-01-01T00:00:00Z'),
+      played('b1', 'b', at: '2026-10-05T10:00:00Z', count: 1, heart: true, added: '2026-09-01T00:00:00Z'),
+      played('c1', 'c', added: '2026-05-01T00:00:00Z'),
+      played('c2', 'c', count: 7),
+    ];
+    final home = musicHome(groupByAlbum(tracks), tracks, isFavorite: (t) => t.isFavorite || t.id == 'c1');
+    expect([for (final a in home.added) a.key], ['b', 'c', 'a']);
+    expect([for (final a in home.played) a.key], ['b', 'a']);
+    expect([for (final t in home.mostPlayed) t.id], ['c2', 'a1', 'b1']);
+    expect([for (final t in home.favorites) t.id], ['b1', 'c1']);
+  });
 }

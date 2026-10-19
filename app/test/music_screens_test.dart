@@ -6,6 +6,7 @@ import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/models/account.dart';
 import 'package:homeplay/screens/music_library_screen.dart';
 import 'package:homeplay/screens/track_list_screen.dart';
+import 'package:homeplay/widgets/alphabet_bar.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,6 +26,8 @@ final _tracks = [
       'Artists': i < 3 ? ['Danheim'] : ['Pink Floyd'],
       'IndexNumber': i + 1,
       'RunTimeTicks': 2000000000,
+      'DateCreated': '2026-10-0${i + 1}T00:00:00Z',
+      'UserData': {'PlayCount': i, if (i > 0) 'LastPlayedDate': '2026-10-1${i}T00:00:00Z'},
       'Path': i < 3 ? 'D:\\Music\\Folk\\Danheim\\Mannavegr\\0$i $name.flac' : 'D:\\Music\\Rock\\Pink Floyd\\$name.mp3',
     },
 ];
@@ -64,15 +67,23 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Danheim'), findsWidgets);
-      expect(find.text('Pink Floyd'), findsOneWidget);
-      for (final tab in ['Albums', 'Tracks', 'Folders', 'Playlists']) {
+      // Home first: what is new and what was played.
+      expect(find.text('Shuffle all 5'), findsOneWidget);
+      expect(find.text('Recently added'), findsOneWidget);
+      expect(find.text('Recently played'), findsOneWidget);
+      expect(find.text('Most played', skipOffstage: false), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      for (final tab in ['Artists', 'Albums', 'Tracks', 'Folders', 'Playlists']) {
         // With big letters the tabs scroll: the last ones are off to the side.
         await tester.ensureVisible(find.text(tab));
         await tester.pumpAndSettle();
         await tester.tap(find.text(tab));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: tab);
+        if (tab == 'Artists') {
+          expect(find.text('Danheim'), findsWidgets);
+          expect(find.text('Pink Floyd'), findsOneWidget);
+        }
         if (tab == 'Folders') {
           expect(find.text('Folk'), findsOneWidget);
           expect(find.text('Rock'), findsOneWidget);
@@ -127,6 +138,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tracks · 1'), findsOneWidget);
     expect(find.text('Artists · 1'), findsOneWidget, reason: 'Pink Floyd holds it');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the letters beside a long artist list jump to the artists of a letter', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    SharedPreferences.setMockInitialValues({'music.tab_name': 'Artists'});
+    // 26 letters, two artists each.
+    final many = [
+      for (var c = 0; c < 26; c++)
+        for (final n in [1, 2])
+          {
+            'Id': 'x$c$n',
+            'Name': 'Song',
+            'Type': 'Audio',
+            'Artists': ['${String.fromCharCode(65 + c)}rtist $n'],
+          },
+    ];
+    final client = JellyfinClient(
+      _account,
+      'dev',
+      client: MockClient((r) async => switch (r.url.path) {
+            '/Items' when r.url.queryParameters['includeItemTypes'] == 'Playlist' =>
+              http.Response(jsonEncode({'Items': []}), 200),
+            '/Items' => http.Response(jsonEncode({'Items': many, 'TotalRecordCount': many.length}), 200),
+            _ => http.Response('', 404),
+          }),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: MusicLibraryScreen(
+        client: client,
+        library: JellyfinItem({'Id': 'lib', 'Name': 'Music', 'Type': 'CollectionFolder', 'CollectionType': 'music'}),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlphabetBar), findsOneWidget);
+    expect(find.text('Trtist 1'), findsNothing);
+    await tester.tap(find.descendant(of: find.byType(AlphabetBar), matching: find.text('T')));
+    await tester.pumpAndSettle();
+    expect(find.text('Trtist 1'), findsOneWidget);
+    expect(tester.getTopLeft(find.text('Trtist 1')).dy, lessThan(400), reason: 'at the top of the list');
     expect(tester.takeException(), isNull);
   });
 }

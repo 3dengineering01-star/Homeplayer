@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../models/account.dart';
 import 'lyrics.dart';
 import '../services/account_store.dart';
+import '../services/quality.dart';
 import 'common.dart';
 
 const _timeout = Duration(seconds: 15);
@@ -180,7 +181,11 @@ class SubsonicClient {
   PlayItem toPlayItem(SubsonicEntry song) => PlayItem(
         title: song.title,
         subtitle: song.subtitle,
-        url: _uri('stream', {'id': song.id}),
+        // On mobile data with a cap chosen, the server converts larger files to MP3.
+        url: _uri('stream', {
+          'id': song.id,
+          if (MusicQuality.capKbps case final kbps?) ...{'maxBitRate': '$kbps', 'format': 'mp3'},
+        }),
         artwork: coverUrl(song.coverArt, size: 600),
         isVideo: false,
         reporter: _Scrobbler(this, song),
