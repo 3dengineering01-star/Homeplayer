@@ -19,6 +19,9 @@
 ./app/build.sh apk      # APK для установки людям -> app/dist/OwnMedia-<версия>.apk (docs/install.md)
 ```
 
+Без терминала: двойной щелчок по `install-on-phone.cmd` в корне проекта скачивает свежую версию текущей ветки
+(`git pull`), собирает её и ставит на подключённый по USB Android-телефон (`./app/build.sh run`).
+
 ## Что умеет версия 0.1
 
 - Вход на Jellyfin (логин и пароль) и на Navidrome/Subsonic (token auth). Пароль не хранится.
