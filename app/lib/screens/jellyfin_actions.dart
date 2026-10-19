@@ -197,84 +197,88 @@ mixin JellyfinActions<T extends StatefulWidget> on State<T> {
     final saved = downloads.find(item.id);
     final action = await showModalBottomSheet<String>(
       context: context,
+      // A long menu (a track: mix, playlist, queue, TV, download...) is taller than a sheet may be.
+      isScrollControlled: true,
       builder: (context) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
-          for (final (i, e) in extra.indexed)
-            ListTile(leading: Icon(e.icon), title: Text(e.label), onTap: () => Navigator.pop(context, 'extra$i')),
-          if (item.type == 'Audio')
-            ListTile(
-              leading: Icon(client.isFavorite(item) ? Icons.favorite : Icons.favorite_border),
-              title: Text(client.isFavorite(item) ? 'Remove from favorites' : 'Add to favorites'),
-              onTap: () => Navigator.pop(context, 'favorite'),
-            ),
-          if (item.isPlayable || item.type == 'MusicAlbum')
-            ListTile(
-              leading: const Icon(Icons.queue_music),
-              title: const Text('Add to playlist'),
-              onTap: () => Navigator.pop(context, 'playlist'),
-            ),
-          if ((item.type == 'Audio' || item.type == 'MusicAlbum') && SaveToPhone.available)
-            ListTile(
-              leading: const Icon(Icons.save_alt),
-              title: const Text("Save to phone's Music"),
-              subtitle: const Text('The file itself, for any player on the phone'),
-              onTap: () => Navigator.pop(context, 'phone'),
-            ),
-          if (const {'Audio', 'MusicAlbum', 'MusicArtist'}.contains(item.type))
-            ListTile(
-              leading: const Icon(Icons.radio_outlined),
-              title: const Text('Instant mix'),
-              subtitle: const Text('Similar songs from the server'),
-              onTap: () => Navigator.pop(context, 'mix'),
-            ),
-          if (item.type == 'Audio' || item.type == 'MusicAlbum') ...[
-            ListTile(
-              leading: const Icon(Icons.playlist_play),
-              title: const Text('Play next'),
-              onTap: () => Navigator.pop(context, 'next'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.playlist_add),
-              title: const Text('Add to queue'),
-              onTap: () => Navigator.pop(context, 'queue'),
-            ),
-          ],
-          if (item.isPlayable && !item.isPhoto)
-            ListTile(
-              leading: const Icon(Icons.cast),
-              title: const Text('Play on TV'),
-              subtitle: const Text('On a TV on this Wi-Fi, the phone as its remote'),
-              onTap: () => Navigator.pop(context, 'tv'),
-            ),
-          if (item.isPlayable && saved == null)
-            ListTile(
-              leading: const Icon(Icons.download_outlined),
-              title: const Text('Download'),
-              subtitle: const Text('To watch or listen without a connection'),
-              onTap: () => Navigator.pop(context, 'download'),
-            ),
-          if (saved != null)
-            ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: Text(saved.state == DownloadState.done ? 'Delete download' : 'Cancel download'),
-              subtitle: saved.size > 0 ? Text(sizeLabel(saved.size)) : null,
-              onTap: () => Navigator.pop(context, 'delete'),
-            ),
-          if (item.isFolder)
-            ListTile(
-              leading: const Icon(Icons.download_for_offline_outlined),
-              title: const Text('Download all'),
-              subtitle: const Text('Every episode, track or video inside'),
-              onTap: () => Navigator.pop(context, 'all'),
-            ),
-          if (item.versionCount > 1)
-            ListTile(
-              leading: const Icon(Icons.movie_filter_outlined),
-              title: const Text('Choose version'),
-              onTap: () => Navigator.pop(context, 'version'),
-            ),
-        ]),
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            ListTile(title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            for (final (i, e) in extra.indexed)
+              ListTile(leading: Icon(e.icon), title: Text(e.label), onTap: () => Navigator.pop(context, 'extra$i')),
+            if (item.type == 'Audio')
+              ListTile(
+                leading: Icon(client.isFavorite(item) ? Icons.favorite : Icons.favorite_border),
+                title: Text(client.isFavorite(item) ? 'Remove from favorites' : 'Add to favorites'),
+                onTap: () => Navigator.pop(context, 'favorite'),
+              ),
+            if (item.isPlayable || item.type == 'MusicAlbum')
+              ListTile(
+                leading: const Icon(Icons.queue_music),
+                title: const Text('Add to playlist'),
+                onTap: () => Navigator.pop(context, 'playlist'),
+              ),
+            if ((item.type == 'Audio' || item.type == 'MusicAlbum') && SaveToPhone.available)
+              ListTile(
+                leading: const Icon(Icons.save_alt),
+                title: const Text("Save to phone's Music"),
+                subtitle: const Text('The file itself, for any player on the phone'),
+                onTap: () => Navigator.pop(context, 'phone'),
+              ),
+            if (const {'Audio', 'MusicAlbum', 'MusicArtist'}.contains(item.type))
+              ListTile(
+                leading: const Icon(Icons.radio_outlined),
+                title: const Text('Instant mix'),
+                subtitle: const Text('Similar songs from the server'),
+                onTap: () => Navigator.pop(context, 'mix'),
+              ),
+            if (item.type == 'Audio' || item.type == 'MusicAlbum') ...[
+              ListTile(
+                leading: const Icon(Icons.playlist_play),
+                title: const Text('Play next'),
+                onTap: () => Navigator.pop(context, 'next'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.playlist_add),
+                title: const Text('Add to queue'),
+                onTap: () => Navigator.pop(context, 'queue'),
+              ),
+            ],
+            if (item.isPlayable && !item.isPhoto)
+              ListTile(
+                leading: const Icon(Icons.cast),
+                title: const Text('Play on TV'),
+                subtitle: const Text('On a TV on this Wi-Fi, the phone as its remote'),
+                onTap: () => Navigator.pop(context, 'tv'),
+              ),
+            if (item.isPlayable && saved == null)
+              ListTile(
+                leading: const Icon(Icons.download_outlined),
+                title: const Text('Download'),
+                subtitle: const Text('To watch or listen without a connection'),
+                onTap: () => Navigator.pop(context, 'download'),
+              ),
+            if (saved != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: Text(saved.state == DownloadState.done ? 'Delete download' : 'Cancel download'),
+                subtitle: saved.size > 0 ? Text(sizeLabel(saved.size)) : null,
+                onTap: () => Navigator.pop(context, 'delete'),
+              ),
+            if (item.isFolder)
+              ListTile(
+                leading: const Icon(Icons.download_for_offline_outlined),
+                title: const Text('Download all'),
+                subtitle: const Text('Every episode, track or video inside'),
+                onTap: () => Navigator.pop(context, 'all'),
+              ),
+            if (item.versionCount > 1)
+              ListTile(
+                leading: const Icon(Icons.movie_filter_outlined),
+                title: const Text('Choose version'),
+                onTap: () => Navigator.pop(context, 'version'),
+              ),
+          ]),
+        ),
       ),
     );
     if (!mounted || action == null) return;
