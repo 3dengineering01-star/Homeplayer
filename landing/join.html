@@ -12,6 +12,9 @@
   Everything after # stays in the phone: the browser does not send it to this website, so the site
   never learns whose server it is or the code. The page only offers the app (from this website)
   and hands the server address and code to it; the app then talks to the friend's server directly.
+  The buttons also copy this page's address: OwnMedia, opened for the first time with no servers,
+  finds the invite on the clipboard and offers it, so a friend who has just installed the app does
+  not have to come back here.
 -->
 <style>
   :root {
@@ -57,7 +60,8 @@
       <div class="step">
         <span class="num">1</span>
         <div>
-          <p>No OwnMedia on this phone yet? Download it and install it.</p>
+          <p>No OwnMedia on this phone yet? Download it, install it and tap <b>Open</b>: the app picks up this
+            invite by itself.</p>
           <a class="button secondary" id="download" href="/download/OwnMedia.apk">Download OwnMedia for Android</a>
           <p class="small">If the phone warns about an app from an unknown developer, tap <b>More details</b>, then
             <b>Install anyway</b>. The button that stands out cancels the install.</p>
@@ -66,7 +70,7 @@
       <div class="step">
         <span class="num">2</span>
         <div>
-          <p>Then come back to this page and open the invite in the app.</p>
+          <p>Already have OwnMedia, or the app did not offer the invite? Open it from here.</p>
           <a class="button primary" id="open" href="#">Open in OwnMedia</a>
           <p class="small">The link works once, for whoever opens it first. If the button does nothing: in OwnMedia
             tap <b>Add your server</b> → <b>Have an invite link?</b> and paste this page's address.</p>
@@ -107,6 +111,29 @@
     ? 'intent://join?' + query + '#Intent;scheme=homeplay;package=dev.homeplay.homeplay;S.browser_fallback_url=' + encodeURIComponent(apk) + ';end'
     : 'homeplay://join?' + query;
   document.getElementById('invite').hidden = false;
+
+  // Leaves the invite on the clipboard for the app to find when it first opens.
+  function copyInvite() {
+    var text = location.href;
+    function fallback() {
+      var field = document.createElement('textarea');
+      field.value = text;
+      field.setAttribute('readonly', '');
+      field.style.position = 'fixed';
+      field.style.opacity = '0';
+      document.body.appendChild(field);
+      field.select();
+      try { document.execCommand('copy'); } catch (e) { /* nothing to do */ }
+      document.body.removeChild(field);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+  document.getElementById('download').addEventListener('click', copyInvite);
+  document.getElementById('open').addEventListener('click', copyInvite);
 })();
 </script>
 </body>

@@ -7,6 +7,7 @@ import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/api/sharing.dart';
 import 'package:homeplay/models/account.dart';
 import 'package:homeplay/screens/share_screen.dart';
+import 'package:homeplay/services/invite_inbox.dart';
 import 'package:homeplay/services/invite_link.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -54,6 +55,16 @@ void main() {
       expect(parseInvite('https://ownmedia.app/join.html#s=javascript%3Aalert(1)&c=ABC'), isNull);
       expect(parseInvite('https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net&c=A%2FB'), isNull);
       expect(parseInvite('https://ownmedia.app/join.html#s=%E0%A4%A&c=ABC'), isNull);
+    });
+
+    test('an invite on the clipboard is offered once, and not for a server already added', () {
+      const link = 'https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net&c=ABC';
+      const added = Account(id: 'a', kind: ServerKind.jellyfin, baseUrl: 'https://PC.ts.net/', username: 'u', serverName: 'PC');
+      expect(inviteToOffer('Anna: open this on your phone: $link', [], []), (server: 'https://pc.ts.net', code: 'ABC'));
+      expect(inviteToOffer(link, [], ['ABC']), isNull);
+      expect(inviteToOffer(link, [added], []), isNull);
+      expect(inviteToOffer('a shopping list', [], []), isNull);
+      expect(inviteToOffer(null, [], []), isNull);
     });
 
     test('anything else is not an invite', () {

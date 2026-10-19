@@ -5,6 +5,7 @@ import '../api/jellyfin.dart';
 import '../api/subsonic.dart';
 import '../models/account.dart';
 import '../services/account_store.dart';
+import '../services/invite_inbox.dart';
 import '../services/own_server.dart';
 import '../services/server_status.dart';
 import '../services/appearance.dart';
@@ -16,6 +17,7 @@ import '../widgets/pressable.dart';
 import 'add_account_screen.dart';
 import 'backup_screen.dart';
 import 'downloads_screen.dart';
+import 'join_screen.dart';
 import 'jellyfin_home.dart';
 import 'settings_screen.dart';
 import 'subsonic_browser.dart';
@@ -36,6 +38,9 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
 
   /// The app starts on the server opened last time; this list stays behind it, one step back.
   bool _started = false;
+
+  /// The clipboard was looked at for an invite since the app came to the front.
+  bool _clipboardChecked = false;
 
   @override
   void initState() {
@@ -60,6 +65,21 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
       _lastId = last;
     });
     _checkAll(accounts);
+    _inviteFromClipboard();
+  }
+
+  /// No servers yet: a friend may have come from an invite on the website, which copied it.
+  Future<void> _inviteFromClipboard() async {
+    final accounts = _accounts;
+    if (_clipboardChecked || accounts == null || accounts.isNotEmpty) return;
+    // Android lets an app read the clipboard only while its window is in front.
+    final state = WidgetsBinding.instance.lifecycleState;
+    if (state != null && state != AppLifecycleState.resumed) return;
+    _clipboardChecked = true;
+    final invite = await InviteInbox.fromClipboard(accounts);
+    if (invite == null || !mounted) return;
+    // Once added, the invite screen opens a fresh server list with the server in it.
+    await Navigator.push(context, MaterialPageRoute<void>(builder: (_) => JoinScreen(invite: invite)));
   }
 
   Future<void> _add() async {
@@ -214,7 +234,12 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _recheck();
+    if (state == AppLifecycleState.resumed) {
+      _recheck();
+      _inviteFromClipboard();
+    }
+    // Back from the browser with an invite copied: look again.
+    if (state == AppLifecycleState.paused) _clipboardChecked = false;
   }
 
   void _recheck() {
