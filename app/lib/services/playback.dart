@@ -58,6 +58,15 @@ class Playback extends BaseAudioHandler with SeekHandler {
     );
     await instance._initSession();
     await instance._keepControls();
+    // A keyboard's own Pause and Play keys, from MainActivity: what they say, not a toggle.
+    _channel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'pause':
+          await instance.pause();
+        case 'play':
+          await instance.play();
+      }
+    });
     instance.items.addListener(instance._cacheAhead);
     instance.current.addListener(instance._cacheAhead);
     final prefs = instance._prefs = await SharedPreferences.getInstance();

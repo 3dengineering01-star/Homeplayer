@@ -129,6 +129,34 @@ class SubsonicClient {
     return [for (final s in list) _song(s as Map)];
   }
 
+  /// Albums from one of the server's lists: 'newest' (added last), 'recent' (played last),
+  /// 'frequent' (played most), 'starred' (favorites) or 'random'.
+  Future<List<SubsonicEntry>> albumList(String type, {int size = 20}) async {
+    final r = await _call('getAlbumList2', {'type': type, 'size': '$size'});
+    return [
+      for (final a in ((r['albumList2'] as Map?)?['album'] as List?) ?? const [])
+        SubsonicEntry(
+          id: '${a['id']}',
+          title: '${a['name'] ?? a['title']}'.trim(),
+          subtitle: (a['artist'] as String?)?.trim(),
+          coverArt: a['coverArt'] as String?,
+          starred: a['starred'] != null,
+        ),
+    ];
+  }
+
+  /// Songs picked at random from the whole library, for "Shuffle all".
+  Future<List<SubsonicEntry>> randomSongs({int size = 100}) async {
+    final r = await _call('getRandomSongs', {'size': '$size'});
+    return [for (final s in ((r['randomSongs'] as Map?)?['song'] as List?) ?? const []) _song(s as Map)];
+  }
+
+  /// The songs marked as favorites.
+  Future<List<SubsonicEntry>> starredSongs() async {
+    final r = await _call('getStarred2');
+    return [for (final s in ((r['starred2'] as Map?)?['song'] as List?) ?? const []) _song(s as Map)];
+  }
+
   static SubsonicEntry _song(Map s) => SubsonicEntry(
         id: '${s['id']}',
         title: '${s['title']}'.trim(),

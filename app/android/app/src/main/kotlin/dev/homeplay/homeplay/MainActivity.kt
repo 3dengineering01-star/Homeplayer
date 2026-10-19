@@ -14,6 +14,7 @@ import android.media.AudioManager
 import android.media.audiofx.DynamicsProcessing
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import android.util.Log
 import android.util.Rational
@@ -28,6 +29,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : AudioServiceActivity() {
     private var pip: MethodChannel? = null
     private var links: MethodChannel? = null
+    private var playback: MethodChannel? = null
 
     // The link the app was opened with, handed to Flutter once.
     private var startLink: String? = null
@@ -47,6 +49,21 @@ class MainActivity : AudioServiceActivity() {
         }
         applyWallpaper(showsWallpaper())
         if (savedInstanceState == null) startLink = linkOf(intent)
+    }
+
+    // A keyboard's or a remote's own Pause and Play keys while the app is on screen. Left to the
+    // media session they became audio_service's play/pause toggle: Pause started music that was
+    // paused (also the queue kept from the last run). A headset's single button still toggles.
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val command = when (event.keyCode) {
+            KeyEvent.KEYCODE_MEDIA_PAUSE -> "pause"
+            KeyEvent.KEYCODE_MEDIA_PLAY -> "play"
+            else -> null
+        }
+        val channel = playback
+        if (command == null || channel == null) return super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) channel.invokeMethod(command, null)
+        return true
     }
 
     private fun linkOf(intent: Intent?): String? =
@@ -84,7 +101,8 @@ class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         holdAudioService(applicationContext)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/playback").setMethodCallHandler { call, result ->
+        playback = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/playback")
+        playback!!.setMethodCallHandler { call, result ->
             when (call.method) {
                 // audio_service's own cancel comes right after it detaches the notification
                 // from the service, and Android may drop it then: the notification stayed after
