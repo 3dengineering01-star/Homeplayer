@@ -86,6 +86,7 @@ class HomeplayApp extends StatelessWidget {
           final wallpaper = lightDynamic?.primary;
           return MaterialApp(
             title: 'OwnMedia',
+            debugShowCheckedModeBanner: false,
             navigatorKey: navigatorKey,
             scaffoldMessengerKey: messengerKey,
             theme: look.theme(dark: false, wallpaper: wallpaper),
