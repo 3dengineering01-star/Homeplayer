@@ -140,11 +140,20 @@ public sealed class SharingTests : IDisposable
     }
 
     [Fact]
-    public void WithoutAnAppFileTheInviteSendsToGooglePlay()
+    public void TheInviteGetsTheNewestAppFromTheWebsite()
     {
-        Assert.Equal("https://pc.ts.net/Homeplay/App", Phone.PhoneLink.AppUrl("https://pc.ts.net/", true));
-        var store = Phone.PhoneLink.AppUrl("https://pc.ts.net", false);
-        Assert.Equal(Phone.PhoneLink.PlayStoreUrl, store);
+        Assert.Equal("https://ownmedia.app/download/OwnMedia.apk", Phone.PhoneLink.AppUrl);
+        var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", Phone.PhoneLink.AppUrl);
+        Assert.Contains("S.browser_fallback_url=https%3A%2F%2Fownmedia.app%2Fdownload%2FOwnMedia.apk", page, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://ownmedia.app/download/OwnMedia.apk\"", page, StringComparison.Ordinal);
+        Assert.Contains("Download OwnMedia for Android", page, StringComparison.Ordinal);
+        Assert.Contains("Install anyway", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AGooglePlayAddressSaysGooglePlay()
+    {
+        var store = Phone.PhoneLink.PlayStoreUrl;
         var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", store);
         Assert.Contains("Get OwnMedia on Google Play", page, StringComparison.Ordinal);
         Assert.Contains("opens it in Google Play", page, StringComparison.Ordinal);
