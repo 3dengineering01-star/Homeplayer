@@ -63,8 +63,10 @@ class _LyricsViewState extends State<_LyricsView> {
   void _load() {
     final item = widget.pb.currentItem;
     if (item == null || identical(item, _item)) return;
-    final length = widget.pb.player.state.duration;
-    final lyrics = _asked[item] ??= TrackLookup.lyrics(item, duration: length > Duration.zero ? length : null);
+    // The server's length first: mpv only guesses it for a converted stream.
+    final played = widget.pb.player.state.duration;
+    final length = item.duration ?? (item.convertedTo == null && played > Duration.zero ? played : null);
+    final lyrics = _asked[item] ??= TrackLookup.lyrics(item, duration: length);
     setState(() {
       _item = item;
       _lyrics = lyrics;

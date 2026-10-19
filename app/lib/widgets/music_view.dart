@@ -393,7 +393,7 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
         stream: p.stream.position,
         initialData: p.state.position,
         builder: (context, pos) {
-          final total = dur.data!.inMilliseconds.toDouble();
+          final total = widget.pb.lengthOf(dur.data!).inMilliseconds.toDouble();
           final current = (_dragging ?? pos.data!.inMilliseconds.toDouble()).clamp(0.0, total > 0 ? total : 0.0);
           final style = Theme.of(context).textTheme.bodySmall;
           return Column(children: [
