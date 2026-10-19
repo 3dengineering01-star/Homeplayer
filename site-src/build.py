@@ -25,6 +25,8 @@ No third-party code: Python's standard library only.
 
 import hashlib
 import html
+import os
+import json
 import re
 import shutil
 import sys
@@ -60,10 +62,10 @@ SETTINGS = {
     "INSTALLER_VERSION": "0.3.13",
     # The Android app file the site serves at a fixed address, download/OwnMedia.apk. publish-app.cmd
     # leaves the fresh signed build in app\dist\site\OwnMedia.apk; the build copies it from there
-    # (too big for git, like the installer). APK_VERSION is the versionName of that build.
+    # (too big for git, like the installer). The version shown next to it comes from version.json,
+    # which publish-app.cmd writes beside the file (and the app reads to offer updates).
     "APK_URL": "{{root}}download/OwnMedia.apk",
     "APK_FILE": r"D:\APP\OwnMedia\app\dist\site\OwnMedia.apk",
-    "APK_VERSION": "0.3.15",
     # The Jellyfin plugin catalogue for NAS, Docker and Linux (jellyfin-repo/manifest.json).
     "CATALOG_URL": "https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/manifest.json",
     # The plugin's public source code (GPL).
@@ -101,6 +103,8 @@ _I = {
     "mail": '<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/>',
     "sliders": '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
     "phone": '<rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M10.5 18.5h3"/>',
+    "signal": '<path d="M4 20v-3M9 20v-7M14 20V9M19 20V4"/>',
+    "spark": '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
     "lock": '<rect x="5" y="10" width="14" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
     "book": '<path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 19.5V4.5"/>',
     "info": '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
@@ -129,8 +133,8 @@ def snippets(s):
                               'Get it on Google Play</a>')
         out["PLAY_STATE"] = "Available on Google Play."
     else:
-        out["PLAY_BUTTON"] = (f'<a class="btn" href="{{{{root}}}}#beta">{icon("phone")} Join the beta</a>')
-        out["PLAY_STATE"] = "Not in Google Play yet: join the beta and we’ll send you the test link."
+        out["PLAY_BUTTON"] = (f'<a class="btn" href="{{{{root}}}}#play">{icon("phone")} Get notified</a>')
+        out["PLAY_STATE"] = "Coming to Google Play: leave your email and we’ll write when it’s there."
     if s["INSTALLER_URL"]:
         out["INSTALLER_BUTTON"] = (f'<a class="btn" href="{e["INSTALLER_URL"]}" download>{icon("download")} '
                                    'Download OwnMediaSetup.exe</a>')
@@ -140,22 +144,38 @@ def snippets(s):
     out["INSTALLER_META"] = installer_meta(s)
     apk = Path(s["APK_FILE"])
     if s["APK_URL"] and apk.is_file():
+        v = html.escape(apk_version(apk))
+        out["APP_VERSION"] = v
         out["APK_BUTTON"] = (f'<a class="btn" href="{e["APK_URL"]}" download type="application/vnd.android.package-archive">'
                              f'{icon("download")} Download for Android</a>')
         mb = round(apk.stat().st_size / 1_000_000)
         sha = hashlib.sha256(apk.read_bytes()).hexdigest()
-        out["APK_META"] = (f'<p class="dl-meta">Version {html.escape(s["APK_VERSION"])}, {mb} MB. '
-                           f'SHA-256: <code class="sha">{sha}</code></p>'
-                           '<p class="dl-note">The file comes from us, not from Google Play, so your phone may warn '
-                           'about an unknown developer. Tap <i>More details</i>, then <i>Install anyway</i>. If it '
-                           'asks, allow installing apps from your browser.</p>')
-        out["ANDROID_STATE"] = "Download the app file and install it, or join the beta for Google Play."
+        warn = ('If the phone warns about an unknown developer, tap <i>More details</i> → '
+                '<i>Install anyway</i>.')
+        out["APK_NOTE"] = (f'<p class="hero-note">Version {v} for Android phones. {warn} The app tells you '
+                           'when a new version is out.<small>Coming to Google Play.</small></p>')
+        out["APK_META"] = (f'<p class="dl-note">Version {v} for Android phones, {mb} MB. {warn} If it asks, '
+                           'allow installing apps from your browser. The app tells you when a new version is '
+                           'out; it installs over the old one, and your servers and settings stay.</p>'
+                           f'<p class="dl-meta">SHA-256: <code class="sha">{sha}</code></p>')
+        out["ANDROID_STATE"] = "The app for your phone: movies, shows, music and photos from your servers."
     else:
-        out["APK_BUTTON"] = ""
+        out["APP_VERSION"] = ""
+        out["APK_BUTTON"] = out["PLAY_BUTTON"]
+        out["APK_NOTE"] = ""
         out["APK_META"] = ""
         out["ANDROID_STATE"] = out["PLAY_STATE"]
     out["YEAR"] = str(date.today().year)
     return out
+
+
+def apk_version(apk):
+    """The app's version from version.json next to the file ("0.3.15"), as publish-app.cmd wrote it."""
+    info = apk.with_name("version.json")
+    try:
+        return str(json.loads(info.read_text(encoding="utf-8-sig"))["version"])
+    except (OSError, ValueError, KeyError) as err:
+        raise SystemExit(f"No version for the app: {info} ({err})")
 
 
 def installer_meta(s):
@@ -201,14 +221,14 @@ def header(root, path):
     </a>
     <nav class="nav" aria-label="Main">
       {links}
-      <a class="btn btn-small" href="{root}#beta">Get the app</a>
+      <a class="btn btn-small" href="{root}download/#android">Get the app</a>
     </nav>
     <details class="menu">
       <summary class="tip-below" aria-label="Open menu" data-tip="Open menu">{icon("menu")}</summary>
       <nav class="menu-panel" aria-label="Main">
         <a href="{root}">Home</a>
         {links}
-        <a class="btn" href="{root}#beta">Get the app</a>
+        <a class="btn" href="{root}download/#android">Get the app</a>
       </nav>
     </details>
   </div>
@@ -227,6 +247,7 @@ def footer(root, sn):
         <h2>App</h2>
         <ul>
           <li><a href="{root}#features">Features</a></li>
+          <li><a href="{root}#whats-new">What’s new</a></li>
           <li><a href="{root}#share">Sharing with friends</a></li>
           <li><a href="{root}download/">Download</a></li>
           <li><a href="{root}#screens">Screenshots</a></li>
@@ -311,8 +332,29 @@ def page(meta, body, sn, asset_v):
     return fill(text, sn, root)
 
 
+# A screenshot that may not be taken yet: {{shot:name|alt text|caption|small caption}} shows
+# img/screens/<name>.webp in a phone frame. Until that file exists, the preview build
+# (OWNMEDIA_PREVIEW=1) shows a dashed placeholder saying which shot to take, and the real build
+# leaves it out.
+PREVIEW = os.environ.get("OWNMEDIA_PREVIEW") == "1"
+
+
+def shot(m):
+    name, alt, cap, sub = m.group(1), m.group(2), m.group(3), m.group(4)
+    if (STATIC / "img" / "screens" / f"{name}.webp").is_file():
+        return (f'<figure class="shot"><div class="phone"><img src="{{{{root}}}}img/screens/{name}.webp" '
+                f'width="600" height="1300" alt="{alt}" loading="lazy"></div>'
+                f'<figcaption>{cap}<span>{sub}</span></figcaption></figure>')
+    if PREVIEW:
+        return (f'<figure class="shot shot-todo"><div class="phone"><div class="todo">Screenshot to take:<br>'
+                f'<b>{alt}</b><br><code>img/screens/{name}.webp</code></div></div>'
+                f'<figcaption>{cap}<span>{sub}</span></figcaption></figure>')
+    return ""
+
+
 def fill(text, sn, root):
     text = re.sub(r"\{\{icon:([a-z-]+)\}\}", lambda m: icon(m.group(1)), text)
+    text = re.sub(r"\{\{shot:([a-z0-9-]+)\|([^|}]*)\|([^|}]*)\|([^|}]*)\}\}", shot, text)
     for _ in range(2):  # snippets may hold {{root}}
         text = text.replace("{{root}}", root)
         text = re.sub(r"\{\{([A-Z_]+)\}\}", lambda m: sn[m.group(1)], text)
@@ -372,6 +414,7 @@ def main():
     if s["APK_URL"] and apk.is_file():
         (OUT / "download").mkdir(exist_ok=True)
         shutil.copy2(apk, OUT / "download" / "OwnMedia.apk")
+        shutil.copy2(apk.with_name("version.json"), OUT / "download" / "version.json")
     elif s["APK_URL"]:
         print(f"Android app not found: {apk}", file=sys.stderr)
 

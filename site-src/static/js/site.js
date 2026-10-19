@@ -1,4 +1,4 @@
-// OwnMedia site: the beta form, the screenshot buttons and the copy buttons. Nothing else:
+// OwnMedia site: the Google Play sign-up form, the screenshot buttons and the copy buttons. Nothing else:
 // no tracking, no cookies, nothing loaded from other sites. Each part runs only where its
 // element is on the page.
 
@@ -44,7 +44,6 @@
       var data = {
         email: email,
         server: servers.join(","),
-        platform: form.platform.value,
         pain: form.pain.value.trim(),
         tester: form.tester.checked ? "yes" : "no",
         _gotcha: form._gotcha.value
@@ -58,9 +57,9 @@
       }).then(function (res) {
         if (!res.ok) throw new Error(String(res.status));
         form.reset();
-        show("You're on the list. Thanks! We'll write when the beta opens.", "ok");
+        show("Thanks! We'll write once OwnMedia is on Google Play.", "ok");
       }).catch(function () {
-        show("The sign-up didn’t reach us. Check your connection, then select Join the beta again.", "err");
+        show("The sign-up didn’t reach us. Check your connection, then select Notify me again.", "err");
       }).then(function () {
         button.disabled = false;
       });

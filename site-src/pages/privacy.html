@@ -5,7 +5,7 @@ path: privacy/
 <div class="page-hero">
   <div class="wrap narrow">
     <h1>Privacy policy</h1>
-    <p class="lead">For the OwnMedia Android app and this website. Last updated 17 October 2026.</p>
+    <p class="lead">For the OwnMedia Android app and this website. Last updated 19 October 2026.</p>
   </div>
 </div>
 
@@ -96,22 +96,31 @@ path: privacy/
       example over your home network, or over Tailscale if you use it. If your server is opened to the
       internet with Tailscale Funnel, connections to its <code>….ts.net</code> address pass through Tailscale’s
       servers in encrypted form; Tailscale’s own privacy policy applies to your Tailscale account.</p>
+    <p>One exception, which you can turn off: when you open the lyrics of a song your server has no lyrics
+      for, the app looks them up on <a href="https://lrclib.net" rel="noopener">LRCLIB</a> (lrclib.net), a free
+      open collection of lyrics. Only the song’s title, artist and length are sent, with no account or
+      identifier of yours. Turn it off in Settings → Music → Lyrics from LRCLIB.</p>
+    <p id="updates">The Android app downloaded from this website asks ownmedia.app once a day which version is
+      the newest (the file <code>/download/version.json</code>), to offer an update. Like any website visit,
+      this shows our web host your IP address; nothing else is sent, and nothing is kept by us. Turn it off in
+      Settings → Updates.</p>
 
     <h2 id="website">This website</h2>
     <ul>
       <li>No cookies, no analytics, no tracking, and nothing is loaded from other websites.</li>
       <li>Like any web server, our hosting provider (Hostinger) keeps standard access logs (IP address, page,
         time, browser) for security and operation.</li>
-      <li>If you join the beta, the form sends your email and answers to Formspree, the service that delivers
-        the form to us. We use them only to invite you to the beta and to understand what testers need, and
-        delete them on request: write to {{EMAIL_LINK}}.</li>
+      <li>If you leave your email for Google Play, the form sends it and your answers to Formspree, the
+        service that delivers the form to us. We use them only to tell you when OwnMedia is on Google Play,
+        to invite you to its test if you ticked the box, and to understand what people need, and delete them
+        on request: write to {{EMAIL_LINK}}.</li>
     </ul>
 
     <h2>Children</h2>
     <p>OwnMedia is not directed at children under 13.</p>
 
     <h2>Your rights, changes and contact</h2>
-    <p>You can ask what we hold about you (on this website: only beta sign-ups), have it corrected or deleted,
+    <p>You can ask what we hold about you (on this website: only the Google Play sign-ups), have it corrected or deleted,
       and complain to your data protection authority. If this policy changes, the new version will be on this
       page with a new date. Questions: {{EMAIL_LINK}}.</p>
   </article>

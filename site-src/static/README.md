@@ -48,7 +48,7 @@
 | **Адрес сайта** (домен) | превью ссылок, sitemap.xml, robots.txt | `https://ownmedia.app` |
 | **Почта** для поддержки и вопросов о данных | подвал, поддержка, политика, сведения о компании | `support@ownmedia.app` — ящик создать в hPanel → Emails |
 | **Название и адрес фирмы** буква в букву как в платёжном профиле Google и D-U-N-S | подвал, `/legal/`, политика | MROYA SIA, рег. № 50203370261, Riga, Ganibu dambis 20A, LV-1045 (от владельца) |
-| **Приложение для Android** `OwnMedia.apk` | «Скачать», первая кнопка на главной | лежит на самом сайте (`/download/OwnMedia.apk`), берётся из `app\dist\site\OwnMedia.apk` после `publish-app.cmd`; новая версия — поменять `APK_VERSION` в `site-src/build.py`, пересобрать и залить файл |
+| **Приложение для Android** `OwnMedia.apk` | «Скачать», первая кнопка на главной | лежит на самом сайте (`/download/OwnMedia.apk`), берётся из `app\dist\site\OwnMedia.apk` после `publish-app.cmd`; номер версии берётся из `app\dist\site\version.json`; новая версия — пересобрать сайт и залить `download/OwnMedia.apk`, `download/version.json` и страницы |
 | **Ссылка на Google Play** | «Скачать», кнопки | пока кнопка «Join the beta» |
 | **Установщик** `OwnMediaSetup.exe` | «Скачать», инструкция для Windows | лежит на самом сайте (`/download/OwnMediaSetup.exe`), версия 0.3.13 из `D:\APP\OwnMedia-release`; новая версия — поменять `INSTALLER_FILE` и `INSTALLER_VERSION` в `site-src/build.py`, пересобрать и залить файл |
 | **Снимки экранов** | главная: первый экран и галерея | настоящие, с демо-сервера (см. ниже) |

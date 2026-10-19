@@ -50,3 +50,10 @@ AddType application/vnd.android.package-archive .apk
     Header set Cache-Control "no-cache"
   </IfModule>
 </FilesMatch>
+
+# The app asks for version.json once a day to offer an update: never answer from a stale copy.
+<Files "version.json">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</Files>
