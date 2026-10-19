@@ -9,6 +9,7 @@ import 'screens/join_screen.dart';
 import 'screens/player_screen.dart';
 import 'screens/tv_screen.dart';
 import 'services/app_links.dart';
+import 'services/app_update.dart';
 import 'services/appearance.dart';
 import 'services/backup.dart';
 import 'services/downloads.dart';
@@ -45,6 +46,16 @@ Future<void> main() async {
   unawaited(Playback.instance.restoreQueue());
   // A friend's invite opens the app: its page comes up over whatever is on screen.
   AppLinks.listen(_openLink);
+  // A newer app on the website, once the first screen has settled; at most once a day.
+  Timer(const Duration(seconds: 5), _offerUpdate);
+}
+
+Future<void> _offerUpdate() async {
+  // Android also starts the app without a screen, for its media service: nothing to show then.
+  if (navigatorKey.currentContext == null) return;
+  final update = await AppUpdate.check();
+  final context = navigatorKey.currentContext;
+  if (update != null && context != null && context.mounted) await offerUpdate(context, update);
 }
 
 void _openLink(String link) {

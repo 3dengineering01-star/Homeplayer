@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../api/lrclib.dart';
+import '../services/app_update.dart';
 import '../services/quality.dart';
 import '../services/track_cache.dart';
 import '../widgets/appearance_picker.dart';
@@ -31,6 +32,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     LrcLib.enabled().then((on) {
       if (mounted) setState(() => _lrclib = on);
     });
+    AppUpdate.available().then((can) async {
+      final on = await AppUpdate.enabled();
+      final info = await PackageInfo.fromPlatform();
+      if (mounted) setState(() => _update = (can: can, on: on, version: info.version));
+    });
+  }
+
+  ({bool can, bool on, String version})? _update;
+
+  Future<void> _checkNow() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final u = await AppUpdate.check(asked: true);
+      if (!mounted) return;
+      if (u == null) {
+        messenger.showSnackBar(SnackBar(content: Text('You have the newest version, ${_update?.version ?? ''}')));
+      } else {
+        await offerUpdate(context, u);
+      }
+    } catch (e) {
+      messenger.showSnackBar(const SnackBar(content: Text('Could not reach ownmedia.app. Check the connection.')));
+    }
   }
 
   bool _lrclib = true;
@@ -212,6 +235,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   setState(() => _lrclib = on);
                 },
               ),
+              if (_update case (can: true, :final on, :final version)) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                  child: Text('Updates', style: theme.textTheme.titleSmall?.copyWith(color: theme.colorScheme.primary)),
+                ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.system_update),
+                  title: const Text('Tell me about new versions'),
+                  subtitle: const Text('Once a day the app asks ownmedia.app which version is the newest'),
+                  value: on,
+                  onChanged: (v) async {
+                    await AppUpdate.setEnabled(v);
+                    setState(() => _update = (can: true, on: v, version: version));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.refresh),
+                  title: const Text('Check now'),
+                  subtitle: Text('This is version $version'),
+                  onTap: _checkNow,
+                ),
+              ],
               ListTile(
                 leading: const Icon(Icons.description_outlined),
                 title: const Text('Open-source licenses'),

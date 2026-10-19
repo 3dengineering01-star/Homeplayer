@@ -1,5 +1,6 @@
 ﻿# Puts the fresh signed app where people get it: next to the server plugin (invite links and the
-# QR code hand it out from there) and into app\dist\site\OwnMedia.apk for the website.
+# QR code hand it out from there) and into app\dist\site\ for the website: OwnMedia.apk and version.json,
+# which the app checks for a newer version. Both go to https://ownmedia.app/download/.
 # Run by publish-app.cmd after the build; the app file is app\dist\OwnMedia-<version>.apk.
 # Saved with a BOM: Windows PowerShell 5 reads a file without one in the old code page, and the
 # Russian messages came out garbled.
@@ -13,6 +14,16 @@ $site = Join-Path $repo 'app\dist\site'
 New-Item -ItemType Directory -Force -Path $site | Out-Null
 Copy-Item -Force $Apk (Join-Path $site 'OwnMedia.apk')
 Write-Host "Для сайта: $site\OwnMedia.apk"
+
+# version.json next to it: the app asks for it once a day and offers the update (app_update.dart).
+$line = Select-String -Path (Join-Path $repo 'app\pubspec.yaml') -Pattern '^version:\s*([^+\s]+)\+(\d+)' | Select-Object -First 1
+if (-not $line) { throw 'No version in app\pubspec.yaml' }
+$version = $line.Matches[0].Groups[1].Value
+$build = [int]$line.Matches[0].Groups[2].Value
+$json = [ordered]@{ version = $version; build = $build; apk = 'OwnMedia.apk' } | ConvertTo-Json
+# UTF-8 without a BOM: the app reads it as JSON from the website.
+[System.IO.File]::WriteAllText((Join-Path $site 'version.json'), $json, (New-Object System.Text.UTF8Encoding $false))
+Write-Host "Для сайта: $site\version.json ($version, сборка $build)"
 
 # For the server: every installed copy of the plugin (Jellyfin keeps one folder per version).
 $data = $null

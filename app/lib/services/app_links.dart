@@ -23,6 +23,15 @@ class AppLinks {
     }
   }
 
+  /// Opens [url] in the browser; false when there is none to open it.
+  static Future<bool> view(String url) async {
+    try {
+      return await _channel.invokeMethod<bool>('view', url) ?? false;
+    } on MissingPluginException {
+      return false;
+    }
+  }
+
   /// Shares [text] through Android's share sheet.
   static Future<void> share(String text, {String title = 'Share'}) =>
       _channel.invokeMethod('share', {'text': text, 'title': title});

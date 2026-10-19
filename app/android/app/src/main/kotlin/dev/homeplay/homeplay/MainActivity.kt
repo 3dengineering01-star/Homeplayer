@@ -132,6 +132,18 @@ class MainActivity : AudioServiceActivity() {
                         startActivity(Intent.createChooser(send, call.argument<String>("title")))
                         result.success(null)
                     }
+                    // A web address in the browser (the new version of the app to download).
+                    "view" -> {
+                        val open = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(call.arguments as String))
+                        result.success(
+                            try {
+                                startActivity(open)
+                                true
+                            } catch (e: android.content.ActivityNotFoundException) {
+                                false
+                            }
+                        )
+                    }
                     else -> result.notImplemented()
                 }
             }
