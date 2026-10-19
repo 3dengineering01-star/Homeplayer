@@ -2,8 +2,12 @@ package dev.homeplay.homeplay
 
 import android.app.NotificationManager
 import android.app.PictureInPictureParams
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
+import android.os.IBinder
+import android.service.media.MediaBrowserService
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.AudioManager
@@ -79,6 +83,7 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        holdAudioService(applicationContext)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "homeplay/playback").setMethodCallHandler { call, result ->
             when (call.method) {
                 // audio_service's own cancel comes right after it detaches the notification
@@ -289,6 +294,36 @@ class MainActivity : AudioServiceActivity() {
         const val AUDIO_SERVICE_NOTIFICATION_ID = 1124
 
         private var controlsListener: Any? = null
+
+        private var serviceHold: ServiceConnection? = null
+
+        /**
+         * Keeps audio_service's service alive for as long as the app's process lives.
+         *
+         * Paused music leaves the foreground, and about a minute after the app's screen is
+         * closed Android stops such an idle service. A frozen app does it once it thaws, often
+         * when the notification shade opens or one of its buttons is pressed: the notification
+         * went away under the finger and the press was lost. The service's end also made
+         * audio_service destroy the Flutter engine while mpv lived on; the next start of the app
+         * then crashed ("Callback invoked after it has been deleted").
+         *
+         * Bound from the app itself, the service stays. It does not keep the process awake:
+         * Android still freezes it while paused, and thaws it for a press in the notification.
+         */
+        private fun holdAudioService(context: Context) {
+            if (serviceHold != null) return
+            val hold = object : ServiceConnection {
+                override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {}
+                override fun onServiceDisconnected(name: ComponentName?) {}
+            }
+            // The media browser action: for any other intent the service has no binder to give.
+            val intent = Intent(MediaBrowserService.SERVICE_INTERFACE).setClass(context, AudioService::class.java)
+            try {
+                if (context.bindService(intent, hold, Context.BIND_AUTO_CREATE)) serviceHold = hold
+            } catch (e: Exception) {
+                Log.w("homeplay", "audio service not held: ${e.javaClass.simpleName}")
+            }
+        }
 
         // Outlive the activity: the music plays on in the service when it is closed.
         private var session = 0
