@@ -24,6 +24,7 @@ import 'native_eq.dart';
 import 'quality.dart';
 import 'queue_edit.dart';
 import 'saved_queue.dart';
+import 'stream_cache.dart';
 import 'track_choice.dart';
 import 'track_lookup.dart';
 import 'video_tuning.dart';
@@ -514,9 +515,14 @@ class Playback extends BaseAudioHandler with SeekHandler {
     // Music: the next track is opened while this one plays, so albums go on without a gap.
     // A video's next episode is not fetched ahead, it may never be watched.
     try {
-      await (player.platform as NativePlayer).setProperty('prefetch-playlist', music ? 'yes' : 'no');
+      final native = player.platform as NativePlayer;
+      await native.setProperty('prefetch-playlist', music ? 'yes' : 'no');
+      // Rides out a bad connection (see streamCacheOptions).
+      for (final MapEntry(:key, :value) in streamCacheOptions(music: music).entries) {
+        await native.setProperty(key, value);
+      }
     } catch (e) {
-      debugPrint('homeplay prefetch not set: $e');
+      debugPrint('homeplay stream cache not set: $e');
     }
     await player.open(Playlist(
         [
