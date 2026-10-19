@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/quality.dart';
+import '../services/track_cache.dart';
 import '../widgets/appearance_picker.dart';
 
 /// App settings: how the app looks, video quality for Wi-Fi and for mobile data, music on
@@ -21,6 +22,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     QualitySettings.load().then((q) {
       if (mounted) setState(() => _quality = q);
+    });
+    // For the size of the saved songs.
+    TrackCache.instance.start().then((_) {
+      if (mounted) setState(() {});
     });
   }
 
@@ -136,6 +141,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text(
                   'Larger files are converted by the server to MP3 of this size, to spend less of your data plan. '
                   'On Wi-Fi and for downloads music always comes as it is. It applies to songs started from now on.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.downloading),
+                title: const Text('Save songs ahead'),
+                subtitle: Text(TrackCache.instance.ahead == 0
+                    ? 'Off'
+                    : 'The next ${TrackCache.instance.ahead} songs of the queue · '
+                        '${sizeLabel(TrackCache.instance.usedBytes)} saved now'),
+                onTap: () async {
+                  final picked = await showDialog<int>(
+                    context: context,
+                    builder: (c) => SimpleDialog(
+                      title: const Text('Save songs ahead'),
+                      children: [
+                        RadioGroup<int>(
+                          groupValue: TrackCache.instance.ahead,
+                          onChanged: (n) => Navigator.pop(c, n),
+                          child: Column(children: [
+                            for (final n in TrackCache.choices)
+                              RadioListTile<int>(
+                                value: n,
+                                title: Text(n == 0 ? 'Off' : '$n songs'),
+                                subtitle: n == TrackCache.defaultAhead ? const Text('Recommended') : null,
+                              ),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (picked == null) return;
+                  await TrackCache.instance.setAhead(picked);
+                  setState(() {});
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_sweep_outlined),
+                title: const Text('Delete saved songs'),
+                subtitle: Text('${sizeLabel(TrackCache.instance.usedBytes)} of ${sizeLabel(TrackCache.limitBytes)} at most'),
+                onTap: () async {
+                  await TrackCache.instance.clear();
+                  setState(() {});
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Text(
+                  'While music plays, the next songs of the queue are saved on the phone, so they play on '
+                  'through a tunnel or a dead zone. On mobile data they take data too, at the size chosen '
+                  'above. The oldest saved songs are deleted by themselves; downloads are kept apart.',
                   style: theme.textTheme.bodySmall,
                 ),
               ),

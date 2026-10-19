@@ -25,6 +25,7 @@ import 'quality.dart';
 import 'queue_edit.dart';
 import 'saved_queue.dart';
 import 'stream_cache.dart';
+import 'track_cache.dart';
 import 'track_choice.dart';
 import 'track_lookup.dart';
 import 'video_tuning.dart';
@@ -57,6 +58,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
     );
     await instance._initSession();
     await instance._keepControls();
+    instance.items.addListener(instance._cacheAhead);
+    instance.current.addListener(instance._cacheAhead);
     final prefs = instance._prefs = await SharedPreferences.getInstance();
     instance.adjust.value = VideoAdjust.fromPrefs(prefs.get);
     instance.sound.value = SoundSettings.fromPrefs(prefs.get);
@@ -419,7 +422,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     for (final item in more) {
       _editing++;
       try {
-        await player.add(Media(item.url.toString(), httpHeaders: item.headers));
+        await player.add(_media(item));
         await Future<void>.delayed(Duration.zero);
       } finally {
         _editing--;
@@ -435,6 +438,22 @@ class Playback extends BaseAudioHandler with SeekHandler {
     }
     queue.add([for (final i in items.value) _mediaItem(i)]);
     _broadcast();
+  }
+
+  /// What mpv opens for [item]: a song through the song cache, else the server's address.
+  Media _media(PlayItem item, {Duration? start}) {
+    final cached = item.isVideo ? null : TrackCache.instance.urlFor(item);
+    return cached != null
+        ? Media(cached.toString(), start: start)
+        : Media(item.url.toString(), httpHeaders: item.headers, start: start);
+  }
+
+  /// Saves the songs after the playing one on the phone (see TrackCache); not for video or a
+  /// restored queue not played yet.
+  void _cacheAhead() {
+    final list = items.value;
+    final music = list.isNotEmpty && !list.any((i) => i.isVideo);
+    TrackCache.instance.follow(music && _pending == null ? list : const [], current.value);
   }
 
   /// An edit of the restored queue before it is played: only the lists change.
@@ -487,6 +506,8 @@ class Playback extends BaseAudioHandler with SeekHandler {
       queueItems = [for (final i in shuffledOrder(queueItems.length, index, _random)) queueItems[i]];
       index = 0;
     }
+    // Music goes through the song cache, which keeps the next songs on the phone.
+    if (music) await TrackCache.instance.start();
     items.value = queueItems;
     current.value = index;
     // The audio output and its equalizer session come with the player, made on first use.
@@ -527,7 +548,7 @@ class Playback extends BaseAudioHandler with SeekHandler {
     await player.open(Playlist(
         [
           for (var n = 0; n < queueItems.length; n++)
-            Media(queueItems[n].url.toString(), httpHeaders: queueItems[n].headers, start: n == index ? startAt : null),
+            _media(queueItems[n], start: n == index ? startAt : null),
         ],
         index: index,
       ));
