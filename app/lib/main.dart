@@ -14,6 +14,7 @@ import 'services/appearance.dart';
 import 'services/backup.dart';
 import 'services/downloads.dart';
 import 'services/invite_inbox.dart';
+import 'services/pro.dart';
 import 'services/invite_link.dart';
 import 'services/pip.dart';
 import 'services/playback.dart';
@@ -47,6 +48,8 @@ Future<void> main() async {
   unawaited(Playback.instance.restoreQueue());
   // A friend's invite opens the app: its page comes up over whatever is on screen.
   AppLinks.listen(_openLink);
+  // The free month and OwnMedia Pro bought on Google Play.
+  unawaited(Pro.instance.start());
   // A newer app on the website, once the first screen has settled; at most once a day.
   Timer(const Duration(seconds: 5), _offerUpdate);
 }

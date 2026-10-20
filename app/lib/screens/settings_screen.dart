@@ -3,9 +3,11 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../api/lrclib.dart';
 import '../services/app_update.dart';
+import '../services/pro.dart';
 import '../services/quality.dart';
 import '../services/track_cache.dart';
 import '../widgets/appearance_picker.dart';
+import 'pro_screen.dart';
 
 /// App settings: how the app looks, video quality for Wi-Fi and for mobile data, music on
 /// mobile data, and the open-source software inside the app.
@@ -88,6 +90,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: q == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(children: [
+              // The free month and the purchase; nothing while Google Play cannot sell it here.
+              ValueListenableBuilder<ProStatus>(
+                valueListenable: Pro.instance.status,
+                builder: (context, s, _) => !s.enforced
+                    ? const SizedBox.shrink()
+                    : ListTile(
+                        leading: Icon(s.bought ? Icons.verified_outlined : Icons.workspace_premium_outlined),
+                        title: const Text('OwnMedia Pro'),
+                        subtitle: Text(s.bought
+                            ? 'Bought. Thank you!'
+                            : s.trialLeft > 0
+                                ? 'Free for ${s.trialLeft} more days, then one purchase'
+                                : 'The free month is over'),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProScreen())),
+                      ),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                 child: Text('Appearance',

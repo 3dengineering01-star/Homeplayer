@@ -55,6 +55,50 @@ public sealed class SharingState
     /// an address the owner cleared on purpose is not put back.
     /// </summary>
     public string SuggestionTaken { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the owner's purchase of OwnMedia Pro as Google Play signed it; null when none.
+    /// Friends' apps check the signature themselves: the server only keeps it.
+    /// </summary>
+    public ProLicence? Licence { get; set; }
+}
+
+/// <summary>
+/// A purchase of OwnMedia Pro: Google Play's JSON and its signature of that text.
+/// </summary>
+/// <param name="Data">The purchase JSON.</param>
+/// <param name="Signature">Google's signature, base64.</param>
+public sealed record ProLicence(string Data, string Signature)
+{
+    /// <summary>
+    /// Whether this looks like OwnMedia Pro for the app (whether Google signed it, only the apps can tell).
+    /// </summary>
+    /// <returns>True to keep it.</returns>
+    public bool LooksRight()
+    {
+        if (string.IsNullOrEmpty(Data) || Data.Length > 8192 || string.IsNullOrEmpty(Signature) || Signature.Length > 2048)
+        {
+            return false;
+        }
+
+        try
+        {
+            Convert.FromBase64String(Signature);
+            using var json = JsonDocument.Parse(Data);
+            var root = json.RootElement;
+            return root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("packageName", out var package) && package.ValueKind == JsonValueKind.String && package.GetString() == "dev.homeplay.homeplay"
+                && root.TryGetProperty("productId", out var product) && product.ValueKind == JsonValueKind.String && product.GetString() == "ownmedia_pro";
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 }
 
 /// <summary>

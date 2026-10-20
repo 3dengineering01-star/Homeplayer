@@ -22,6 +22,7 @@ import 'car_library.dart';
 import 'downloads.dart';
 import 'native_eq.dart';
 import 'quality.dart';
+import 'pro.dart';
 import 'queue_edit.dart';
 import 'saved_queue.dart';
 import 'stream_cache.dart';
@@ -581,7 +582,11 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   /// Android Auto and other media browsers: music from the downloads and the servers.
   late final CarLibrary car = CarLibrary(
-    accounts: AccountStore.load,
+    // After the free month, only servers that may be opened (see Pro).
+    accounts: () async => [
+      for (final a in await AccountStore.load())
+        if (await Pro.instance.mayOpen(a)) a,
+    ],
     jellyfin: (a) async => JellyfinClient(a, await AccountStore.deviceId()),
     subsonic: SubsonicClient.new,
     downloads: () async {

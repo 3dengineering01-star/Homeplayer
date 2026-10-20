@@ -615,6 +615,31 @@ class JellyfinClient {
   /// Takes the invite back; a friend who joined loses access.
   Future<void> deleteInvite(String code) => _sharingCall('DELETE', '/Homeplay/Invites/${Uri.encodeComponent(code)}');
 
+  // --- OwnMedia Pro on the server (Homeplay plugin 1.10) ---
+
+  /// The owner's purchase of OwnMedia Pro kept on the server, as Google signed it; null when
+  /// there is none (or an older plugin, or no plugin).
+  Future<({String data, String signature})?> serverLicence() async {
+    final res = await _http
+        .get(Uri.parse('$_base/Homeplay/Licence'), headers: {...headers, 'Cache-Control': 'no-cache'})
+        .timeout(_timeout);
+    if (res.statusCode != 200 || res.body.isEmpty) return null;
+    final j = jsonDecode(res.body);
+    if (j is! Map || j['Data'] is! String || j['Signature'] is! String) return null;
+    return (data: j['Data'] as String, signature: j['Signature'] as String);
+  }
+
+  /// Leaves the owner's purchase on the server, so friends invited to it watch free. Only the
+  /// server's owner (an administrator) may; false when the server did not take it.
+  Future<bool> keepLicence(({String data, String signature}) purchase) async {
+    final res = await _http
+        .post(Uri.parse('$_base/Homeplay/Licence'),
+            headers: {...headers, 'Content-Type': 'application/json'},
+            body: jsonEncode({'Data': purchase.data, 'Signature': purchase.signature}))
+        .timeout(_timeout);
+    return res.statusCode < 300;
+  }
+
   /// Uses a friend's invite: the server makes a sign-in for this phone and gives its token.
   static Future<Account> join({
     required String server,

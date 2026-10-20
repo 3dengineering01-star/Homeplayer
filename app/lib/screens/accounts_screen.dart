@@ -6,6 +6,7 @@ import '../api/subsonic.dart';
 import '../models/account.dart';
 import '../services/account_store.dart';
 import '../services/invite_inbox.dart';
+import '../services/pro.dart';
 import '../services/own_server.dart';
 import '../services/server_status.dart';
 import '../services/appearance.dart';
@@ -19,6 +20,7 @@ import 'backup_screen.dart';
 import 'downloads_screen.dart';
 import 'join_screen.dart';
 import 'jellyfin_home.dart';
+import 'pro_screen.dart';
 import 'settings_screen.dart';
 import 'subsonic_browser.dart';
 
@@ -88,6 +90,13 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
   }
 
   Future<void> _open(Account a, {bool instant = false}) async {
+    // The free month is over: the server opens once OwnMedia Pro is bought (here, or by the
+    // owner of a friend's server). On start the list stays instead.
+    if (!await Pro.instance.mayOpen(a)) {
+      if (instant || !mounted) return;
+      final bought = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => ProScreen(server: a.serverName)));
+      if (bought != true || !mounted) return;
+    }
     AccountStore.setLastOpened(a.id);
     _lastId = a.id;
     final Widget screen;
@@ -161,12 +170,27 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
                       ActionChip(
                         avatar: const Icon(Icons.download_for_offline_outlined),
                         label: const Text('Downloads'),
-                        onPressed: () => push(const DownloadsScreen()),
+                        onPressed: () async {
+                          final open = await Pro.instance.mayUseAny(accounts);
+                          if (!context.mounted) return;
+                          push(open ? const DownloadsScreen() : const ProScreen());
+                        },
                       ),
                       ActionChip(
                         avatar: const Icon(Icons.palette_outlined),
                         label: const Text('Appearance'),
                         onPressed: () => showAppearanceSheet(context),
+                      ),
+                      // The last week of the free month, and after it: OwnMedia Pro to buy.
+                      ValueListenableBuilder<ProStatus>(
+                        valueListenable: Pro.instance.status,
+                        builder: (context, s, _) => (s.onTrial && s.trialLeft <= 7) || s.ended
+                            ? ActionChip(
+                                avatar: const Icon(Icons.workspace_premium_outlined),
+                                label: Text(s.ended ? 'Buy OwnMedia Pro' : 'Free for ${s.trialLeft} more days'),
+                                onPressed: () => push(const ProScreen()),
+                              )
+                            : const SizedBox.shrink(),
                       ),
                     ]),
                   ]),
