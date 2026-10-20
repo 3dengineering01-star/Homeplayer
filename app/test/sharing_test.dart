@@ -125,6 +125,10 @@ void main() {
     expect(serverMessage('"quoted"'), 'quoted');
     expect(serverMessage('{"title":"Bad","detail":"Choose a library"}'), 'Choose a library');
     expect(serverMessage(''), isNull);
+    // Module 1.10 refuses a home address with a whole sentence: the owner sees it as it is.
+    const homeOnly = 'This address works only at home. Friends need the internet address, '
+        'like https://your-pc.tail1234.ts.net (Tailscale Funnel).';
+    expect(serverMessage('"$homeOnly"'), homeOnly);
   });
 
   test('photos are not shared unless ticked', () {

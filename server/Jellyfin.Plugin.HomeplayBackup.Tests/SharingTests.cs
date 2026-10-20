@@ -191,6 +191,73 @@ public sealed class SharingTests : IDisposable
         Assert.Equal("https://music.example.com", state.PublicUrl);
     }
 
+    // A friend away from home cannot open such an address: it is never put in an invite.
+    [Theory]
+    [InlineData("http://192.168.1.137:8096")]
+    [InlineData("192.168.1.137")]
+    [InlineData("http://10.0.0.5")]
+    [InlineData("https://172.16.0.1")]
+    [InlineData("https://172.31.255.255")]
+    [InlineData("http://127.0.0.1:8096")]
+    [InlineData("http://169.254.10.20")]
+    [InlineData("http://100.64.0.1")]
+    [InlineData("http://100.101.102.103:8096")]
+    [InlineData("http://100.127.255.255")]
+    [InlineData("http://0.0.0.0:8096")]
+    [InlineData("http://[fd7a:115c:a1e0::1]:8096")]
+    [InlineData("http://[fc00::1]")]
+    [InlineData("http://[fe80::1]")]
+    [InlineData("http://[febf::1]")]
+    [InlineData("http://[::1]:8096")]
+    [InlineData("http://[::ffff:192.168.1.10]")]
+    [InlineData("http://localhost:8096")]
+    [InlineData("LOCALHOST")]
+    [InlineData("http://goodman:8096")]
+    [InlineData("http://goodman.local:8096")]
+    [InlineData("https://nas.lan")]
+    [InlineData("https://nas.home.arpa")]
+    [InlineData("https://nas.home.arpa.")]
+    [InlineData("https://pc.internal")]
+    [InlineData("https://app.localhost")]
+    public void AnAddressThatWorksOnlyAtHomeIsSeen(string input) =>
+        Assert.True(SharingStore.IsHomeOnly(input));
+
+    [Theory]
+    [InlineData("https://goodman.tailc91480.ts.net")]
+    [InlineData("amd.tailc91480.ts.net")]
+    [InlineData("https://music.example.com:8920")]
+    [InlineData("http://8.8.8.8:8096")]
+    [InlineData("http://172.15.0.1")]
+    [InlineData("http://172.32.0.1")]
+    [InlineData("http://100.63.255.255")]
+    [InlineData("http://100.128.0.1")]
+    [InlineData("http://192.169.1.1")]
+    [InlineData("http://[2001:db8::1]")]
+    [InlineData("http://[fec0::1]")]
+    [InlineData("https://local.example.com")]
+    [InlineData("https://mylan.com")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    [InlineData("not an address")]
+    public void AnInternetAddressIsNotHomeOnly(string? input) =>
+        Assert.False(SharingStore.IsHomeOnly(input));
+
+    // The installer may leave the home address when Funnel did not turn on: it is not taken.
+    [Fact]
+    public void TheInstallersHomeAddressIsNotTaken()
+    {
+        var state = new SharingState();
+        Assert.False(SharingStore.TakeSuggestion(state, "http://192.168.1.137:8096"));
+        Assert.Equal(string.Empty, state.PublicUrl);
+        Assert.Equal(string.Empty, state.SuggestionTaken);
+
+        // A home address kept from before gives way to the installer's internet address.
+        state.PublicUrl = "http://192.168.1.137:8096";
+        Assert.True(SharingStore.TakeSuggestion(state, "https://amd.tailc91480.ts.net"));
+        Assert.Equal("https://amd.tailc91480.ts.net", state.PublicUrl);
+    }
+
     [Fact]
     public void TheJoinPageTellsHowToMakeAServerOfOnesOwn()
     {
