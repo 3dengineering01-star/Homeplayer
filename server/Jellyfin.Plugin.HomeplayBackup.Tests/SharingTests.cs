@@ -192,6 +192,32 @@ public sealed class SharingTests : IDisposable
     }
 
     [Fact]
+    public void TheOwnersPurchaseIsKeptForFriends()
+    {
+        var file = Path.Combine(_folder, "sharing.json");
+        var store = new SharingStore(file);
+        Assert.Null(store.Load().Licence);
+        var licence = new ProLicence(Purchase, "c2lnbmF0dXJl");
+        store.Update(s => s.Licence = licence);
+        Assert.Equal(licence, new SharingStore(file).Load().Licence);
+    }
+
+    [Fact]
+    public void OnlyAPurchaseOfOwnMediaProIsKept()
+    {
+        Assert.True(new ProLicence(Purchase, "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(Purchase.Replace("ownmedia_pro", "other", StringComparison.Ordinal), "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(Purchase.Replace("dev.homeplay.homeplay", "com.other", StringComparison.Ordinal), "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(Purchase, "not base64!").LooksRight());
+        Assert.False(new ProLicence("not json", "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(string.Empty, "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(new string('x', 9000), "c2lnbmF0dXJl").LooksRight());
+    }
+
+    private const string Purchase =
+        "{\"orderId\":\"GPA.1\",\"packageName\":\"dev.homeplay.homeplay\",\"productId\":\"ownmedia_pro\",\"purchaseState\":0}";
+
+    [Fact]
     public void TheJoinPageTellsHowToMakeAServerOfOnesOwn()
     {
         var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", "x", "https://pc.ts.net/Homeplay/Setup");
@@ -223,5 +249,17 @@ public sealed class SharingAccessTests
             .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
             .Single();
         Assert.Equal("RequiresElevation", attribute.Policy);
+    }
+
+    // Only the owner leaves the purchase on the server; anyone signed in reads it.
+    [Fact]
+    public void OnlyTheOwnerLeavesThePurchase()
+    {
+        static string? PolicyOf(string method) => typeof(Api.LicenceController).GetMethod(method)!
+            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false)
+            .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+            .Single().Policy;
+        Assert.Equal("RequiresElevation", PolicyOf(nameof(Api.LicenceController.SetLicence)));
+        Assert.Null(PolicyOf(nameof(Api.LicenceController.GetLicence)));
     }
 }

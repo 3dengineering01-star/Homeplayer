@@ -18,6 +18,8 @@ Flutter + media_kit (libmpv), direct play без транскодировани�
     медиауведомление, аудиофокус, отчёты о прогрессе на сервер, выбор и запоминание дорожек.
   - `lib/services/track_choice.dart` — чистые функции выбора аудио и субтитров (покрыты тестами).
   - `lib/services/account_store.dart` — аккаунты; токены в flutter_secure_storage, пароль не хранится.
+  - `lib/services/licence.dart` (правила пробного месяца, проверка подписи Google, тесты) и `pro.dart`
+    (покупка OwnMedia Pro в Google Play); экран `screens/pro_screen.dart`. Шаги в Play — `docs/play/README.md`, 5б.
   - `lib/screens/`, `lib/widgets/` — UI.
   - `test/common_test.dart` — юнит-тесты.
 - `server/` — плагин Jellyfin «Homeplay Backup» (C#, .NET 10, Jellyfin 12.1): принимает фото и видео

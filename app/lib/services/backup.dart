@@ -10,6 +10,7 @@ import '../api/backup.dart';
 import '../api/jellyfin.dart';
 import '../models/account.dart';
 import 'account_store.dart';
+import 'pro.dart';
 import 'backup_ledger.dart';
 import 'device_name.dart';
 
@@ -167,6 +168,9 @@ class Backup {
       if (account == null) {
         await disable();
         return 0;
+      }
+      if (!await Pro.instance.mayOpen(account)) {
+        throw const _BackupStop('The free month of OwnMedia is over. Buy OwnMedia Pro to keep backing up photos.');
       }
       if (!background && !(await PhotoManager.getPermissionState(requestOption: permission)).hasAccess) {
         throw const _BackupStop('No access to photos. Open the backup settings in OwnMedia to allow it.');
