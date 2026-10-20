@@ -95,7 +95,7 @@ public class ShareController : ControllerBase
     public ActionResult<SharingInfo> GetSharing()
     {
         var state = Store.Load();
-        if (state.PublicUrl.Length == 0)
+        if (state.PublicUrl.Length == 0 || SharingStore.IsHomeOnly(state.PublicUrl))
         {
             state = TakeInstallerAddress() ?? state;
         }
@@ -131,7 +131,8 @@ public class ShareController : ControllerBase
     }
 
     /// <summary>
-    /// Sets the address friends reach the server at; empty to clear it.
+    /// Sets the address friends reach the server at; empty to clear it. An address that works only at
+    /// home (192.168.x.x, localhost...) is refused: a friend's link with it would not open.
     /// </summary>
     /// <param name="request">The address.</param>
     /// <returns>The address as kept.</returns>
@@ -141,6 +142,11 @@ public class ShareController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public ActionResult<string> SetSharing([FromBody] SharingRequest request)
     {
+        if (SharingStore.IsHomeOnly(request.PublicUrl))
+        {
+            return BadRequest(SharingStore.HomeOnlyMessage);
+        }
+
         var url = string.IsNullOrWhiteSpace(request.PublicUrl) ? string.Empty : SharingStore.NormalizeUrl(request.PublicUrl);
         if (url is null)
         {
@@ -171,10 +177,19 @@ public class ShareController : ControllerBase
         }
 
         var now = DateTime.UtcNow;
+        string? refusal = null;
         var result = Store.Update(state =>
         {
             if (state.PublicUrl.Length == 0)
             {
+                refusal = "Set the server's internet address first: friends reach it there.";
+                return null;
+            }
+
+            // Kept before 1.10, when such an address was still taken: the link would not open away from home.
+            if (SharingStore.IsHomeOnly(state.PublicUrl))
+            {
+                refusal = SharingStore.HomeOnlyMessage;
                 return null;
             }
 
@@ -189,9 +204,7 @@ public class ShareController : ControllerBase
             state.Invites.Add(invite);
             return Info(state, invite, libraries);
         });
-        return result is null
-            ? Conflict("Set the server's internet address first: friends reach it there.")
-            : result;
+        return result is null ? Conflict(refusal) : result;
     }
 
     /// <summary>

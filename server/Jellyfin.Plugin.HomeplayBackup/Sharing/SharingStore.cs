@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -245,6 +247,77 @@ public sealed class SharingStore
     }
 
     /// <summary>
+    /// What the owner is told when the address works only at home.
+    /// </summary>
+    public const string HomeOnlyMessage =
+        "This address works only at home. Friends need the internet address, like https://your-pc.tail1234.ts.net (Tailscale Funnel).";
+
+    // Names that only the home network knows.
+    private static readonly string[] HomeSuffixes = [".local", ".lan", ".home.arpa", ".internal", ".localhost"];
+
+    /// <summary>
+    /// Whether <paramref name="input"/> is an address that works only at home, never for a friend
+    /// elsewhere: a home network or Tailscale IP (10/8, 172.16/12, 192.168/16, 127/8, 169.254/16,
+    /// 100.64/10, fc00::/7, fe80::/10), localhost, a name of one word, or a name in .local, .lan,
+    /// .home.arpa or .internal.
+    /// </summary>
+    /// <param name="input">The address, as typed or as kept; https:// may be missing.</param>
+    /// <returns>True when it works only at home; false for an internet address or text that is no address.</returns>
+    public static bool IsHomeOnly(string? input)
+    {
+        var text = input?.Trim() ?? string.Empty;
+        if (text.Length == 0)
+        {
+            return false;
+        }
+
+        if (!text.Contains("://", StringComparison.Ordinal))
+        {
+            text = "https://" + text;
+        }
+
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri) || uri.Host.Length == 0)
+        {
+            return false;
+        }
+
+        var host = uri.Host.Trim('[', ']').TrimEnd('.').ToLowerInvariant();
+        if (IPAddress.TryParse(host, out var ip))
+        {
+            return IsHomeOnly(ip);
+        }
+
+        return host == "localhost"
+            || !host.Contains('.', StringComparison.Ordinal)
+            || HomeSuffixes.Any(s => host.EndsWith(s, StringComparison.Ordinal) || host == s[1..]);
+    }
+
+    private static bool IsHomeOnly(IPAddress ip)
+    {
+        if (ip.IsIPv4MappedToIPv6)
+        {
+            ip = ip.MapToIPv4();
+        }
+
+        var b = ip.GetAddressBytes();
+        if (ip.AddressFamily == AddressFamily.InterNetwork)
+        {
+            return b[0] == 0 // "this network"
+                || b[0] == 10
+                || b[0] == 127
+                || (b[0] == 172 && b[1] >= 16 && b[1] <= 31)
+                || (b[0] == 192 && b[1] == 168)
+                || (b[0] == 169 && b[1] == 254)
+                || (b[0] == 100 && b[1] >= 64 && b[1] <= 127); // Tailscale
+        }
+
+        return ip.Equals(IPAddress.IPv6Loopback)
+            || ip.Equals(IPAddress.IPv6Any)
+            || (b[0] & 0xFE) == 0xFC // fc00::/7, unique local (Tailscale too)
+            || (b[0] == 0xFE && (b[1] & 0xC0) == 0x80); // fe80::/10, link local
+    }
+
+    /// <summary>
     /// The file where the installer leaves the server's internet address after turning on Tailscale
     /// Funnel: C:\ProgramData\Homeplay\public-url.txt on Windows.
     /// </summary>
@@ -253,7 +326,8 @@ public sealed class SharingStore
 
     /// <summary>
     /// Takes the installer's address as the server's internet address when the owner has none yet
-    /// and this address was not taken before.
+    /// (or only one that works at home) and this address was not taken before. An address that works
+    /// only at home is never taken.
     /// </summary>
     /// <param name="state">The sharing, changed in place.</param>
     /// <param name="suggestion">The text of the installer's file, or null without one.</param>
@@ -261,7 +335,10 @@ public sealed class SharingStore
     public static bool TakeSuggestion(SharingState state, string? suggestion)
     {
         var url = NormalizeUrl(suggestion);
-        if (url is null || state.PublicUrl.Length > 0 || url == state.SuggestionTaken)
+        if (url is null
+            || IsHomeOnly(url)
+            || (state.PublicUrl.Length > 0 && !IsHomeOnly(state.PublicUrl))
+            || url == state.SuggestionTaken)
         {
             return false;
         }
