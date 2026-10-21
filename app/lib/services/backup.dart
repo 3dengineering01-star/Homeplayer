@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:photo_manager/photo_manager.dart';
@@ -11,7 +10,9 @@ import '../api/backup.dart';
 import '../api/jellyfin.dart';
 import '../models/account.dart';
 import 'account_store.dart';
+import 'pro.dart';
 import 'backup_ledger.dart';
+import 'device_name.dart';
 
 /// What a backup run is doing, for the backup screen.
 class BackupProgress {
@@ -68,7 +69,12 @@ class Backup {
 
   /// [afterRun]: called from inside the triggered run itself, where `keep` would keep the
   /// running work and leave nothing queued; `append` queues the next one behind it.
-  static Future<void> _watchNewMedia({bool afterRun = false}) => Workmanager().registerOneOffTask(
+  ///
+  /// Android only: iOS has no trigger for new photos and would run a one-off task at once, so
+  /// each run would queue the next one straight away. There the periodic run does the work.
+  static Future<void> _watchNewMedia({bool afterRun = false}) async {
+    if (!Platform.isAndroid) return;
+    await Workmanager().registerOneOffTask(
         _newMediaTask,
         _newMediaTask,
         constraints: Constraints(
@@ -80,6 +86,7 @@ class Backup {
         ),
         existingWorkPolicy: afterRun ? ExistingWorkPolicy.append : ExistingWorkPolicy.keep,
       );
+  }
 
   static Future<SharedPreferences> _prefs() async {
     final prefs = await SharedPreferences.getInstance();
@@ -135,13 +142,7 @@ class Backup {
     await p.remove(_accountKey);
   }
 
-  static Future<String> _device() async {
-    try {
-      return (await DeviceInfoPlugin().androidInfo).model;
-    } catch (_) {
-      return 'Phone';
-    }
-  }
+  static Future<String> _device() => deviceName();
 
   /// Sends what the server does not have yet, oldest first. Stops after [budget] (the system
   /// gives background work about 10 minutes) or when [cancelled] says so; the next run goes on
@@ -167,6 +168,9 @@ class Backup {
       if (account == null) {
         await disable();
         return 0;
+      }
+      if (!await Pro.instance.mayOpen(account)) {
+        throw const _BackupStop('The free month of OwnMedia is over. Buy OwnMedia Pro to keep backing up photos.');
       }
       if (!background && !(await PhotoManager.getPermissionState(requestOption: permission)).hasAccess) {
         throw const _BackupStop('No access to photos. Open the backup settings in OwnMedia to allow it.');
@@ -256,7 +260,9 @@ class _BackupStop implements Exception {
 void backupDispatcher() {
   Workmanager().executeTask((task, _) async {
     WidgetsFlutterBinding.ensureInitialized();
-    await Backup.run(background: true, budget: const Duration(minutes: 9));
+    // iOS gives a background refresh about 30 seconds; uploads go on from where they stopped.
+    final budget = Platform.isIOS ? const Duration(seconds: 25) : const Duration(minutes: 9);
+    await Backup.run(background: true, budget: budget);
     // Watch for the next photo; the periodic run also restores a lost trigger.
     if ((await Backup.settings()).enabled) await Backup._watchNewMedia(afterRun: task == Backup._newMediaTask);
     // Failures are saved for the backup screen; the periodic task stays scheduled anyway.

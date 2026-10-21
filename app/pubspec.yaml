@@ -4,7 +4,7 @@ publish_to: 'none'
 # The build number is the Android version code. Earlier test builds were split per processor and got
 # 2000 + 1 on arm64 phones; one file for all phones uses the number as it is, so it starts above that
 # to install over them. Raise it with every APK given out.
-version: 0.3.13+2017
+version: 0.3.17+2021
 
 environment:
   sdk: ^3.13.4
@@ -22,6 +22,8 @@ dependencies:
   flutter_secure_storage: ^11.2.0
   http: ^1.6.0
   image_picker: ^1.2.4
+  in_app_purchase: ^3.3.1
+  in_app_purchase_android: ^0.5.5
   media_kit: ^1.2.6
   media_kit_libs_video: ^1.0.7
   media_kit_video: ^2.0.1

@@ -9,12 +9,12 @@
     "imageUrl": "https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/docs/play/icon-512.png",
     "versions": [
       {
-        "version": "1.7.0.0",
+        "version": "1.10.0.0",
         "changelog": "See https://github.com/3dengineering01-star/Homeplayer",
         "targetAbi": "12.1.0.0",
-        "sourceUrl": "https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/homeplay-backup_1.7.0.0.zip",
-        "checksum": "61f667a332f40589ca8eae96e26013fb",
-        "timestamp": "2026-10-17T08:55:43Z"
+        "sourceUrl": "https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/homeplay-backup_1.10.0.0.zip",
+        "checksum": "c5b3d5f3da20b4dcab76c1005b370891",
+        "timestamp": "2026-10-20T18:20:15Z"
       }
     ]
   }

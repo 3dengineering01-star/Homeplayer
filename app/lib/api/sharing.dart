@@ -71,9 +71,24 @@ class SharingInfo {
         libraries = [for (final l in j['Libraries'] as List? ?? const []) ShareLibrary(l as Map<String, dynamic>)],
         invites = [for (final i in j['Invites'] as List? ?? const []) ShareInvite(i as Map<String, dynamic>)];
 
+  SharingInfo._(this.publicUrl, this.libraries, this.invites);
+
   final String publicUrl;
   final List<ShareLibrary> libraries;
+
+  /// Oldest first, as the server keeps them.
   final List<ShareInvite> invites;
+
+  /// The same with [invite] added as the newest, or put in place of the one with its code.
+  SharingInfo withInvite(ShareInvite invite) => SharingInfo._(publicUrl, libraries, [
+        for (final i in invites)
+          if (i.code != invite.code) i,
+        invite,
+      ]);
+
+  /// The same without the invite [code].
+  SharingInfo withoutInvite(String code) =>
+      SharingInfo._(publicUrl, libraries, [for (final i in invites) if (i.code != code) i]);
 }
 
 /// The server's own words from an error answer: plain text, a JSON string or a problem object.

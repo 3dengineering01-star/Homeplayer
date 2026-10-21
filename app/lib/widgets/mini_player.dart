@@ -8,7 +8,21 @@ import 'artwork.dart';
 import 'glass.dart';
 import 'vinyl_art.dart';
 
-/// Bar at the bottom of every screen while music plays and the full player is closed.
+/// What a swipe on the mini player does.
+enum MiniSwipe { none, next, previous, open }
+
+/// A finger moved by [dx], [dy] and let go at [vx], [vy] (logical pixels, per second): sideways
+/// changes the track (to the left: the next one, as the cards of a deck), up opens the player.
+MiniSwipe miniSwipe(double dx, double dy, double vx, double vy) {
+  if (dx.abs() > dy.abs()) {
+    if (dx.abs() < 64 && vx.abs() < 600) return MiniSwipe.none;
+    return (dx.abs() >= 24 ? dx : vx) < 0 ? MiniSwipe.next : MiniSwipe.previous;
+  }
+  return dy < -40 || (vy < -500 && dy < 0) ? MiniSwipe.open : MiniSwipe.none;
+}
+
+/// Bar at the bottom of every screen while music plays and the full player is closed. Swipe it
+/// sideways for the next or previous track, up for the player.
 /// It sits outside the navigator, where there is no Overlay, so no tooltips here.
 class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key, required this.onOpen});
@@ -19,7 +33,7 @@ class MiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final pb = Playback.instance;
     return ListenableBuilder(
-      listenable: Listenable.merge([pb.items, pb.current, pb.screenOpen]),
+      listenable: Listenable.merge([pb.items, pb.current, pb.screenOpen, pb.restored]),
       builder: (context, _) {
         final item = pb.currentItem;
         if (item == null || item.isVideo || pb.screenOpen.value) return const SizedBox.shrink();
@@ -29,46 +43,61 @@ class MiniPlayer extends StatelessWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-            child: _Frame(
-              onTap: onOpen,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 4, 6),
-                  child: Row(children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: SizedBox.square(
-                        dimension: 46,
-                        child: artworkImage(item, fallback: const NoteTile()),
+            child: _Swipe(
+              onSwipe: (s) => switch (s) {
+                MiniSwipe.next => pb.skipToNext(),
+                MiniSwipe.previous => pb.skipToPrevious(),
+                MiniSwipe.open => onOpen(),
+                MiniSwipe.none => null,
+              },
+              child: _Frame(
+                onTap: onOpen,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 4, 6),
+                    child: Row(children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox.square(
+                          dimension: 46,
+                          child: artworkImage(item, fallback: const NoteTile()),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                        Text(item.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                        if (item.subtitle != null)
-                          Text(item.subtitle!,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                          Text(item.title,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.primary)),
-                      ]),
-                    ),
-                    StreamBuilder<bool>(
-                      stream: pb.player.stream.playing,
-                      initialData: pb.player.state.playing,
-                      builder: (context, s) => IconButton.filled(
-                        icon: Icon(s.data! ? Icons.pause : Icons.play_arrow, semanticLabel: s.data! ? 'Pause' : 'Play'),
-                        onPressed: s.data! ? pb.pause : pb.play,
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                          if (item.subtitle != null)
+                            Text(item.subtitle!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.primary)),
+                        ]),
                       ),
-                    ),
-                    IconButton(icon: const Icon(Icons.close, semanticLabel: 'Stop'), onPressed: pb.stop),
-                  ]),
-                ),
-                _Progress(pb: pb),
-              ]),
+                      // The queue from the last run is not in the player yet (see Playback.restoreQueue).
+                      if (pb.restored.value)
+                        IconButton.filled(
+                          icon: const Icon(Icons.play_arrow, semanticLabel: 'Play'),
+                          onPressed: pb.play,
+                        )
+                      else
+                        StreamBuilder<bool>(
+                          stream: pb.player.stream.playing,
+                          initialData: pb.player.state.playing,
+                          builder: (context, s) => IconButton.filled(
+                            icon: Icon(s.data! ? Icons.pause : Icons.play_arrow, semanticLabel: s.data! ? 'Pause' : 'Play'),
+                            onPressed: s.data! ? pb.pause : pb.play,
+                          ),
+                        ),
+                      IconButton(icon: const Icon(Icons.close, semanticLabel: 'Stop'), onPressed: pb.stop),
+                    ]),
+                  ),
+                  if (!pb.restored.value) _Progress(pb: pb),
+                ]),
+              ),
             ),
           ),
         );
@@ -145,6 +174,43 @@ class TvBar extends StatelessWidget {
       );
 }
 
+/// Follows the finger a little while it slides, then tells [onSwipe] what the swipe meant.
+class _Swipe extends StatefulWidget {
+  const _Swipe({required this.onSwipe, required this.child});
+
+  final ValueChanged<MiniSwipe> onSwipe;
+  final Widget child;
+
+  @override
+  State<_Swipe> createState() => _SwipeState();
+}
+
+class _SwipeState extends State<_Swipe> {
+  Offset _moved = Offset.zero;
+
+  void _end(Velocity v) {
+    final s = miniSwipe(_moved.dx, _moved.dy, v.pixelsPerSecond.dx, v.pixelsPerSecond.dy);
+    setState(() => _moved = Offset.zero);
+    widget.onSwipe(s);
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onPanUpdate: (d) => setState(() => _moved += d.delta),
+        onPanEnd: (d) => _end(d.velocity),
+        onPanCancel: () => setState(() => _moved = Offset.zero),
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: _moved == Offset.zero ? 200 : 0),
+          curve: Curves.easeOut,
+          // Sideways it follows a third of the way; up only a little, the player opens instead.
+          transform: _moved.dx.abs() > _moved.dy.abs()
+              ? Matrix4.translationValues(_moved.dx / 3, 0, 0)
+              : Matrix4.translationValues(0, _moved.dy < 0 ? _moved.dy / 6 : 0, 0),
+          child: widget.child,
+        ),
+      );
+}
+
 /// The bar's card: a pane of glass with the glass style, else a raised card.
 class _Frame extends StatelessWidget {
   const _Frame({required this.onTap, required this.child});
@@ -176,7 +242,7 @@ class _Progress extends StatelessWidget {
         stream: pb.player.stream.position,
         initialData: pb.player.state.position,
         builder: (context, pos) {
-          final total = pb.player.state.duration.inMilliseconds;
+          final total = pb.lengthOf(pb.player.state.duration).inMilliseconds;
           final value = total > 0 ? (pos.data!.inMilliseconds / total).clamp(0.0, 1.0) : 0.0;
           return LinearProgressIndicator(value: value, minHeight: 3, backgroundColor: Colors.transparent);
         },

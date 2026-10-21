@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/jellyfin.dart';
 import '../services/music_folders.dart';
 import '../services/search_index.dart';
+import '../services/save_to_phone.dart';
 import '../widgets/highlighted_text.dart';
 import '../widgets/media_cards.dart';
 import '../widgets/track_tile.dart';
@@ -43,7 +44,8 @@ class _MusicFolderViewState extends State<MusicFolderView> with JellyfinActions 
       (icon: Icons.play_arrow, label: 'Play', run: () => playAll(tracks)),
       (icon: Icons.shuffle, label: 'Shuffle', run: () => playAll(tracks, shuffle: true)),
       (icon: Icons.playlist_add, label: 'Add to playlist', run: () => addToPlaylist(context, client, items: tracks)),
-      (icon: Icons.save_alt, label: "Save to phone's Music", run: () => saveToPhone(tracks)),
+      if (SaveToPhone.available)
+        (icon: Icons.save_alt, label: "Save to phone's Music", run: () => saveToPhone(tracks)),
     ];
     final picked = await showModalBottomSheet<SheetAction>(
       context: context,

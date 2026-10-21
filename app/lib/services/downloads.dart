@@ -221,7 +221,8 @@ class Downloads {
   /// Queues [items] (playable ones not on the phone yet). Returns how many were added.
   Future<int> add(JellyfinClient client, List<JellyfinItem> items, {String? group}) async {
     await init();
-    if (Platform.isAndroid) await FileDownloader().permissions.request(PermissionType.notifications);
+    // The notification shows the progress; Android 13+ and iOS ask the user first.
+    await FileDownloader().permissions.request(PermissionType.notifications);
     var added = 0;
     for (final item in items.where((i) => i.isPlayable && find(i.id) == null)) {
       final entry = await _sidecars(client, item, group);
@@ -462,4 +463,5 @@ PlayItem downloadedPlayItem(DownloadEntry e, String dir, {PlaybackReporter? repo
         for (final s in e.subtitles) ExternalSubtitle(url: Uri.file('$dir/${s.file}'), title: s.title, language: s.language),
       ],
       reporter: reporter,
+      ref: e.isVideo ? null : TrackRef(TrackSource.download, e.id, accountId: e.accountId),
     );

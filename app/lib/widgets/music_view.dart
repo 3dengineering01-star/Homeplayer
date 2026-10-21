@@ -9,6 +9,8 @@ import '../services/playback.dart';
 import '../services/video_tuning.dart';
 import 'appearance_picker.dart';
 import 'artwork.dart';
+import 'instant_mix.dart';
+import 'lyrics_sheet.dart';
 import 'queue_sheet.dart';
 import 'vinyl_art.dart';
 
@@ -114,6 +116,11 @@ class _TopBar extends StatelessWidget {
           ]),
         ),
         IconButton(
+          tooltip: 'Instant mix: songs like this one',
+          onPressed: pb.currentItem?.ref == null ? null : () => playInstantMixOf(context, pb.currentItem!),
+          icon: const Icon(Icons.radio_outlined),
+        ),
+        IconButton(
           tooltip: 'Appearance',
           onPressed: () => showAppearanceSheet(context),
           icon: const Icon(Icons.palette_outlined),
@@ -197,6 +204,14 @@ class _Controls extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         MusicSeekBar(pb: pb),
+        // The file's sound: "FLAC · 24-bit · 96 kHz".
+        ValueListenableBuilder<String?>(
+          valueListenable: pb.audioInfo,
+          builder: (context, info, _) => SizedBox(
+            height: 18,
+            child: info == null ? null : Text(info, style: theme.textTheme.labelSmall?.copyWith(letterSpacing: 0.4)),
+          ),
+        ),
         ListenableBuilder(
           listenable: Listenable.merge([pb.shuffle, pb.repeat]),
           builder: (context, _) => Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
@@ -268,10 +283,11 @@ class _Controls extends StatelessWidget {
             ),
           ),
           _SleepButton(pb: pb),
+          // The queue has its button at the top.
           IconButton(
-            tooltip: 'Queue',
-            onPressed: () => showQueueSheet(context, pb),
-            icon: const Icon(Icons.queue_music),
+            tooltip: 'Lyrics',
+            onPressed: item.ref == null ? null : () => showLyricsSheet(context, pb),
+            icon: const Icon(Icons.lyrics_outlined),
           ),
         ]),
       ]),
@@ -377,7 +393,7 @@ class _MusicSeekBarState extends State<MusicSeekBar> {
         stream: p.stream.position,
         initialData: p.state.position,
         builder: (context, pos) {
-          final total = dur.data!.inMilliseconds.toDouble();
+          final total = widget.pb.lengthOf(dur.data!).inMilliseconds.toDouble();
           final current = (_dragging ?? pos.data!.inMilliseconds.toDouble()).clamp(0.0, total > 0 ? total : 0.0);
           final style = Theme.of(context).textTheme.bodySmall;
           return Column(children: [

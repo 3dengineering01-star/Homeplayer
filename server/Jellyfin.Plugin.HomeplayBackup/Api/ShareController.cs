@@ -68,7 +68,7 @@ public class ShareController : ControllerBase
             i.Expires,
             i.Joined,
             SharingStore.StateOf(i, DateTime.UtcNow).ToString(),
-            state.PublicUrl.Length == 0 ? string.Empty : SharingStore.JoinLink(state.PublicUrl, i.Code),
+            state.PublicUrl.Length == 0 ? string.Empty : SharingStore.JoinLink(state.PublicUrl, _host.FriendlyName, i.Code),
             i.Device,
             activity.LastSeen,
             activity.Watching);
@@ -246,7 +246,7 @@ public class ShareController : ControllerBase
         var names = invite?.Libraries.Select(id => libraries.FirstOrDefault(l => l.Id == id)?.Name).OfType<string>().ToList() ?? [];
         var server = state.PublicUrl.Length > 0 ? state.PublicUrl : $"{Request.Scheme}://{Request.Host}";
         var folder = System.IO.Path.GetDirectoryName(typeof(ShareController).Assembly.Location) ?? ".";
-        var appUrl = PhoneLink.AppUrl(server, PhoneLink.FindApk(folder) is not null);
+        var appUrl = PhoneLink.AppUrl;
         var setupUrl = PhoneLink.FindSetup(folder) is null ? null : $"{server.TrimEnd('/')}/Homeplay/Setup";
         var page = JoinPage.Html(SharingStore.StateOf(invite, DateTime.UtcNow), _host.FriendlyName, names, server, invite?.Code ?? code, appUrl, setupUrl);
         return Content(page, "text/html; charset=utf-8");

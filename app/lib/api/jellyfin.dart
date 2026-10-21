@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
+import '../services/device_name.dart';
 import '../services/quality.dart';
 import '../services/search_filters.dart';
 import 'common.dart';
 import 'discovery.dart';
+import 'lyrics.dart';
 import 'dlna.dart';
 import 'sharing.dart';
 
@@ -40,6 +42,12 @@ class JellyfinItem {
   Map<String, dynamic> get _user => (_j['UserData'] as Map<String, dynamic>?) ?? const {};
   bool get played => (_user['Played'] as bool?) ?? false;
   bool get isFavorite => (_user['IsFavorite'] as bool?) ?? false;
+
+  /// When this user last played it, if ever.
+  DateTime? get lastPlayed => DateTime.tryParse((_user['LastPlayedDate'] as String?) ?? '');
+
+  /// How many times this user played it.
+  int get playCount => (_user['PlayCount'] as num?)?.toInt() ?? 0;
 
   /// Where playback stopped last time; zero when there is nothing to resume.
   Duration get resumePosition => Duration(microseconds: ((_user['PlaybackPositionTicks'] as num?) ?? 0).toInt() ~/ 10);
@@ -224,7 +232,7 @@ class JellyfinClient {
   String get _base => account.baseUrl;
 
   static String _authHeader(String deviceId, [String? token]) =>
-      'MediaBrowser Client="OwnMedia", Device="Android", DeviceId="$deviceId", Version="$_appVersion"'
+      'MediaBrowser Client="OwnMedia", Device="$platformName", DeviceId="$deviceId", Version="$_appVersion"'
       '${token != null ? ', Token="$token"' : ''}';
 
   Map<String, String> get headers => {'Authorization': _authHeader(deviceId, account.token)};
@@ -463,6 +471,46 @@ class JellyfinClient {
     }
   }
 
+  /// Songs like [itemId] (a song, album, artist or playlist), the server's "Instant Mix".
+  Future<List<JellyfinItem>> instantMix(String itemId, {int limit = 100}) async =>
+      (await _list('/Items/$itemId/InstantMix', {
+        'userId': account.userId!,
+        'limit': '$limit',
+        'fields': 'MediaSourceCount,Path',
+        'enableUserData': 'true',
+      }))
+          .where((i) => i.type == 'Audio')
+          .toList();
+
+  /// Items by id in the order asked, without the ones the server no longer has: for a queue
+  /// saved before the app was closed.
+  Future<List<JellyfinItem>> itemsByIds(List<String> ids) async {
+    final byId = <String, JellyfinItem>{};
+    // A few hundred ids per request keep the address short enough for any proxy.
+    for (var at = 0; at < ids.length; at += 200) {
+      final chunk = ids.sublist(at, at + 200 > ids.length ? ids.length : at + 200);
+      for (final i in _items(await _get('/Items', {
+        'userId': account.userId!,
+        'ids': chunk.join(','),
+        'fields': 'MediaSourceCount,Path',
+        'enableUserData': 'true',
+      }))) {
+        byId[i.id] = i;
+      }
+    }
+    return [for (final id in ids) ?byId[id]];
+  }
+
+  /// The track's lyrics (Jellyfin 10.9+, from an .lrc or .txt next to the file or the tags);
+  /// null when it has none.
+  Future<Lyrics?> lyrics(String itemId) async {
+    final res = await _http.get(Uri.parse('$_base/Audio/$itemId/Lyrics'), headers: headers).timeout(_timeout);
+    if (res.statusCode == 404) return null;
+    if (_lostAccess(res.statusCode)) throw ApiException(signedOut);
+    if (res.statusCode != 200) throw ApiException('Server answered ${res.statusCode} for lyrics');
+    return lyricsFromJellyfin(jsonDecode(res.body));
+  }
+
   // --- Playlists ---
 
   /// The user's playlists, by name.
@@ -535,7 +583,9 @@ class JellyfinClient {
   }
 
   Future<http.Response> _sharingCall(String method, String path, [Object? body]) async {
-    final req = http.Request(method, Uri.parse('$_base$path'))..headers.addAll({...headers, 'Content-Type': 'application/json'});
+    final req = http.Request(method, Uri.parse('$_base$path'))
+      // Always the server's own answer, never one kept on the way: the list changes with each invite.
+      ..headers.addAll({...headers, 'Content-Type': 'application/json', 'Cache-Control': 'no-cache'});
     if (body != null) req.body = jsonEncode(body);
     final res = await http.Response.fromStream(await _http.send(req).timeout(_timeout));
     if (res.statusCode < 300) return res;
@@ -564,6 +614,31 @@ class JellyfinClient {
 
   /// Takes the invite back; a friend who joined loses access.
   Future<void> deleteInvite(String code) => _sharingCall('DELETE', '/Homeplay/Invites/${Uri.encodeComponent(code)}');
+
+  // --- OwnMedia Pro on the server (Homeplay plugin 1.10) ---
+
+  /// The owner's purchase of OwnMedia Pro kept on the server, as Google signed it; null when
+  /// there is none (or an older plugin, or no plugin).
+  Future<({String data, String signature})?> serverLicence() async {
+    final res = await _http
+        .get(Uri.parse('$_base/Homeplay/Licence'), headers: {...headers, 'Cache-Control': 'no-cache'})
+        .timeout(_timeout);
+    if (res.statusCode != 200 || res.body.isEmpty) return null;
+    final j = jsonDecode(res.body);
+    if (j is! Map || j['Data'] is! String || j['Signature'] is! String) return null;
+    return (data: j['Data'] as String, signature: j['Signature'] as String);
+  }
+
+  /// Leaves the owner's purchase on the server, so friends invited to it watch free. Only the
+  /// server's owner (an administrator) may; false when the server did not take it.
+  Future<bool> keepLicence(({String data, String signature}) purchase) async {
+    final res = await _http
+        .post(Uri.parse('$_base/Homeplay/Licence'),
+            headers: {...headers, 'Content-Type': 'application/json'},
+            body: jsonEncode({'Data': purchase.data, 'Signature': purchase.signature}))
+        .timeout(_timeout);
+    return res.statusCode < 300;
+  }
 
   /// Uses a friend's invite: the server makes a sign-in for this phone and gives its token.
   static Future<Account> join({
@@ -1006,16 +1081,37 @@ class JellyfinClient {
     }
   }
 
+  /// A track converted by the server to at most [kbps] when the file is larger (Jellyfin's
+  /// "universal" stream): MP3, which every phone plays. Smaller files come as they are.
+  Uri cappedAudioUrl(JellyfinItem item, int kbps) => Uri.parse('$_base/Audio/${item.id}/universal').replace(queryParameters: {
+        'UserId': account.userId!,
+        'DeviceId': deviceId,
+        'ApiKey': account.token!,
+        'MaxStreamingBitrate': '${kbps * 1000}',
+        'Container': 'mp3,aac,m4a|aac,m4b|aac,opus,ogg|opus,ogg|vorbis,webma,webm|webma,flac,wav',
+        'TranscodingContainer': 'mp3',
+        'TranscodingProtocol': 'http',
+        'AudioCodec': 'mp3',
+        'MaxAudioChannels': '2',
+        // Its own session per track: the next track opened ahead does not stop this one's conversion.
+        'PlaySessionId': '${item.id}-${DateTime.now().microsecondsSinceEpoch}',
+      });
+
   PlayItem toPlayItem(JellyfinItem item, {String? versionId}) => PlayItem(
         title: item.name,
         subtitle: item.subtitle,
-        url: streamUrl(item, versionId: versionId),
+        url: switch (MusicQuality.capKbps) {
+          final kbps? when item.type == 'Audio' => cappedAudioUrl(item, kbps),
+          _ => streamUrl(item, versionId: versionId),
+        },
         artwork: imageUrl(item, height: 600),
         isVideo: item.isVideo,
         headers: headers,
         reporter: _reporter(item, versionId, null, 'DirectPlay'),
         favorite: item.type == 'Audio' ? ServerFavorite(isFavorite(item), (on) => setFavorite(item.id, on)) : null,
         container: item.container,
+        ref: item.isVideo ? null : TrackRef(TrackSource.jellyfin, item.id, accountId: account.id),
+        duration: item.runTime,
         tvUrl: () async {
           final url = streamUrl(item, versionId: versionId);
           final home = await homeBase();

@@ -10,19 +10,23 @@ Flutter + media_kit (libmpv), direct play без транскодировани�
 
 ## Структура
 
-- `app/` — Flutter-приложение (пакет `homeplay`), целевая платформа Android.
+- `app/` — Flutter-приложение (пакет `homeplay`), платформы Android и iOS. iPhone-версия: `app/ios/`,
+  сборка на Mac от GitHub `.github/workflows/ios.yml`, установка и отличия от Android — `docs/ios.md`.
   - `lib/api/` — клиенты серверов: `jellyfin.dart`, `subsonic.dart`, общее в `common.dart`
     (`PlayItem`, `PlaybackReporter`, список кодеков, которые декодирует libmpv), автопоиск Jellyfin в `discovery.dart`.
   - `lib/services/playback.dart` — единственный плеер приложения (`Playback`, audio_service): очередь,
     медиауведомление, аудиофокус, отчёты о прогрессе на сервер, выбор и запоминание дорожек.
   - `lib/services/track_choice.dart` — чистые функции выбора аудио и субтитров (покрыты тестами).
   - `lib/services/account_store.dart` — аккаунты; токены в flutter_secure_storage, пароль не хранится.
+  - `lib/services/licence.dart` (правила пробного месяца, проверка подписи Google, тесты) и `pro.dart`
+    (покупка OwnMedia Pro в Google Play); экран `screens/pro_screen.dart`. Шаги в Play — `docs/play/README.md`, 5б.
   - `lib/screens/`, `lib/widgets/` — UI.
   - `test/common_test.dart` — юнит-тесты.
 - `server/` — плагин Jellyfin «Homeplay Backup» (C#, .NET 10, Jellyfin 12.1): принимает фото и видео
   с телефона. Логика хранения в `BackupStore.cs` (покрыта тестами), HTTP API в `Api/BackupController.cs`.
   Подробности в `server/README.md`.
-- `landing/index.html` — лендинг с листом ожидания (Formspree).
+- `landing/index.html` — лендинг с листом ожидания (Formspree); `landing/join.html` — страница приглашения
+  на сайте (`ownmedia.app/join.html#s=…&c=…`), на неё ведут ссылки модуля 1.9+.
 - `docs/validation.md` — план проверки спроса.
 - `tools/phone.sh` — управление телефоном через adb (только локально).
 - `jellyfin-repo/` — каталог модулей Jellyfin (manifest.json и zip модуля) для NAS, Docker и Linux; пересобирается

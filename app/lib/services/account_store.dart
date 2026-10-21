@@ -6,7 +6,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/account.dart';
 
 class AccountStore {
-  static const _storage = FlutterSecureStorage();
+  // On iOS the photo backup runs while the phone is locked; the default keychain setting hides
+  // the accounts until it is unlocked, so they stay readable after the first unlock instead.
+  static const _storage = FlutterSecureStorage(
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
+  );
   static const _accountsKey = 'accounts';
   static const _deviceIdKey = 'device_id';
   static const _lastOpenedKey = 'last_opened';

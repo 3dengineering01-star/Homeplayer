@@ -5,8 +5,8 @@
 # и ставит модуль одной кнопкой — на любом сервере: Synology, другой NAS, Docker, Linux, Windows.
 #
 # Запуск из корня репозитория: tools/make_plugin_repo.sh. Нужен .NET SDK (в облаке его ставит хук).
-# В zip нет приложения (OwnMedia.apk) и установщика: они большие для git. Без них страница
-# приглашения ведёт за приложением в Google Play; APK можно положить в папку модуля на сервере вручную.
+# В zip нет приложения (OwnMedia.apk) и установщика: они большие для git. Страница приглашения и
+# QR-код ведут за приложением на сайт (https://ownmedia.app/download/OwnMedia.apk, PhoneLink.AppUrl).
 set -euo pipefail
 
 repo=3dengineering01-star/Homeplayer

@@ -39,6 +39,8 @@ class PlayItem {
     this.favorite,
     this.container,
     this.tvUrl,
+    this.ref,
+    this.duration,
   });
 
   final String title;
@@ -80,6 +82,14 @@ class PlayItem {
   /// the TV can reach when the phone uses an internet one. Null when [url] will do.
   final Future<Uri> Function()? tvUrl;
 
+  /// Where the track comes from, to find it again after a restart and to ask its server for
+  /// lyrics or similar songs; null for videos and what cannot be found again.
+  final TrackRef? ref;
+
+  /// The length the server gives for the file. mpv's own guess is wrong for a stream the server
+  /// converts (it estimates from the bitrate).
+  final Duration? duration;
+
   PlayItem copyWith({
     Uri? url,
     String? audioTrackId,
@@ -105,7 +115,40 @@ class PlayItem {
         favorite: favorite,
         container: container,
         tvUrl: tvUrl,
+        ref: ref,
+        duration: duration,
       );
+}
+
+enum TrackSource { jellyfin, subsonic, download }
+
+/// A track as its server knows it: the server's account and the track's id there. A download
+/// keeps the Jellyfin id and account of the track it was made from.
+class TrackRef {
+  const TrackRef(this.source, this.id, {this.accountId});
+
+  final TrackSource source;
+  final String id;
+  final String? accountId;
+
+  Map<String, dynamic> toJson() => {'source': source.name, 'id': id, 'accountId': ?accountId};
+
+  /// Null for anything this version cannot read (a newer app's entry, a damaged file).
+  static TrackRef? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final source = TrackSource.values.where((s) => s.name == j['source']).firstOrNull;
+    final id = j['id'];
+    final account = j['accountId'];
+    if (source == null || id is! String || (account != null && account is! String)) return null;
+    return TrackRef(source, id, accountId: account as String?);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is TrackRef && other.source == source && other.id == id && other.accountId == accountId;
+
+  @override
+  int get hashCode => Object.hash(source, id, accountId);
 }
 
 /// A track's heart: marked as a favorite on its server. [marked] changes at once when tapped and

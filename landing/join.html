@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OwnMedia invite</title>
+<meta name="description" content="You are invited to watch and listen with OwnMedia.">
+<meta name="robots" content="noindex">
+<!--
+  An invite to a friend's own server. The link looks like
+    https://ownmedia.app/join.html#s=<server address>&n=<server name>&c=<code>
+  Everything after # stays in the phone: the browser does not send it to this website, so the site
+  never learns whose server it is or the code. The page only offers the app (from this website)
+  and hands the server address and code to it; the app then talks to the friend's server directly.
+  The buttons also copy this page's address: OwnMedia, opened for the first time with no servers,
+  finds the invite on the clipboard and offers it, so a friend who has just installed the app does
+  not have to come back here.
+-->
+<style>
+  :root {
+    --bg: #0f1115; --surface: #171a21; --line: #262a33; --text: #e8eaef; --muted: #9aa1ad;
+    --accent: #7cc4ff; --accent-ink: #06121d;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f6f7f9; --surface: #ffffff; --line: #e1e4ea; --text: #151820; --muted: #5b6270;
+      --accent: #0b6bcb; --accent-ink: #ffffff;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px 48px; }
+  header { padding: 20px 0; font-weight: 650; }
+  header a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 14px; }
+  h1 { font-size: clamp(26px, 6vw, 34px); line-height: 1.2; margin: 16px 0 8px; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+  .step { display: flex; gap: 12px; margin: 0 0 18px; }
+  .step:last-child { margin-bottom: 0; }
+  .num { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--line); display: grid; place-items: center; font-weight: 650; font-size: 14px; }
+  .step p { margin: 2px 0 10px; }
+  .button { display: block; text-align: center; padding: 14px 18px; border-radius: 12px; font-weight: 650; text-decoration: none; }
+  .primary { background: var(--accent); color: var(--accent-ink); }
+  .secondary { border: 1px solid var(--line); color: var(--text); }
+  .small { color: var(--muted); font-size: 14px; margin: 10px 0 0; }
+  a { color: var(--accent); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="./"><span class="logo">▶</span> OwnMedia</a></header>
+
+  <main id="invite" hidden>
+    <h1 id="title">You are invited</h1>
+    <p class="lead" id="lead">to watch and listen with OwnMedia: movies, shows and music from a friend's own server.</p>
+    <div class="card">
+      <div class="step">
+        <span class="num">1</span>
+        <div>
+          <p>No OwnMedia on this phone yet? Download it, install it and tap <b>Open</b>: the app picks up this
+            invite by itself.</p>
+          <a class="button secondary" id="download" href="/download/OwnMedia.apk">Download OwnMedia for Android</a>
+          <p class="small">If the phone warns about an app from an unknown developer, tap <b>More details</b>, then
+            <b>Install anyway</b>. The button that stands out cancels the install.</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <div>
+          <p>Already have OwnMedia, or the app did not offer the invite? Open it from here.</p>
+          <a class="button primary" id="open" href="#">Open in OwnMedia</a>
+          <p class="small">The link works once, for whoever opens it first. If the button does nothing: in OwnMedia
+            tap <b>Add your server</b> → <b>Have an invite link?</b> and paste this page's address.</p>
+        </div>
+      </div>
+    </div>
+    <p class="small">OwnMedia plays from your friend's computer directly. This website does not see the server's
+      address or the invite: they stay in the link on your phone.</p>
+  </main>
+
+  <main id="broken" hidden>
+    <h1>This invite link is not complete</h1>
+    <p class="lead">Part of it was lost when it was copied. Ask whoever sent it for a new one.</p>
+    <a class="button secondary" href="/download/OwnMedia.apk">Download OwnMedia for Android</a>
+  </main>
+</div>
+<script>
+(function () {
+  var p = new URLSearchParams(location.hash.slice(1));
+  var server = p.get('s') || '', code = p.get('c') || '', name = p.get('n') || '';
+  var ok = /^[A-Za-z0-9]{4,64}$/.test(code);
+  try {
+    var u = new URL(server);
+    ok = ok && (u.protocol === 'https:' || u.protocol === 'http:') && u.hostname.length > 0;
+  } catch (e) { ok = false; }
+  if (!ok) { document.getElementById('broken').hidden = false; return; }
+
+  if (name) document.getElementById('title').textContent = name;
+  document.getElementById('lead').textContent = name
+    ? 'invites you to watch and listen with OwnMedia: movies, shows and music from their own server.'
+    : 'to watch and listen with OwnMedia: movies, shows and music from a friend’s own server.';
+
+  var query = 'server=' + encodeURIComponent(server) + '&code=' + encodeURIComponent(code);
+  var apk = new URL('/download/OwnMedia.apk', location.href).href;
+  var android = /Android/i.test(navigator.userAgent);
+  // On Android, Chrome opens the app, or without it goes to the download.
+  document.getElementById('open').href = android
+    ? 'intent://join?' + query + '#Intent;scheme=homeplay;package=dev.homeplay.homeplay;S.browser_fallback_url=' + encodeURIComponent(apk) + ';end'
+    : 'homeplay://join?' + query;
+  document.getElementById('invite').hidden = false;
+
+  // Leaves the invite on the clipboard for the app to find when it first opens.
+  function copyInvite() {
+    var text = location.href;
+    function fallback() {
+      var field = document.createElement('textarea');
+      field.value = text;
+      field.setAttribute('readonly', '');
+      field.style.position = 'fixed';
+      field.style.opacity = '0';
+      document.body.appendChild(field);
+      field.select();
+      try { document.execCommand('copy'); } catch (e) { /* nothing to do */ }
+      document.body.removeChild(field);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+  document.getElementById('download').addEventListener('click', copyInvite);
+  document.getElementById('open').addEventListener('click', copyInvite);
+})();
+</script>
+</body>
+</html>

@@ -122,7 +122,17 @@ public sealed class SharingTests : IDisposable
         Assert.Equal("Anna 3", SharingStore.UserNameFor(" Anna ", taken.Contains));
         Assert.Equal("Friend", SharingStore.UserNameFor("<>/", _ => false));
         Assert.Equal("Пётр", SharingStore.UserNameFor("Пётр", _ => false));
-        Assert.Equal("https://pc.ts.net/Homeplay/Join/ABC", SharingStore.JoinLink("https://pc.ts.net/", "ABC"));
+    }
+
+    [Fact]
+    public void TheInviteLinkLeadsToTheWebsiteAndKeepsTheServerAfterTheHash()
+    {
+        Assert.Equal(
+            "https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net&n=Anna%27s%20%D0%BA%D0%B8%D0%BD%D0%BE&c=ABC",
+            SharingStore.JoinLink("https://pc.ts.net/", "Anna's кино", "ABC"));
+        Assert.Equal(
+            "https://ownmedia.app/join.html#s=http%3A%2F%2F192.168.1.10%3A8096&c=Q7",
+            SharingStore.JoinLink("http://192.168.1.10:8096", " ", "Q7"));
     }
 
     [Fact]
@@ -140,11 +150,20 @@ public sealed class SharingTests : IDisposable
     }
 
     [Fact]
-    public void WithoutAnAppFileTheInviteSendsToGooglePlay()
+    public void TheInviteGetsTheNewestAppFromTheWebsite()
     {
-        Assert.Equal("https://pc.ts.net/Homeplay/App", Phone.PhoneLink.AppUrl("https://pc.ts.net/", true));
-        var store = Phone.PhoneLink.AppUrl("https://pc.ts.net", false);
-        Assert.Equal(Phone.PhoneLink.PlayStoreUrl, store);
+        Assert.Equal("https://ownmedia.app/download/OwnMedia.apk", Phone.PhoneLink.AppUrl);
+        var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", Phone.PhoneLink.AppUrl);
+        Assert.Contains("S.browser_fallback_url=https%3A%2F%2Fownmedia.app%2Fdownload%2FOwnMedia.apk", page, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://ownmedia.app/download/OwnMedia.apk\"", page, StringComparison.Ordinal);
+        Assert.Contains("Download OwnMedia for Android", page, StringComparison.Ordinal);
+        Assert.Contains("Install anyway", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AGooglePlayAddressSaysGooglePlay()
+    {
+        var store = Phone.PhoneLink.PlayStoreUrl;
         var page = JoinPage.Html(InviteState.Waiting, "PC", ["Music"], "https://pc.ts.net", "ABC", store);
         Assert.Contains("Get OwnMedia on Google Play", page, StringComparison.Ordinal);
         Assert.Contains("opens it in Google Play", page, StringComparison.Ordinal);
@@ -171,6 +190,32 @@ public sealed class SharingTests : IDisposable
         Assert.False(SharingStore.TakeSuggestion(state, "https://other.tail1234.ts.net"));
         Assert.Equal("https://music.example.com", state.PublicUrl);
     }
+
+    [Fact]
+    public void TheOwnersPurchaseIsKeptForFriends()
+    {
+        var file = Path.Combine(_folder, "sharing.json");
+        var store = new SharingStore(file);
+        Assert.Null(store.Load().Licence);
+        var licence = new ProLicence(Purchase, "c2lnbmF0dXJl");
+        store.Update(s => s.Licence = licence);
+        Assert.Equal(licence, new SharingStore(file).Load().Licence);
+    }
+
+    [Fact]
+    public void OnlyAPurchaseOfOwnMediaProIsKept()
+    {
+        Assert.True(new ProLicence(Purchase, "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(Purchase.Replace("ownmedia_pro", "other", StringComparison.Ordinal), "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(Purchase.Replace("dev.homeplay.homeplay", "com.other", StringComparison.Ordinal), "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(Purchase, "not base64!").LooksRight());
+        Assert.False(new ProLicence("not json", "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(string.Empty, "c2lnbmF0dXJl").LooksRight());
+        Assert.False(new ProLicence(new string('x', 9000), "c2lnbmF0dXJl").LooksRight());
+    }
+
+    private const string Purchase =
+        "{\"orderId\":\"GPA.1\",\"packageName\":\"dev.homeplay.homeplay\",\"productId\":\"ownmedia_pro\",\"purchaseState\":0}";
 
     [Fact]
     public void TheJoinPageTellsHowToMakeAServerOfOnesOwn()
@@ -204,5 +249,17 @@ public sealed class SharingAccessTests
             .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
             .Single();
         Assert.Equal("RequiresElevation", attribute.Policy);
+    }
+
+    // Only the owner leaves the purchase on the server; anyone signed in reads it.
+    [Fact]
+    public void OnlyTheOwnerLeavesThePurchase()
+    {
+        static string? PolicyOf(string method) => typeof(Api.LicenceController).GetMethod(method)!
+            .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false)
+            .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+            .Single().Policy;
+        Assert.Equal("RequiresElevation", PolicyOf(nameof(Api.LicenceController.SetLicence)));
+        Assert.Null(PolicyOf(nameof(Api.LicenceController.GetLicence)));
     }
 }

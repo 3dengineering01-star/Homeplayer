@@ -55,6 +55,50 @@ public sealed class SharingState
     /// an address the owner cleared on purpose is not put back.
     /// </summary>
     public string SuggestionTaken { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the owner's purchase of OwnMedia Pro as Google Play signed it; null when none.
+    /// Friends' apps check the signature themselves: the server only keeps it.
+    /// </summary>
+    public ProLicence? Licence { get; set; }
+}
+
+/// <summary>
+/// A purchase of OwnMedia Pro: Google Play's JSON and its signature of that text.
+/// </summary>
+/// <param name="Data">The purchase JSON.</param>
+/// <param name="Signature">Google's signature, base64.</param>
+public sealed record ProLicence(string Data, string Signature)
+{
+    /// <summary>
+    /// Whether this looks like OwnMedia Pro for the app (whether Google signed it, only the apps can tell).
+    /// </summary>
+    /// <returns>True to keep it.</returns>
+    public bool LooksRight()
+    {
+        if (string.IsNullOrEmpty(Data) || Data.Length > 8192 || string.IsNullOrEmpty(Signature) || Signature.Length > 2048)
+        {
+            return false;
+        }
+
+        try
+        {
+            Convert.FromBase64String(Signature);
+            using var json = JsonDocument.Parse(Data);
+            var root = json.RootElement;
+            return root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("packageName", out var package) && package.ValueKind == JsonValueKind.String && package.GetString() == "dev.homeplay.homeplay"
+                && root.TryGetProperty("productId", out var product) && product.ValueKind == JsonValueKind.String && product.GetString() == "ownmedia_pro";
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
 }
 
 /// <summary>
@@ -272,12 +316,30 @@ public sealed class SharingStore
     }
 
     /// <summary>
-    /// The link a friend opens: the server's page for the invite.
+    /// The page on the OwnMedia website that a friend opens. The server and the code go after "#",
+    /// which the browser keeps to itself, so the website never learns them.
+    /// </summary>
+    public const string SiteJoinUrl = "https://ownmedia.app/join.html";
+
+    /// <summary>
+    /// The link a friend opens: the invite's page on the OwnMedia website, which offers the app from
+    /// the website and hands it the server's address and the code. The server's own page,
+    /// /Homeplay/Join/{code}, keeps working for links sent before.
     /// </summary>
     /// <param name="publicUrl">The server's internet address.</param>
+    /// <param name="serverName">The server's name, shown on the page.</param>
     /// <param name="code">The invite's code.</param>
     /// <returns>The link.</returns>
-    public static string JoinLink(string publicUrl, string code) => $"{publicUrl.TrimEnd('/')}/Homeplay/Join/{code}";
+    public static string JoinLink(string publicUrl, string serverName, string code)
+    {
+        var link = $"{SiteJoinUrl}#s={Uri.EscapeDataString(publicUrl.TrimEnd('/'))}";
+        if (!string.IsNullOrWhiteSpace(serverName))
+        {
+            link += $"&n={Uri.EscapeDataString(serverName.Trim())}";
+        }
+
+        return $"{link}&c={Uri.EscapeDataString(code)}";
+    }
 
     /// <summary>
     /// A user name for the friend that Jellyfin takes and nobody has: their name in plain

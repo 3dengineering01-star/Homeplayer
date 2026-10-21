@@ -4,8 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../services/music_folders.dart';
+import '../services/alphabet.dart';
 import '../services/music_index.dart';
 import '../services/search_index.dart';
+import '../widgets/alphabet_bar.dart';
 import '../widgets/highlighted_text.dart';
 import '../widgets/media_cards.dart';
 import '../widgets/track_tile.dart';
@@ -20,8 +22,9 @@ ArtistSort _artistSort = ArtistSort.name;
 AlbumSort _albumSort = AlbumSort.name;
 TrackSort _trackSort = TrackSort.title;
 
-/// A music library by artists, albums, tracks, its folders on disk and playlists, each sorted as
-/// the user picks and filtered by what is typed in the search field. It opens on the tab used last.
+/// A music library: a Home tab with what is new and what is played, then artists, albums,
+/// tracks, its folders on disk and playlists, each sorted as the user picks and filtered by what
+/// is typed in the search field. It opens on the tab used last.
 class MusicLibraryScreen extends StatefulWidget {
   const MusicLibraryScreen({super.key, required this.client, required this.library});
 
@@ -39,9 +42,11 @@ typedef _Music = ({
   MusicFolder folders,
 });
 
-const _tabNames = ['Artists', 'Albums', 'Tracks', 'Folders', 'Playlists'];
-const _playlistsTab = 4;
-const _tabKey = 'music.tab';
+const _tabNames = ['Home', 'Artists', 'Albums', 'Tracks', 'Folders', 'Playlists'];
+const _homeTab = 0;
+const _playlistsTab = 5;
+// By name: the tabs were numbered differently before Home came first.
+const _tabKey = 'music.tab_name';
 
 class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinActions, SingleTickerProviderStateMixin {
   @override
@@ -56,7 +61,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
           if (_contents != null) _contents = _loadContents();
         }
         // The tab the person chose, not one a search jumped to.
-        if (!_searching) SharedPreferences.getInstance().then((p) => p.setInt(_tabKey, _tabs.index));
+        if (!_searching) SharedPreferences.getInstance().then((p) => p.setString(_tabKey, _tabNames[_tabs.index]));
       }
       setState(() {});
     });
@@ -65,14 +70,16 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   void initState() {
     super.initState();
     SharedPreferences.getInstance().then((p) {
-      final last = p.getInt(_tabKey);
-      if (mounted && last != null && last >= 0 && last < _tabNames.length) _tabs.index = last;
+      final last = _tabNames.indexOf(p.getString(_tabKey) ?? '');
+      if (mounted && last >= 0) _tabs.index = last;
     });
   }
   late Future<_Music> _music = _load();
   late Future<List<JellyfinItem>> _playlists = client.playlists();
   final _query = TextEditingController();
   bool _searching = false;
+  final _artistScroll = ScrollController();
+  final _albumScroll = ScrollController();
 
   /// The library once loaded, for the counts on the tabs while searching.
   _Music? _data;
@@ -126,7 +133,8 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   /// Artists or Playlists tab shows the track.
   void _goWhereFound() {
     final counts = _tabCounts;
-    if (counts == null || _tabs.index >= counts.length || counts[_tabs.index] > 0) return;
+    // Home has no search of its own.
+    if (counts == null || _tabs.index >= counts.length || (_tabs.index != _homeTab && counts[_tabs.index] > 0)) return;
     final first = counts.indexWhere((c) => c > 0);
     if (first >= 0) _tabs.animateTo(first);
   }
@@ -152,6 +160,8 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   void dispose() {
     _tabs.dispose();
     _query.dispose();
+    _artistScroll.dispose();
+    _albumScroll.dispose();
     super.dispose();
   }
 
@@ -167,9 +177,9 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
           itemBuilder: (_) => [for (final v in values) PopupMenuItem(value: v, child: Text(label(v)))],
         );
     return switch (_tabs.index) {
-      0 => menu(ArtistSort.values, _artistSort, (s) => s.label, (s) => _artistSort = s),
-      1 => menu(AlbumSort.values, _albumSort, (s) => s.label, (s) => _albumSort = s),
-      2 => menu(TrackSort.values, _trackSort, (s) => s.label, (s) => _trackSort = s),
+      1 => menu(ArtistSort.values, _artistSort, (s) => s.label, (s) => _artistSort = s),
+      2 => menu(AlbumSort.values, _albumSort, (s) => s.label, (s) => _albumSort = s),
+      3 => menu(TrackSort.values, _trackSort, (s) => s.label, (s) => _trackSort = s),
       _ => const SizedBox.shrink(),
     };
   }
@@ -205,7 +215,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
           tabs: [
             for (final (i, name) in _tabNames.indexed)
               Tab(text: switch (_tabCounts) {
-                final counts? when i < counts.length => '$name · ${counts[i]}',
+                final counts? when i < counts.length && i != _homeTab => '$name · ${counts[i]}',
                 _ => name,
               }),
           ],
@@ -214,6 +224,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
       body: TabBarView(
         controller: _tabs,
         children: [
+          _withMusic((m) => _home(m)),
           _withMusic((m) => _artistList(m)),
           _withMusic((m) => _albumGrid(m)),
           _withMusic((m) => _trackList(m)),
@@ -231,6 +242,7 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
     final hits = _find(m);
     final lists = _contentsData;
     return [
+      0, // Home
       hits.artists.length,
       hits.albums.length,
       hits.tracks.length,
@@ -258,9 +270,13 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
     final q = _text;
     final artists = _find(m).artists;
     if (artists.isEmpty) return _Empty(query: q);
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 24),
+    final letters = q.isEmpty && _artistSort == ArtistSort.name ? _letters([for (final a in artists) a.group.name]) : null;
+    final list = ListView.builder(
+      controller: _artistScroll,
+      padding: EdgeInsets.only(bottom: 24, right: letters == null ? 0 : 20),
       itemCount: artists.length,
+      // All rows one height, so a letter's row is found by arithmetic.
+      prototypeItem: const ListTile(leading: SizedBox.square(dimension: 48), title: Text(' '), subtitle: Text(' ')),
       itemBuilder: (context, i) {
         final a = artists[i].group;
         final albums = a.albums.where((g) => !g.loose).length;
@@ -273,6 +289,8 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
                   if (albums > 0) '$albums ${albums == 1 ? 'album' : 'albums'}',
                   '${a.trackCount} ${a.trackCount == 1 ? 'track' : 'tracks'}',
                 ].join(' · '),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
           onTap: () => _open(
             TrackListScreen(
@@ -288,25 +306,58 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
         );
       },
     );
+    if (letters == null) return list;
+    return _withLetters(list, letters, (index) {
+      final pos = _artistScroll.position;
+      final row = (pos.maxScrollExtent + pos.viewportDimension - 24) / artists.length;
+      return index * row;
+    }, _artistScroll);
   }
+
+  /// Letters only for a list long enough to need them.
+  List<({String letter, int index})>? _letters(List<String> names) => names.length < 30 ? null : letterIndex(names);
+
+  /// [list] with the letter strip on its right; [offsetOf] is where the item at an index starts.
+  Widget _withLetters(Widget list, List<({String letter, int index})> letters, double Function(int index) offsetOf,
+          ScrollController scroll) =>
+      Stack(children: [
+        list,
+        Positioned(
+          right: 0,
+          top: 8,
+          bottom: 8,
+          child: AlphabetBar(
+            letters: [for (final l in letters) l.letter],
+            onLetter: (i) {
+              if (!scroll.hasClients) return;
+              scroll.jumpTo(offsetOf(letters[i].index).clamp(0, scroll.position.maxScrollExtent));
+            },
+          ),
+        ),
+      ]);
 
   Widget _albumGrid(_Music m) {
     final q = _text;
     final hits = _find(m).albums;
     final albums = [for (final h in hits) h.group];
     if (albums.isEmpty) return _Empty(query: q);
+    final letters = q.isEmpty && _albumSort == AlbumSort.name ? _letters([for (final a in albums) a.name]) : null;
     return LayoutBuilder(
       builder: (context, box) {
-        final columns = ((box.maxWidth - 32 + 12) / (180 + 12)).ceil().clamp(2, 8);
-        final cell = (box.maxWidth - 32 - 12 * (columns - 1)) / columns;
-        return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        // Room on the right for the letters.
+        final right = letters == null ? 16.0 : 28.0;
+        final columns = ((box.maxWidth - 16 - right + 12) / (180 + 12)).ceil().clamp(2, 8);
+        final cell = (box.maxWidth - 16 - right - 12 * (columns - 1)) / columns;
+        final rowHeight = cell + 8 + MediaQuery.textScalerOf(context).scale(40);
+        final grid = GridView.builder(
+          controller: _albumScroll,
+          padding: EdgeInsets.fromLTRB(16, 12, right, 24),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: columns,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
             // A square cover, then two lines of text that grow with the phone's text size.
-            mainAxisExtent: cell + 8 + MediaQuery.textScalerOf(context).scale(40),
+            mainAxisExtent: rowHeight,
           ),
           itemCount: albums.length,
           itemBuilder: (context, i) => _AlbumCard(
@@ -314,20 +365,86 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
             album: albums[i],
             query: q,
             inside: hits[i].inside,
-            onTap: () => _open(
-              TrackListScreen(
-                client: client,
-                title: albums[i].name,
-                subtitle: [albums[i].artist, albums[i].year?.toString()].whereType<String>().join(' · '),
-                load: () async => albums[i].tracks,
-                cover: albums[i].cover,
-              ),
-            ),
+            onTap: () => _openAlbum(albums[i]),
             onLongPress: () => addToPlaylist(context, client, items: albums[i].tracks).then((_) => _refreshPlaylists()),
           ),
         );
+        if (letters == null) return grid;
+        return _withLetters(grid, letters, (index) => index ~/ columns * (rowHeight + 12), _albumScroll);
       },
     );
+  }
+
+  void _openAlbum(AlbumGroup a) => _open(
+        TrackListScreen(
+          client: client,
+          title: a.name,
+          subtitle: [a.artist, a.year?.toString()].whereType<String>().join(' · '),
+          load: () async => a.tracks,
+          cover: a.cover,
+        ),
+      );
+
+  /// What is new in the library and what this user plays, worked out from the tracks.
+  Widget _home(_Music m) {
+    final home = musicHome(m.albums, m.tracks, isFavorite: client.isFavorite);
+    final theme = Theme.of(context);
+    final cardWidth = 140.0;
+    Widget albums(String title, List<AlbumGroup> list) => Shelf(
+          title: title,
+          height: cardWidth + 8 + MediaQuery.textScalerOf(context).scale(40),
+          children: [
+            for (final a in list)
+              SizedBox(
+                width: cardWidth,
+                child: _AlbumCard(
+                  client: client,
+                  album: a,
+                  onTap: () => _openAlbum(a),
+                  onLongPress: () => addToPlaylist(context, client, items: a.tracks).then((_) => _refreshPlaylists()),
+                ),
+              ),
+          ],
+        );
+    Widget tracks(String title, List<JellyfinItem> list, {required VoidCallback onMore}) =>
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SectionTitle(title, onMore: list.length > 5 ? onMore : null),
+          for (final t in list.take(5))
+            TrackTile(
+              client: client,
+              item: t,
+              onTap: () => openItem(list, t),
+              onLongPress: () => _actions(list, t),
+            ),
+        ]);
+    return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: FilledButton.tonalIcon(
+          onPressed: m.tracks.isEmpty ? null : () => playAll(m.tracks, shuffle: true),
+          icon: const Icon(Icons.shuffle),
+          label: Text('Shuffle all ${m.tracks.length}'),
+        ),
+      ),
+      if (home.added.isNotEmpty) albums('Recently added', home.added),
+      if (home.played.isNotEmpty) albums('Recently played', home.played),
+      if (home.mostPlayed.isNotEmpty)
+        tracks('Most played', home.mostPlayed,
+            onMore: () => _open(TrackListScreen(
+                  client: client,
+                  title: 'Most played',
+                  subtitle: widget.library.name,
+                  load: () async => home.mostPlayed,
+                ))),
+      if (home.favorites.isNotEmpty)
+        tracks('Favorites', home.favorites, onMore: () => _open(TrackListScreen.favorites(client: client))),
+      if (home.played.isEmpty && home.mostPlayed.isEmpty)
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Play some music: what you listen to most shows up here.',
+              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        ),
+    ]);
   }
 
   Widget _trackList(_Music m) {

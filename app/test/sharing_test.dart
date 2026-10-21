@@ -7,6 +7,7 @@ import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/api/sharing.dart';
 import 'package:homeplay/models/account.dart';
 import 'package:homeplay/screens/share_screen.dart';
+import 'package:homeplay/services/invite_inbox.dart';
 import 'package:homeplay/services/invite_link.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -37,6 +38,33 @@ void main() {
       );
       expect(parseInvite('homeplay://join?server=javascript%3Aalert(1)&code=ABC'), isNull);
       expect(parseInvite('homeplay://join?code=ABC'), isNull);
+    });
+
+    test("the website's invite page carries the server and the code after #", () {
+      expect(
+        parseInvite('https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net%2F&n=Anna%27s%20%D0%BA%D0%B8%D0%BD%D0%BE&c=ABC'),
+        (server: 'https://pc.ts.net', code: 'ABC'),
+      );
+      expect(
+        parseInvite(inviteMessage('Anna', 'https://ownmedia.app/join.html#s=http%3A%2F%2F192.168.1.10%3A8096&c=Q7')),
+        (server: 'http://192.168.1.10:8096', code: 'Q7'),
+      );
+      expect(parseInvite('https://ownmedia.app/join#s=https%3A%2F%2Fpc.ts.net&c=Z9'), (server: 'https://pc.ts.net', code: 'Z9'));
+      // Cut short when copied, or not a site: not an invite.
+      expect(parseInvite('https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net'), isNull);
+      expect(parseInvite('https://ownmedia.app/join.html#s=javascript%3Aalert(1)&c=ABC'), isNull);
+      expect(parseInvite('https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net&c=A%2FB'), isNull);
+      expect(parseInvite('https://ownmedia.app/join.html#s=%E0%A4%A&c=ABC'), isNull);
+    });
+
+    test('an invite on the clipboard is offered once, and not for a server already added', () {
+      const link = 'https://ownmedia.app/join.html#s=https%3A%2F%2Fpc.ts.net&c=ABC';
+      const added = Account(id: 'a', kind: ServerKind.jellyfin, baseUrl: 'https://PC.ts.net/', username: 'u', serverName: 'PC');
+      expect(inviteToOffer('Anna: open this on your phone: $link', [], []), (server: 'https://pc.ts.net', code: 'ABC'));
+      expect(inviteToOffer(link, [], ['ABC']), isNull);
+      expect(inviteToOffer(link, [added], []), isNull);
+      expect(inviteToOffer('a shopping list', [], []), isNull);
+      expect(inviteToOffer(null, [], []), isNull);
     });
 
     test('anything else is not an invite', () {
@@ -243,5 +271,87 @@ void main() {
         id: 'f', kind: ServerKind.jellyfin, baseUrl: 'https://pc.ts.net', username: 'Petr', serverName: "Anna's", token: 't', userId: 'u', shared: true);
     await expectLater(signedOut(friend, 403).views(), throwsA(predicate((e) => '$e'.contains('ended your access'))));
     await expectLater(signedOut(_owner, 401).views(), throwsA(predicate((e) => '$e'.contains('Session expired'))));
+  });
+
+  testWidgets('a removed invite goes at once, even while the server is slow or answers with the old list',
+      (tester) async {
+    final sharing = {
+      'PublicUrl': 'https://pc.ts.net',
+      'Libraries': _libraries,
+      'Invites': [
+        {
+          'Code': 'C',
+          'Friend': 'Ivan',
+          'LibraryNames': ['Movies'],
+          'Created': '2026-10-01T10:00:00Z',
+          'Expires': '2099-10-08T10:00:00Z',
+          'State': 'Waiting',
+          'Link': 'https://pc.ts.net/Homeplay/Join/C',
+        },
+      ],
+    };
+    final client = JellyfinClient(
+      _owner,
+      'dev',
+      client: MockClient((r) async {
+        if (r.method == 'DELETE') {
+          // The server takes its time.
+          await Future<void>(() => null);
+          return http.Response('', 204);
+        }
+        return http.Response(jsonEncode(sharing), 200); // Never forgets: the old list.
+      }),
+    );
+    await tester.pumpWidget(MaterialApp(home: ShareScreen(client: client)));
+    await tester.pumpAndSettle();
+    expect(find.text('Ivan'), findsOneWidget);
+    await tester.tap(find.byTooltip('More'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
+    await tester.pump();
+    expect(find.text('Ivan'), findsNothing, reason: 'gone before the server answers');
+    await tester.pumpAndSettle();
+    expect(find.text('Ivan'), findsNothing, reason: 'an old list from the server does not bring it back');
+  });
+
+  testWidgets('a new invite shows its link at once, to send or copy, and is in the list', (tester) async {
+    final sharing = {'PublicUrl': 'https://pc.ts.net', 'Libraries': _libraries, 'Invites': <Object>[]};
+    final client = JellyfinClient(
+      _owner,
+      'dev',
+      client: MockClient((r) async => switch ((r.method, r.url.path)) {
+            ('POST', '/Homeplay/Invites') => http.Response(
+                jsonEncode({
+                  'Code': 'N',
+                  'Friend': 'Olga',
+                  'LibraryNames': ['Movies'],
+                  'Created': '2026-10-19T10:00:00.0000000Z',
+                  'Expires': '2026-10-26T10:00:00.0000000Z',
+                  'State': 'Waiting',
+                  'Link': 'https://pc.ts.net/Homeplay/Join/N',
+                }),
+                200),
+            _ => http.Response(jsonEncode(sharing), 200), // Slow to learn of the new one.
+          }),
+    );
+    await tester.pumpWidget(MaterialApp(home: ShareScreen(client: client)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Invite a friend').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Olga');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Make the link'));
+    await tester.pumpAndSettle();
+    expect(find.text('The link for Olga is ready'), findsOneWidget);
+    expect(find.text('https://pc.ts.net/Homeplay/Join/N'), findsOneWidget);
+    expect(find.text('Send the link'), findsOneWidget);
+    expect(find.text('Copy the link'), findsOneWidget);
+    await tester.tap(find.text('Copy the link'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Link copied'), findsOneWidget);
+    expect(find.text('Olga'), findsOneWidget, reason: 'in the list, though the server list did not have it yet');
+    expect(tester.takeException(), isNull);
   });
 }
