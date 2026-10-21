@@ -57,7 +57,7 @@ App, бесплатное.
 баннер, скриншоты, категория, e-mail для связи.
 
 **Политика конфиденциальности:** адрес https://ownmedia.app/privacy/. Живую страницу собирает сайт
-(`site-src/pages/privacy.html` в ветке сайта, `python site-src/build.py`, залить `site/privacy/index.html` и
+(`site-src/pages/privacy.html`, `python site-src/build.py`, залить `site/privacy/index.html` и
 `site/privacy.html`); `landing/privacy.html` — её прежняя короткая версия, её правят вместе с сайтом.
 Почта для связи — support@ownmedia.app.
 
