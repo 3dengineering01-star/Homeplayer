@@ -39,6 +39,17 @@ void main() {
       expect(isProPurchase((data: _good, signature: _goodSig), key: ''), isFalse);
       expect(isProPurchase((data: _good, signature: _goodSig), key: 'bm90IGEga2V5'), isFalse);
     });
+
+    test("the app's key from Play Console is a readable 2048-bit RSA key", () {
+      expect(rsaKeyBits(googlePlayKey), 2048);
+      expect(rsaKeyBits(_key), 2048);
+      expect(rsaKeyBits(''), 0);
+      expect(rsaKeyBits('bm90IGEga2V5'), 0);
+    });
+
+    test("a purchase signed with the test key does not count with the app's key", () {
+      expect(isProPurchase((data: _good, signature: _goodSig)), isFalse);
+    });
   });
 
   group('the trial', () {

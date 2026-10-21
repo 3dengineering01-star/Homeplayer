@@ -19,8 +19,8 @@ const trialDays = 30;
 
 /// Google Play's public key for this app: Play Console → Monetize → Monetization setup →
 /// Licensing. It is public; Google signs every purchase with the matching private key.
-/// Empty until the app is in Play Console: then no purchase on a server counts.
-const googlePlayKey = '';
+const googlePlayKey =
+    'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyJvTQY8QvJ/MRovM09yZSLUxrtbO7XOMFiwNBnBx39O2z5nXQAtpi9GokgJylwAhqIBH3ByqTbtn/c4GHIfDP++rlYB/w9SxKL2vdjM8INs5aZS2OS5NoeXDDXtR8iAWa2G+NM0HPAe1qBNGhwJE20f0u3KJG/3AjJnhyjP/le9SUiuFh4tVHgpo8cPC5YW8BXRjmmGMLwMDCHbJ3kqHHfWfx35VZU6CJViYhQHw8Z+f52Nt/noBXnpfkSK6DxpevPCbVNgcVavh4FiwuKfJrM9ZixnRR1pYKjfpEWkyfpp7q+Yu3a++YhPOHwOumj9seMecM367Ak4Eu17RZ8N1VQIDAQAB';
 
 /// A purchase as Google Play gives it: its JSON and Google's signature of that text.
 typedef SignedPurchase = ({String data, String signature});
@@ -93,6 +93,16 @@ bool verifyRsaSha1(List<int> message, List<int> signature, List<int> publicKey) 
     same &= em[2 + pad + i] == tail[i];
   }
   return same;
+}
+
+/// Size in bits of the RSA key in [base64Key] (X.509, base64, as Play Console shows it); 0 when it
+/// is not a readable RSA key.
+int rsaKeyBits(String base64Key) {
+  try {
+    return _rsaKey(base64.decode(base64Key))?.n.bitLength ?? 0;
+  } catch (_) {
+    return 0;
+  }
 }
 
 // The modulus and exponent from SubjectPublicKeyInfo:
