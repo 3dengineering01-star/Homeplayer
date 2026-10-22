@@ -45,6 +45,20 @@
 **Проверка скорости и качества** после загрузки: https://pagespeed.web.dev → адрес сайта →
 вкладка «Мобильные». Все четыре оценки должны быть не ниже 90.
 
+## Поисковики
+
+- **Google Search Console** — ресурс «ownmedia.app» (весь домен) на аккаунте livonid@gmail.com, подтверждён
+  записью `google-site-verification` в DNS Hostinger (её не удалять). 22.10.2026 отправлен `sitemap.xml`
+  (38 страниц на четырёх языках) и запрошено индексирование `/de/`, `/fr/`, `/es/`. Там же видно, по каким
+  запросам сайт показывают и какие страницы попали в индекс.
+- **Bing Webmaster Tools** — сайт `https://ownmedia.app/` добавлен 22.10.2026 вручную (импорт из Search Console
+  у Bing не сработал). Для подтверждения на сайте лежат метатег `msvalidate.01` на английской главной
+  (`BING_SITE_VERIFY` в `site-src/build.py`) и файл `BingSiteAuth.xml` в корне (`site-src/static/`); оба не
+  удалять. Bing на кнопку Verify отвечал ошибкой («Unexpected error»), подтверждение нужно повторить позже:
+  Bing Webmaster Tools → ownmedia.app → Verify, затем Sitemaps → `https://ownmedia.app/sitemap.xml`.
+  Через Bing сайт попадает и в DuckDuckGo, Yahoo и Ecosia.
+- После новой версии сайта ничего отправлять не нужно: поисковики сами перечитывают `sitemap.xml`.
+
 ## Что нужно от владельца
 
 Пока этого нет, на сайте стоят заглушки. Всё меняется в одном месте — в начале файла

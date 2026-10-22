@@ -73,6 +73,9 @@ SETTINGS = {
     "APK_FILE": r"D:\APP\OwnMedia\app\dist\site\OwnMedia.apk",
     # The Jellyfin plugin catalogue for NAS, Docker and Linux (jellyfin-repo/manifest.json).
     "CATALOG_URL": "https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/manifest.json",
+    # Bing Webmaster Tools: proof that the site is ours (meta msvalidate.01 on the English home page).
+    # Keep it: without it Bing drops the site from Webmaster Tools.
+    "BING_SITE_VERIFY": "57ECC0031F97FE2A0B4B5B47E935AB6C",
     # The plugin's public source code (GPL).
     "SOURCE_URL": "https://github.com/3dengineering01-star/Homeplayer",
 }
@@ -319,6 +322,8 @@ def page(meta, body, sn, asset_v, keys):
     title = meta["title"] if key == "" else f'{meta["title"]} — OwnMedia'
     title_e, desc_e = html.escape(title), html.escape(meta["description"])
     robots = '\n<meta name="robots" content="noindex">' if meta.get("noindex") else ""
+    if key == "" and lang == "en" and sn.get("BING_SITE_VERIFY"):
+        robots += f'\n<meta name="msvalidate.01" content="{sn["BING_SITE_VERIFY"]}">'
     # The same page in the other languages, for search engines; English is the default.
     langs = [code for code in LANGS if key in keys[code]]
     alternates = ""
