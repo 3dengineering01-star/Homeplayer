@@ -130,13 +130,21 @@ def icon(name):
 # Snippets made from the settings.
 # ---------------------------------------------------------------------------------------------
 
+def email_link(email):
+    """The contact address, hidden from address-harvesting bots: the page holds it reversed in two
+    parts, and site.js puts it together into a normal mailto link. Without the script it reads
+    "support (at) ownmedia.app", which people understand and simple harvesters don't pick up."""
+    user, domain = email.split("@", 1)
+    return (f'<a class="mail-link" data-u="{html.escape(user[::-1])}" data-d="{html.escape(domain[::-1])}">'
+            f'{html.escape(user)} (at) {html.escape(domain)}</a>')
+
+
 def snippets(s, lang="en"):
     u = UI[lang]
     e = {k: html.escape(v) for k, v in s.items()}
     email = s["CONTACT_EMAIL"]
     out = dict(e)
-    out["EMAIL_LINK"] = (f'<a href="mailto:{e["CONTACT_EMAIL"]}">{e["CONTACT_EMAIL"]}</a>' if email
-                         else f"<em>{u['email_soon']}</em>")
+    out["EMAIL_LINK"] = email_link(email) if email else f"<em>{u['email_soon']}</em>"
     if s["PLAY_URL"]:
         out["PLAY_BUTTON"] = (f'<a class="btn" href="{e["PLAY_URL"]}" rel="noopener">{icon("play")} '
                               f'{u["play_button"]}</a>')

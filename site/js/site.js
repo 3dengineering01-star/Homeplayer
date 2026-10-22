@@ -1,9 +1,19 @@
-// OwnMedia site: the Google Play sign-up form, the screenshot buttons, the copy buttons and the remembered
+// OwnMedia site: the contact address, the Google Play sign-up form, the screenshot buttons, the copy buttons and the remembered
 // language. Nothing else: no tracking, no cookies, nothing loaded from other sites. Each part runs only where its
 // element is on the page.
 
 (function () {
   "use strict";
+
+  // The contact address: the page keeps it reversed in two parts so that address-harvesting bots
+  // don't find it; here it becomes a normal link again (build.py, email_link).
+  var mails = document.querySelectorAll("a.mail-link[data-u][data-d]");
+  for (var m = 0; m < mails.length; m++) {
+    var flip = function (s) { return s.split("").reverse().join(""); };
+    var address = flip(mails[m].getAttribute("data-u")) + "@" + flip(mails[m].getAttribute("data-d"));
+    mails[m].href = "mailto:" + address;
+    mails[m].textContent = address;
+  }
 
   // Messages in the page's language (<html lang>); English when it isn't one of these.
   var TEXT = {
