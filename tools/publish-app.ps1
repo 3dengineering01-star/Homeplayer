@@ -22,8 +22,19 @@ $version = $line.Matches[0].Groups[1].Value
 $build = [int]$line.Matches[0].Groups[2].Value
 $json = [ordered]@{ version = $version; build = $build; apk = 'OwnMedia.apk' } | ConvertTo-Json
 # UTF-8 without a BOM: the app reads it as JSON from the website.
-[System.IO.File]::WriteAllText((Join-Path $site 'version.json'), $json, (New-Object System.Text.UTF8Encoding $false))
+[System.IO.File]::WriteAllText((Join-Path $site 'version.json'), ($json -replace "`r`n", "`n"), (New-Object System.Text.UTF8Encoding $false))
 Write-Host "Для сайта: $site\version.json ($version, сборка $build)"
+
+# The website itself (site\ and ownmedia-site.zip) shows the version and the file's SHA-256 on its
+# pages and serves its own copy of version.json: rebuild it, so nothing there stays at the old version.
+$python = Get-Command py, python -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($python) {
+    & $python.Source (Join-Path $repo 'site-src\build.py')
+    if ($LASTEXITCODE -ne 0) { throw 'site-src\build.py failed' }
+    Write-Host "Сайт пересобран: $repo\site и $repo\ownmedia-site.zip"
+} else {
+    Write-Host 'Python не найден, сайт не пересобран: запустите python site-src\build.py.'
+}
 
 # For the server: every installed copy of the plugin (Jellyfin keeps one folder per version).
 $data = $null

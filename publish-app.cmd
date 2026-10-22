@@ -16,7 +16,8 @@ for /f "delims=" %%f in ('dir /b /o-d "app\dist\OwnMedia-*.apk"') do (set "APK=a
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\publish-app.ps1 -Apk "%APK%"
 if errorlevel 1 goto :fail
 echo.
-echo Готово. Осталось загрузить оба файла из app\dist\site на сайт в папку download.
+echo Готово. Осталось залить на сайт новые файлы из папки site\ (или архив ownmedia-site.zip):
+echo download\OwnMedia.apk, downloadersion.json, страницы с номером версии и sitemap.xml.
 goto :end
 :fail
 echo.
