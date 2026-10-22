@@ -298,10 +298,10 @@ def footer(sn, lang, key, keys):
       </div>
       <div>
         <h2>{u["f_company"]}</h2>
+        <!-- Only the name and the email here: the registration number and the address are on
+             legal/ and in the privacy policy, one click away, as the e-commerce rules ask. -->
         <address>
           {sn["COMPANY_NAME"]}<br>
-          {u["reg_no"]} {sn["COMPANY_REG"]}<br>
-          {sn["COMPANY_ADDRESS"]}<br>
           {sn["EMAIL_LINK"]}
         </address>
         <ul>
