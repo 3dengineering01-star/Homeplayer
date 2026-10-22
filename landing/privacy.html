@@ -59,12 +59,12 @@
   <header><a href="./"><span class="logo">▶</span> OwnMedia</a></header>
 
   <h1>Privacy policy</h1>
-  <p class="updated">OwnMedia for Android · last updated 20 October 2026 · <a href="#ru">Русский</a></p>
+  <p class="updated">OwnMedia for Android · last updated 21 October 2026 · <a href="#ru">Русский</a></p>
 
   <div class="summary">
     <p>OwnMedia talks only to the media servers you add to it (Jellyfin, Navidrome or another Subsonic server).
       We, the developers, receive nothing: there is no OwnMedia account, no analytics, no crash reporting,
-      no ads and no tracking.</p>
+      no ads and no tracking. OwnMedia Pro is paid for through Google Play, which handles the payment.</p>
   </div>
 
   <h2>Your servers and sign-in</h2>
@@ -91,33 +91,43 @@
   <h2>Android Auto</h2>
   <p>In the car, the app lists the music from your downloads and your servers and plays it. Android Auto gets the titles and artists of what is shown and playing, as with any music app.</p>
 
+  <h2 id="pro">OwnMedia Pro</h2>
+  <ul>
+    <li>The app is free for a month; after that, OwnMedia Pro is a one-time purchase. To count the month, the app keeps on the phone the day it was first opened and the last day it was used. Nothing of this is sent anywhere.</li>
+    <li>You buy OwnMedia Pro in Google Play. Google takes the payment, under the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>; we receive no card or payment details, and the app sends us nothing about the purchase.</li>
+    <li>Google gives the app a record of the purchase, signed by Google: the app, the product, the order number, the time of purchase and a purchase token. Your name, email address and Google account are not in it. The app keeps this record on the phone and checks it with Google Play, so the purchase also works after reinstalling the app or on another phone with the same Google account. After a refund, the app removes it.</li>
+    <li>If you own a Jellyfin server with the Homeplay Backup plugin, the app also stores this record on your server, so friends you invited can use OwnMedia without buying it. Only the server's administrator can store it there; anyone signed in to the server can read it, and their app checks Google's signature. A friend's app remembers on the phone which servers have it.</li>
+    <li>Like every seller on Google Play, we see Google's sales reports in Google Play Console. We use them only for accounting, refunds and support.</li>
+  </ul>
+
   <h2>Permissions</h2>
   <ul>
     <li><b>Photos and videos, media location</b>: only for the optional backup.</li>
     <li><b>Notifications</b>: for playback controls and download progress.</li>
     <li><b>Network</b>: to reach your servers.</li>
+    <li><b>Google Play billing</b>: to buy OwnMedia Pro.</li>
   </ul>
 
   <h2>Third parties</h2>
   <p>The app shares no data with third parties. Connections go directly from your phone to your server, for example over your home network or over Tailscale if you use it.</p>
   <p>One exception, which you can turn off: when you open the lyrics of a song your server has no lyrics for, the app looks them up on <a href="https://lrclib.net">LRCLIB</a> (lrclib.net), a free open collection of lyrics. Only the song's title, artist and length are sent, with no account or identifier of yours. Turn it off in Settings → Music → Lyrics from LRCLIB.</p>
   <p>The Android app downloaded from this website asks ownmedia.app once a day which version is the newest (the file <code>/download/version.json</code>), to offer an update. Like any website visit, this shows our web host your IP address; nothing else is sent, and nothing is kept by us. Turn it off in Settings → Updates.</p>
-  <p>OwnMedia Pro is bought through Google Play; Google handles the payment, and we receive no card or payment details. The app keeps Google's record of the purchase on your phone and, if you own a server with the OwnMedia plugin, on that server, so friends you invited can watch free. The record names the app and the product, with an order number; it is not sent to us.</p>
+  <p>Purchases of OwnMedia Pro go through Google Play (see <a href="#pro">OwnMedia Pro</a>).</p>
 
   <h2>Children</h2>
   <p>OwnMedia is not directed at children under 13.</p>
 
   <h2>Changes and contact</h2>
-  <p>If this policy changes, the new version will be on this page with a new date. Questions: <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
+  <p>If this policy changes, the new version will be on this page with a new date. Questions: <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>.</p>
 
   <div class="lang" id="ru" lang="ru">
     <h1>Политика конфиденциальности</h1>
-    <p class="updated">OwnMedia для Android · обновлено 20 октября 2026</p>
+    <p class="updated">OwnMedia для Android · обновлено 21 октября 2026</p>
 
     <div class="summary">
       <p>OwnMedia общается только с медиасерверами, которые вы в него добавили (Jellyfin, Navidrome или другой
         Subsonic-сервер). Мы, разработчики, не получаем ничего: нет учётной записи OwnMedia, аналитики, отчётов
-        об ошибках, рекламы и слежки.</p>
+        об ошибках, рекламы и слежки. OwnMedia Pro оплачивается через Google Play, оплату проводит Google.</p>
     </div>
 
     <h2>Ваши серверы и вход</h2>
@@ -144,24 +154,34 @@
     <h2>Android Auto</h2>
     <p>В машине приложение показывает музыку из загрузок и с ваших серверов и играет её. Android Auto видит названия и исполнителей показанного и играющего, как у любого музыкального приложения.</p>
 
+    <h2 id="pro-ru">OwnMedia Pro</h2>
+    <ul>
+      <li>Месяц приложение бесплатно, потом OwnMedia Pro покупается один раз. Чтобы считать месяц, приложение хранит на телефоне день, когда его впервые открыли, и день, когда им пользовались последний раз. Это никуда не отправляется.</li>
+      <li>OwnMedia Pro покупается в Google Play. Оплату проводит Google по своей <a href="https://policies.google.com/privacy?hl=ru">политике конфиденциальности</a>; данных карты и платежа мы не получаем, и приложение ничего не сообщает нам о покупке.</li>
+      <li>Google выдаёт приложению запись о покупке со своей подписью: приложение, товар, номер заказа, время покупки и ключ покупки. Вашего имени, почты и аккаунта Google в ней нет. Приложение хранит запись на телефоне и сверяет её с Google Play, поэтому покупка сохраняется после переустановки и на другом телефоне с тем же аккаунтом Google. После возврата денег приложение её удаляет.</li>
+      <li>Если у вас свой сервер Jellyfin с модулем Homeplay Backup, приложение сохраняет эту запись и на нём — чтобы приглашённые вами друзья пользовались OwnMedia без покупки. Сохранить её может только администратор сервера; прочитать — любой, кто вошёл на сервер, и его приложение проверяет подпись Google. Приложение друга помнит на телефоне, на каких серверах она есть.</li>
+      <li>Как любой продавец в Google Play, мы видим отчёты Google о продажах в Google Play Console и используем их только для учёта, возвратов и поддержки.</li>
+    </ul>
+
     <h2>Разрешения</h2>
     <ul>
       <li><b>Фото и видео, место съёмки</b>: только для копирования по желанию.</li>
       <li><b>Уведомления</b>: управление воспроизведением и прогресс загрузок.</li>
       <li><b>Сеть</b>: доступ к вашим серверам.</li>
+      <li><b>Оплата через Google Play</b>: покупка OwnMedia Pro.</li>
     </ul>
 
     <h2>Третьи лица</h2>
     <p>Приложение не передаёт данные третьим лицам. Соединения идут напрямую с телефона на ваш сервер, например по домашней сети или через Tailscale, если вы им пользуетесь.</p>
     <p>Одно исключение, его можно выключить: если вы открываете текст песни, а на вашем сервере текста нет, приложение ищет его на <a href="https://lrclib.net">LRCLIB</a> (lrclib.net), бесплатной открытой коллекции текстов. Отправляются только название песни, исполнитель и длительность, без учётной записи и каких-либо ваших идентификаторов. Выключается в «Настройки → Music → Lyrics from LRCLIB».</p>
     <p>Android-приложение, скачанное с этого сайта, раз в день спрашивает у ownmedia.app, какая версия самая новая (файл <code>/download/version.json</code>), чтобы предложить обновление. Как при любом заходе на сайт, хостинг видит ваш IP-адрес; больше ничего не отправляется, и мы ничего не храним. Выключается в «Настройки → Updates».</p>
-    <p>OwnMedia Pro покупается через Google Play: оплату проводит Google, данных карты и платежа мы не получаем. Запись Google о покупке приложение хранит на вашем телефоне и, если у вас свой сервер с модулем OwnMedia, на этом сервере — чтобы приглашённые вами друзья смотрели бесплатно. В записи указаны приложение, товар и номер заказа; нам она не отправляется.</p>
+    <p>Покупка OwnMedia Pro проходит через Google Play (см. <a href="#pro-ru">OwnMedia Pro</a>).</p>
 
     <h2>Дети</h2>
     <p>OwnMedia не предназначен для детей младше 13 лет.</p>
 
     <h2>Изменения и контакты</h2>
-    <p>Если политика изменится, новая версия появится на этой странице с новой датой. Вопросы: <a href="mailto:CONTACT_EMAIL">CONTACT_EMAIL</a>.</p>
+    <p>Если политика изменится, новая версия появится на этой странице с новой датой. Вопросы: <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>.</p>
   </div>
 
   <footer>OwnMedia is an independent project, not affiliated with Jellyfin, Navidrome, Plex or Tailscale.</footer>
