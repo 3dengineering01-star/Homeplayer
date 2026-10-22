@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>OwnMedia avec Docker — OwnMedia</title>
+<meta name="description" content="Jellyfin dans Docker sous Linux ou sur n’importe quel NAS, plus le plugin OwnMedia depuis le catalogue de plugins. Le même fichier compose que pour Synology.">
+<link rel="canonical" href="https://ownmedia.app/fr/guides/docker/">
+<link rel="alternate" hreflang="en" href="https://ownmedia.app/guides/docker/">
+<link rel="alternate" hreflang="de" href="https://ownmedia.app/de/guides/docker/">
+<link rel="alternate" hreflang="fr" href="https://ownmedia.app/fr/guides/docker/">
+<link rel="alternate" hreflang="es" href="https://ownmedia.app/es/guides/docker/">
+<link rel="alternate" hreflang="x-default" href="https://ownmedia.app/guides/docker/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="OwnMedia avec Docker — OwnMedia">
+<meta property="og:description" content="Jellyfin dans Docker sous Linux ou sur n’importe quel NAS, plus le plugin OwnMedia depuis le catalogue de plugins. Le même fichier compose que pour Synology.">
+<meta property="og:url" content="https://ownmedia.app/fr/guides/docker/">
+<meta property="og:image" content="https://ownmedia.app/img/og-image.jpg?v=bcb906ff">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia : films, musique et photos de votre propre serveur">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../../../favicon.ico" sizes="any">
+<link rel="icon" href="../../../img/favicon-32.png?v=670ec50d" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../../../img/apple-touch-icon.png?v=71be1fb5">
+<link rel="preload" href="../../../fonts/bricolage-grotesque-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../../css/site.css?v=474fd499">
+<script src="../../../js/site.js?v=474fd499" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Aller au contenu</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../../../fr/" aria-label="Accueil OwnMedia">
+      <img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../../../fr/download/">Télécharger</a>
+      <a href="../../../fr/guides/" aria-current="page">Guides</a>
+      <a href="../../../privacy/">Confidentialité</a>
+      <a href="../../../fr/support/">Assistance</a>
+      <details class="lang">
+        <summary aria-label="Langue: Français"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>FR</span></summary>
+        <div class="lang-panel"><a href="../../../guides/docker/" hreflang="en" lang="en">English</a><a href="../../../de/guides/docker/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/docker/" hreflang="fr" lang="fr" aria-current="true">Français</a><a href="../../../es/guides/docker/" hreflang="es" lang="es">Español</a></div>
+      </details>
+      <a class="btn btn-small" href="../../../fr/download/#android">Obtenir l’app</a>
+    </nav>
+    <details class="menu">
+      <summary class="tip-below" aria-label="Ouvrir le menu" data-tip="Ouvrir le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../../../fr/">Accueil</a>
+        <a href="../../../fr/download/">Télécharger</a>
+      <a href="../../../fr/guides/" aria-current="page">Guides</a>
+      <a href="../../../privacy/">Confidentialité</a>
+      <a href="../../../fr/support/">Assistance</a>
+        <a class="btn" href="../../../fr/download/#android">Obtenir l’app</a>
+        <div class="menu-langs"><a href="../../../guides/docker/" hreflang="en" lang="en">English</a><a href="../../../de/guides/docker/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/docker/" hreflang="fr" lang="fr" aria-current="true">Français</a><a href="../../../es/guides/docker/" hreflang="es" lang="es">Español</a></div>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="../../../fr/guides/">Guides</a> / Docker</div>
+    <h1>OwnMedia avec Docker</h1>
+    <p class="lead">Pour une machine Linux ou tout NAS qui fait tourner Docker Compose. Sur Synology, suivez
+      plutôt le <a href="../../../fr/guides/synology/">guide Synology pas à pas</a>.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <p class="muted">Les menus de Jellyfin et de l’app sont cités en anglais, tels qu’ils s’appellent dans
+      l’interface anglaise.</p>
+
+    <h2>1. Jellyfin</h2>
+    <p>Créez des dossiers pour les réglages et le cache de Jellyfin, et un pour les photos sauvegardées depuis
+      les téléphones. Puis un <code>docker-compose.yml</code> ; remplacez les chemins à gauche des deux-points par
+      les vôtres :</p>
+<pre><code id="compose">services:
+  jellyfin:
+    image: jellyfin/jellyfin:12.1
+    container_name: jellyfin
+    # Le réseau de l'hôte : les téléphones du Wi-Fi trouvent le serveur tout seuls ("Add your server").
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /srv/jellyfin/config:/config
+      - /srv/jellyfin/cache:/cache
+      - /srv/media/video:/media/video:ro
+      - /srv/media/music:/media/music:ro
+      - /srv/media/photos/OwnMedia:/media/photos</code></pre>
+    <p><button class="btn btn-glass btn-small" type="button" data-copy="compose">Copier le fichier</button></p>
+    <p>Lancez-le avec <code>docker compose up -d</code>. <code>:ro</code> garde vos films et votre musique en
+      lecture seule ; le dossier des photos doit être accessible en écriture, car les sauvegardes du téléphone y
+      arrivent.</p>
+    <div class="note"><p>Le plugin d’OwnMedia demande Jellyfin 12.1 ou plus récent.
+      <code>network_mode: host</code> permet aux téléphones de trouver le serveur sur votre Wi-Fi (port UDP
+      7359). Si un pare-feu est actif, autorisez TCP 8096 et UDP 7359.</p></div>
+
+    <h2>2. Première configuration</h2>
+    <p>Ouvrez <code>http://&lt;adresse du serveur&gt;:8096</code> dans un navigateur, créez un utilisateur (nom et
+      mot de passe pour le téléphone) et ajoutez des bibliothèques : Movies → <code>/media/video</code>, Music →
+      <code>/media/music</code>, et Photos → <code>/media/photos</code> si vous voulez.</p>
+
+    <h2>3. Le plugin OwnMedia</h2>
+    <p>Dans Jellyfin : <b>Dashboard → Plugins → Manage Repositories → +</b>, nom <code>OwnMedia</code>, URL :</p>
+    <div class="copy">
+      <code id="catalog">https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/manifest.json</code>
+      <button class="btn btn-glass btn-small" type="button" data-copy="catalog">Copier</button>
+    </div>
+    <p>Puis <b>Plugins</b> → filtre <b>All</b> → <b>Homeplay Backup</b> → Install, et redémarrez Jellyfin depuis la
+      page principale du <b>Dashboard</b>. Dans les réglages du plugin, indiquez le dossier des photos
+      <code>/media/photos</code>.</p>
+
+    <h2>4. Le téléphone</h2>
+    <p>Dans OwnMedia, touchez <b>Add your server</b> ; sur le même Wi-Fi, il est trouvé tout seul, sinon saisissez
+      <code>&lt;adresse du serveur&gt;:8096</code>. Une page avec un QR code pour les téléphones :
+      <code>http://&lt;adresse du serveur&gt;:8096/Homeplay/Phone</code>.</p>
+
+    <h2>5. Accès depuis Internet</h2>
+    <p>Installez Tailscale sur l’hôte, connectez-vous, et ouvrez le port de Jellyfin avec Funnel :</p>
+<pre><code>sudo tailscale funnel --bg 8096</code></pre>
+    <p>La commande affiche l’adresse, <code>https://&lt;machine&gt;.&lt;votre tailnet&gt;.ts.net/</code>. La
+      première fois, Tailscale peut vous demander d’activer Funnel dans le navigateur. Seul le port 8096 est
+      ouvert ; rien ne change sur votre box. Ensuite, dans OwnMedia : le menu du serveur ⋮ → <b>Share with
+      friends</b> → <i>I have an address already</i> → cette adresse.</p>
+    <p>Vous accédez déjà au serveur autrement, avec votre propre domaine et un reverse proxy ou un VPN ?
+      Utilisez plutôt cette adresse. Plus d’informations dans <a href="../../../fr/guides/remote-access/">Hors de chez
+      vous et amis</a>.</p>
+
+    <h2>L’app pour vos amis</h2>
+    <p>Rien à configurer : les pages d’invitation et le QR code envoient vos amis télécharger la dernière app
+      sur <a href="../../../fr/download/#android">ownmedia.app</a>. Il faut pour cela le plugin 1.8 ou plus récent ;
+      Jellyfin propose la mise à jour dans Dashboard → Plugins.</p>
+
+    <h2 id="remove">Désinstaller OwnMedia</h2>
+    <ol>
+      <li><code>docker compose down</code> dans le dossier du fichier compose, puis
+        <code>docker image rm jellyfin/jellyfin:12.1</code>.</li>
+      <li>Coupez l’accès depuis Internet : <code>sudo tailscale funnel --https=443 off</code>. Arrêter Jellyfin
+        ne suffit pas : Funnel reste actif dans Tailscale (l’adresse s’ouvre, avec une erreur) tant que vous ne le
+        coupez pas ou que vous ne retirez pas Tailscale et la machine de la liste Machines sur le site de
+        Tailscale.</li>
+      <li>Supprimez les dossiers de réglages et de cache de Jellyfin. Vos films, musiques et sauvegardes de
+        photos ne sont pas touchés.</li>
+      <li>Dans OwnMedia sur le téléphone : le menu du serveur ⋮ → supprimer le serveur.</li>
+    </ol>
+  </article>
+</div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../../../fr/"><img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Films, séries, musique et photos de votre propre serveur, sur votre téléphone Android.</p>
+      </div>
+      <div>
+        <h2>Application</h2>
+        <ul>
+          <li><a href="../../../fr/#features">Fonctionnalités</a></li>
+          <li><a href="../../../fr/#whats-new">Nouveautés</a></li>
+          <li><a href="../../../fr/#share">Partager avec vos proches</a></li>
+          <li><a href="../../../fr/download/">Télécharger</a></li>
+          <li><a href="../../../fr/#screens">Captures d’écran</a></li>
+          <li><a href="../../../fr/#faq">Questions fréquentes</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Aide</h2>
+        <ul>
+          <li><a href="../../../fr/guides/windows/">Serveur sous Windows</a></li>
+          <li><a href="../../../fr/guides/synology/">NAS Synology</a></li>
+          <li><a href="../../../fr/guides/docker/">Docker</a></li>
+          <li><a href="../../../fr/guides/remote-access/">Hors de chez vous et amis</a></li>
+          <li><a href="../../../fr/guides/tv/">Regarder sur la télé</a></li>
+          <li><a href="../../../fr/support/">Assistance</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Société</h2>
+        <address>
+          MROYA SIA<br>
+          N° d’immatriculation 50203370261<br>
+          Riga, Ganibu dambis 20A, LV-1045<br>
+          <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>
+        </address>
+        <ul>
+          <li><a href="../../../legal/">Informations sur la société (en anglais)</a></li>
+          <li><a href="../../../privacy/">Politique de confidentialité (en anglais)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 MROYA SIA. Pas de cookies, pas de statistiques, pas de pistage.</span>
+      <span>OwnMedia est un projet indépendant, sans lien avec Jellyfin, Navidrome, Plex ou Tailscale.</span>
+    </div>
+    <nav class="footer-langs" aria-label="Langue"><div class="footer-langs-list"><a href="../../../guides/docker/" hreflang="en" lang="en">English</a><a href="../../../de/guides/docker/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/docker/" hreflang="fr" lang="fr" aria-current="true">Français</a><a href="../../../es/guides/docker/" hreflang="es" lang="es">Español</a></div></nav>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>Unterwegs schauen und Freunde einladen — OwnMedia</title>
+<meta name="description" content="Wie OwnMedia deinen Server mit Tailscale über das Internet erreicht, wie es schneller wird und wie Einladungslinks für Freunde funktionieren.">
+<link rel="canonical" href="https://ownmedia.app/de/guides/remote-access/">
+<link rel="alternate" hreflang="en" href="https://ownmedia.app/guides/remote-access/">
+<link rel="alternate" hreflang="de" href="https://ownmedia.app/de/guides/remote-access/">
+<link rel="alternate" hreflang="fr" href="https://ownmedia.app/fr/guides/remote-access/">
+<link rel="alternate" hreflang="es" href="https://ownmedia.app/es/guides/remote-access/">
+<link rel="alternate" hreflang="x-default" href="https://ownmedia.app/guides/remote-access/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:locale" content="de_DE">
+<meta property="og:title" content="Unterwegs schauen und Freunde einladen — OwnMedia">
+<meta property="og:description" content="Wie OwnMedia deinen Server mit Tailscale über das Internet erreicht, wie es schneller wird und wie Einladungslinks für Freunde funktionieren.">
+<meta property="og:url" content="https://ownmedia.app/de/guides/remote-access/">
+<meta property="og:image" content="https://ownmedia.app/img/og-image.jpg?v=bcb906ff">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia: Filme, Musik und Fotos von deinem eigenen Server">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../../../favicon.ico" sizes="any">
+<link rel="icon" href="../../../img/favicon-32.png?v=670ec50d" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../../../img/apple-touch-icon.png?v=71be1fb5">
+<link rel="preload" href="../../../fonts/bricolage-grotesque-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../../css/site.css?v=474fd499">
+<script src="../../../js/site.js?v=474fd499" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../../../de/" aria-label="OwnMedia Startseite">
+      <img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../../../de/download/">Download</a>
+      <a href="../../../de/guides/" aria-current="page">Anleitungen</a>
+      <a href="../../../privacy/">Datenschutz</a>
+      <a href="../../../de/support/">Support</a>
+      <details class="lang">
+        <summary aria-label="Sprache: Deutsch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>DE</span></summary>
+        <div class="lang-panel"><a href="../../../guides/remote-access/" hreflang="en" lang="en">English</a><a href="../../../de/guides/remote-access/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../../fr/guides/remote-access/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/remote-access/" hreflang="es" lang="es">Español</a></div>
+      </details>
+      <a class="btn btn-small" href="../../../de/download/#android">App holen</a>
+    </nav>
+    <details class="menu">
+      <summary class="tip-below" aria-label="Menü öffnen" data-tip="Menü öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../../../de/">Startseite</a>
+        <a href="../../../de/download/">Download</a>
+      <a href="../../../de/guides/" aria-current="page">Anleitungen</a>
+      <a href="../../../privacy/">Datenschutz</a>
+      <a href="../../../de/support/">Support</a>
+        <a class="btn" href="../../../de/download/#android">App holen</a>
+        <div class="menu-langs"><a href="../../../guides/remote-access/" hreflang="en" lang="en">English</a><a href="../../../de/guides/remote-access/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../../fr/guides/remote-access/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/remote-access/" hreflang="es" lang="es">Español</a></div>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="../../../de/guides/">Anleitungen</a> / Fernzugriff</div>
+    <h1>Unterwegs und Freunde</h1>
+    <p class="lead">Schau deinen Server von überall und teile ihn mit den Leuten, die du auswählst, ohne
+      Ports an deinem Router zu öffnen.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <ul class="toc">
+      <li><a href="#how">So funktioniert’s</a></li>
+      <li><a href="#you">Du, unterwegs</a></li>
+      <li><a href="#friends">Freunde einladen</a></li>
+      <li><a href="#access">Wer Zugang hat</a></li>
+      <li><a href="#speed">Geschwindigkeit</a></li>
+    </ul>
+
+    <h2 id="how">So funktioniert’s</h2>
+    <p>Zu Hause spricht das Handy über dein WLAN mit dem Server. Fürs Internet nutzt OwnMedia
+      <b>Tailscale Funnel</b>: Tailscale, ein kostenloser Dienst, gibt deinem Server eine sichere Adresse wie
+      <code>https://my-pc.tail1234.ts.net</code>. Darüber ist nur Jellyfin erreichbar; sonst wird nichts auf dem
+      Computer oder NAS geöffnet, und an deinem Router änderst du nichts.</p>
+    <ul>
+      <li><b>Windows:</b> Lass im Installationsprogramm <i>„Let friends watch from anywhere“</i> angehakt. Es
+        installiert Tailscale, du meldest dich einmal im Browser an, und es schaltet Funnel ein. Beim ersten Mal
+        nicht angehakt? Starte OwnMediaSetup noch einmal. <a href="../../../de/guides/windows/">Anleitung für
+        Windows</a>.</li>
+      <li><b>Synology:</b> <a href="../../../de/guides/synology/#internet">Schritt 7 der Synology-Anleitung</a>.</li>
+      <li><b>Docker:</b> <a href="../../../de/guides/docker/">ein Befehl</a> auf dem Host.</li>
+    </ul>
+    <p>Hast du schon einen eigenen Weg, ein VPN oder eine eigene Domain? OwnMedia funktioniert mit jeder
+      Adresse, die dein Handy erreicht.</p>
+
+    <h2 id="you">Du, unterwegs</h2>
+    <p>Füge den Server in OwnMedia mit seiner Adresse <code>https://….ts.net</code> hinzu, oder behalte die
+      Heimadresse und schalte die Tailscale-App auf deinem Handy ein, angemeldet mit demselben Konto wie der
+      Server. Mit der Tailscale-App ist die Verbindung meist schneller (siehe
+      <a href="#speed">Geschwindigkeit</a>).</p>
+    <p>Im Mobilfunknetz kann OwnMedia Datenvolumen sparen: Stell eine Qualität fürs WLAN und eine fürs
+      Mobilfunknetz ein (Zahnrad-Symbol in der Serverliste). „Auto“ misst die Verbindung vor einem Video, und
+      der Server wandelt nur um, was nicht hindurchpassen würde.</p>
+
+    <h2 id="friends">Freunde einladen</h2>
+    <ol class="ol-steps">
+      <li>Öffne in OwnMedia das Menü des Servers ⋮ → <b>Share with friends</b>.</li>
+      <li>Gib den Namen des Freundes ein und wähle die Mediatheken zum Teilen. Fotos sind nicht dabei, außer du
+        fügst sie hinzu.</li>
+      <li>Schick den Link über einen beliebigen Messenger oder per E-Mail.</li>
+      <li>Der Freund öffnet den Link auf seinem Android-Handy, installiert OwnMedia, falls er es noch nicht hat,
+        und fügt deinen Server mit einem Tippen hinzu: Er muss keinen Namen und kein Passwort eintippen.</li>
+    </ol>
+    <div class="note">
+      <p>Der Link funktioniert <b>einmal</b>, <b>7 Tage</b> lang: Wer ihn zuerst benutzt, bekommt den Zugang.
+        Schick ihn nur an den Freund, für den er gedacht ist.</p>
+    </div>
+    <p>Ein Freund kann nur schauen und hören: Er kann nichts löschen, keine Fotos auf deinem Server sichern und
+      ihn nicht weiter teilen. Teile nur, was du teilen darfst.</p>
+    <p>Du hast schon einen Einladungslink? In OwnMedia: <b>Add your server</b> → <i>Have an invite link?</i> und
+      füge ihn ein.</p>
+
+    <h3>Ein eigener Server</h3>
+    <p>Freunde, denen es gefällt, können sich einen eigenen Server einrichten: Die Einladungsseite und die App
+      zeigen drei Schritte, und <i>Send the link to my computer</i> schickt ihnen das Windows-Installationsprogramm
+      von deinem Server.</p>
+
+    <h2 id="access">Wer Zugang hat</h2>
+    <p>In <b>Share with friends</b> zeigt die Liste <b>Who has access</b> jeden Freund: das Handy, mit dem er
+      beigetreten ist, wann er den Server zuletzt genutzt hat und was er gerade schaut. <b>End access</b>
+      entfernt seine Anmeldung sofort von deinem Server, und seine App sagt ihm, dass der Besitzer den Zugang
+      geschlossen hat. (Braucht das Plugin in Version 1.7 oder neuer.)</p>
+
+    <h2 id="speed">Geschwindigkeit</h2>
+    <ul>
+      <li>Über Funnel (so verbinden sich Freunde) und über das Relay von Tailscale, wenn keine direkte
+        Verbindung möglich ist, bekommst du etwa 20 Mbit/s. Das reicht für normale Filme und Serien in 1080p
+        (5–10 Mbit/s), aber nicht für schwere 4K-Dateien: 4K mit 60 Bildern pro Sekunde braucht etwa
+        40 Mbit/s.</li>
+      <li>Mit der Tailscale-App auf dem Handy ist die Verbindung oft direkt und so schnell, wie das Internet an
+        beiden Enden erlaubt.</li>
+      <li>Für schwere Dateien unterwegs: Lade sie zu Hause herunter (lang drücken → <b>Download</b>), oder wähle
+        im Player eine niedrigere Qualität, dann wandelt der Server das Video um.</li>
+    </ul>
+    <p>Mehr Details für NAS-Besitzer: <a href="../../../de/guides/synology/#slow">wenn das Video ruckelt</a>.</p>
+  </article>
+</div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../../../de/"><img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Filme, Serien, Musik und Fotos von deinem eigenen Server, auf deinem Android-Handy.</p>
+      </div>
+      <div>
+        <h2>App</h2>
+        <ul>
+          <li><a href="../../../de/#features">Funktionen</a></li>
+          <li><a href="../../../de/#whats-new">Neuigkeiten</a></li>
+          <li><a href="../../../de/#share">Mit Freunden teilen</a></li>
+          <li><a href="../../../de/download/">Download</a></li>
+          <li><a href="../../../de/#screens">Screenshots</a></li>
+          <li><a href="../../../de/#faq">Fragen &amp; Antworten</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Hilfe</h2>
+        <ul>
+          <li><a href="../../../de/guides/windows/">Server unter Windows</a></li>
+          <li><a href="../../../de/guides/synology/">Synology NAS</a></li>
+          <li><a href="../../../de/guides/docker/">Docker</a></li>
+          <li><a href="../../../de/guides/remote-access/">Unterwegs &amp; Freunde</a></li>
+          <li><a href="../../../de/guides/tv/">Auf dem Fernseher</a></li>
+          <li><a href="../../../de/support/">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Unternehmen</h2>
+        <address>
+          MROYA SIA<br>
+          Reg.-Nr. 50203370261<br>
+          Riga, Ganibu dambis 20A, LV-1045<br>
+          <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>
+        </address>
+        <ul>
+          <li><a href="../../../legal/">Firmenangaben (Englisch)</a></li>
+          <li><a href="../../../privacy/">Datenschutzerklärung (Englisch)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 MROYA SIA. Keine Cookies, keine Statistik, kein Tracking.</span>
+      <span>OwnMedia ist ein unabhängiges Projekt und steht in keiner Verbindung zu Jellyfin, Navidrome, Plex oder Tailscale.</span>
+    </div>
+    <nav class="footer-langs" aria-label="Sprache"><div class="footer-langs-list"><a href="../../../guides/remote-access/" hreflang="en" lang="en">English</a><a href="../../../de/guides/remote-access/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../../fr/guides/remote-access/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/remote-access/" hreflang="es" lang="es">Español</a></div></nav>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>OwnMedia — Filme, Musik und Fotos von deinem eigenen Server</title>
+<meta name="description" content="Eine Android-App für Jellyfin und Navidrome. Spielt fast jede Datei so ab, wie sie ist, funktioniert unterwegs ohne Router-Einstellungen und sichert deine Fotos auf deinem Server. Kein Konto, keine Werbung, kein Tracking.">
+<link rel="canonical" href="https://ownmedia.app/de/">
+<link rel="alternate" hreflang="en" href="https://ownmedia.app/">
+<link rel="alternate" hreflang="de" href="https://ownmedia.app/de/">
+<link rel="alternate" hreflang="fr" href="https://ownmedia.app/fr/">
+<link rel="alternate" hreflang="es" href="https://ownmedia.app/es/">
+<link rel="alternate" hreflang="x-default" href="https://ownmedia.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:locale" content="de_DE">
+<meta property="og:title" content="OwnMedia — Filme, Musik und Fotos von deinem eigenen Server">
+<meta property="og:description" content="Eine Android-App für Jellyfin und Navidrome. Spielt fast jede Datei so ab, wie sie ist, funktioniert unterwegs ohne Router-Einstellungen und sichert deine Fotos auf deinem Server. Kein Konto, keine Werbung, kein Tracking.">
+<meta property="og:url" content="https://ownmedia.app/de/">
+<meta property="og:image" content="https://ownmedia.app/img/og-image.jpg?v=bcb906ff">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia: Filme, Musik und Fotos von deinem eigenen Server">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="icon" href="../img/favicon-32.png?v=670ec50d" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../img/apple-touch-icon.png?v=71be1fb5">
+<link rel="preload" href="../fonts/bricolage-grotesque-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../css/site.css?v=474fd499">
+<script src="../js/site.js?v=474fd499" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../de/" aria-label="OwnMedia Startseite">
+      <img src="../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../de/download/">Download</a>
+      <a href="../de/guides/">Anleitungen</a>
+      <a href="../privacy/">Datenschutz</a>
+      <a href="../de/support/">Support</a>
+      <details class="lang">
+        <summary aria-label="Sprache: Deutsch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>DE</span></summary>
+        <div class="lang-panel"><a href="../" hreflang="en" lang="en">English</a><a href="../de/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../fr/" hreflang="fr" lang="fr">Français</a><a href="../es/" hreflang="es" lang="es">Español</a></div>
+      </details>
+      <a class="btn btn-small" href="../de/download/#android">App holen</a>
+    </nav>
+    <details class="menu">
+      <summary class="tip-below" aria-label="Menü öffnen" data-tip="Menü öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../de/">Startseite</a>
+        <a href="../de/download/">Download</a>
+      <a href="../de/guides/">Anleitungen</a>
+      <a href="../privacy/">Datenschutz</a>
+      <a href="../de/support/">Support</a>
+        <a class="btn" href="../de/download/#android">App holen</a>
+        <div class="menu-langs"><a href="../" hreflang="en" lang="en">English</a><a href="../de/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../fr/" hreflang="fr" lang="fr">Français</a><a href="../es/" hreflang="es" lang="es">Español</a></div>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-text">
+      <span class="eyebrow"><span class="dot"></span>Version 0.3.18 für Android</span>
+      <h1>Deine Filme und Musik.<br>Dein Server. Eine&nbsp;App.</h1>
+      <p class="lead">OwnMedia spielt Filme, Serien, Musik und Fotos von deinem eigenen Jellyfin- oder
+        Navidrome-Server. Fast jede Datei läuft so, wie sie ist, zu Hause und unterwegs, und nichts geht
+        irgendwo anders hin.</p>
+      <div class="btn-row">
+        <a class="btn" href="../download/OwnMedia.apk" download type="application/vnd.android.package-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg> Für Android herunterladen</a>
+        <a class="btn btn-glass" href="../de/guides/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 7h8M8 11h8"/><circle cx="12" cy="16.5" r="1.5"/></svg> Server einrichten</a>
+      </div>
+      <p class="hero-note">Version 0.3.18 für Android-Handys. Warnt das Handy vor einem unbekannten Entwickler, tippe auf <i>Weitere Details</i> → <i>Trotzdem installieren</i>. Die App sagt dir, wenn eine neue Version da ist.<small>Bald bei Google Play.</small></p>
+      <ul class="hero-points">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg> Kein Konto</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg> Keine Werbung</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg> Kein Tracking</li>
+      </ul>
+    </div>
+    <div class="hero-visual">
+      <div class="float-chip glass chip-a"><span class="ic i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4.5v15l12-7.5z"/></svg></span><span>Spielt jede Datei<small>MKV, HEVC, DTS, ASS</small></span></div>
+      <div class="phone">
+        <img src="../img/screens/home.webp?v=8f043a1c" width="600" height="1300" alt="OwnMedia: die Mediatheken eines Heimservers als Glaskacheln, mit dem Mini-Player" fetchpriority="high">
+      </div>
+      <div class="float-chip glass chip-b"><span class="ic i-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span>Songtexte, Instant Mix<small>lückenlos, FLAC 24-bit</small></span></div>
+      <div class="float-chip glass chip-c"><span class="ic i-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></span><span>Mit der Familie teilen<small>ein Link, kein Passwort</small></span></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Alles von deinem Server, in deiner Tasche</h2>
+      <p>Filme und Serien aus Jellyfin, Musik aus Jellyfin oder Navidrome, Fotos in beide Richtungen.
+        Eine App statt zwei oder drei.</p>
+    </div>
+    <div class="grid grid-features">
+      <article class="card glass">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></div>
+        <h3>Musik, wie sie sein soll</h3>
+        <p>Eine Startseite für deine Musik: zuletzt hinzugefügt, zuletzt gehört, am meisten gehört und Favoriten.
+          Instant Mix spielt Songs wie den, den du gerade liebst. Songtexte laufen Zeile für Zeile mit. Alben
+          laufen ohne Lücken, und du siehst das echte Format: FLAC · 24-bit · 96 kHz. Die Warteschlange ist nach
+          einem Neustart noch da.</p>
+      </article>
+      <article class="card glass">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg></div>
+        <h3>Spielt jede Datei</h3>
+        <p>Basiert auf mpv: MKV, HEVC, AV1, DTS, Dolby, FLAC und gestaltete ASS-Untertitel, so wie sie sind, ohne
+          auf die Umwandlung durch den Server zu warten.</p>
+      </article>
+      <article class="card glass">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V4"/></svg></div>
+        <h3>Spielt auch bei schlechtem Empfang</h3>
+        <p>Während du hörst, werden die nächsten Songs auf dem Handy gespeichert, damit die Musik in Tunneln,
+          Aufzügen und im Zug weiterläuft. Im Mobilfunknetz wählst du 320, 192 oder 128 kbps und schonst dein
+          Datenvolumen.</p>
+      </article>
+      <article class="card glass">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/></svg></div>
+        <h3><a class="card-anchor" href="#share">Mit Freunden teilen</a></h3>
+        <p>Schick einen Link. Dein Freund holt sich die App und tritt deinem Server mit einem Tippen bei – kein
+          Passwort, keine Einrichtung. Du siehst, wer was schaut, und beendest den Zugang mit einem Knopf.</p>
+      </article>
+      <article class="card glass">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg></div>
+        <h3>Deine Fotos auf deinem Server</h3>
+        <p>Neue Fotos und Videos landen Sekunden nach der Aufnahme auf deinem eigenen Server. Keine Cloud,
+          keine Monatsgebühr.</p>
+      </article>
+      <article class="card glass" id="car">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3zM5 11h14"/><circle cx="7.5" cy="16" r="1"/><circle cx="16.5" cy="16" r="1"/></svg></div>
+        <h3>Auf dem Fernseher und im Auto</h3>
+        <p>Auf dem Fernseher abspielen, über das WLAN zu Hause (<a href="../de/guides/tv/">so geht’s</a>).
+          Android Auto mit deiner Musik und Sprachsuche.</p>
+      </article>
+      <article class="card glass">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
+        <h3>Unterwegs</h3>
+        <p>Das Windows-Installationsprogramm macht deinen Server über Tailscale im Internet erreichbar, ohne
+          Router-Einstellungen. Lieber dein eigenes VPN? Das geht auch.</p>
+      </article>
+      <article class="card glass">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg></div>
+        <h3>Offline dank Downloads</h3>
+        <p>Ein Film, eine ganze Staffel oder ein Album für den Flug. Wo du aufgehört hast, erfährt dein Server,
+          sobald du wieder online bist.</p>
+      </article>
+      <article class="card glass">
+        <div class="icon i-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <h3>Ohne Haken</h3>
+        <p>Kein Konto, keine Werbung, keine Statistik. Die App spricht mit deinen Servern. Zwei kleine
+          Ausnahmen, beide leicht abzuschalten: Songtexte von LRCLIB und ein täglicher Blick auf ownmedia.app nach
+          einer neuen Version.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="whats-new">
+  <div class="wrap whatsnew">
+    <div class="card glass whatsnew-text">
+      <span class="eyebrow"><span class="dot"></span>Versionen 0.3.16 bis 0.3.18</span>
+      <h2>Neuigkeiten</h2>
+      <ul class="whatsnew-list">
+        <li>Einladungen mit einem Tippen: Ein Freund holt sich die App von ownmedia.app, und sie öffnet deine
+          Einladung von selbst.</li>
+        <li>Mit Freunden teilen: Eine neue Einladung zeigt ihren Link sofort, bereit zum Senden.</li>
+        <li>OwnMedia Pro: Im ersten Monat ist alles kostenlos, danach ein einmaliger Kauf bei Google Play, kein
+          Abo. Freunde, die du einlädst, schauen kostenlos, wenn du Pro hast.</li>
+        <li>Die Version aus Google Play installiert sich über die von dieser Website; deine Server und
+          Einstellungen bleiben.</li>
+        <li>Davor, in 0.3.14 und 0.3.15: eine Startseite für Musik, Instant Mix, mitlaufende Songtexte,
+          lückenlose Alben, vorab gespeicherte Songs für Funklöcher und ein Datensparmodus fürs Mobilfunknetz.</li>
+      </ul>
+      <div class="btn-row"><a class="btn" href="../download/OwnMedia.apk" download type="application/vnd.android.package-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg> Für Android herunterladen</a></div>
+    </div>
+    <div class="whatsnew-shots"></div>
+  </div>
+</section>
+
+<section id="share" class="share">
+  <div class="wrap share-grid">
+    <div class="share-text">
+      <h2>Teile deinen Server mit Familie und Freunden</h2>
+      <p class="lead">Die Eltern in einer anderen Stadt, ein Freund am anderen Ende der Stadt: Schick ihnen
+        einen Link, und deine Filme und Musik sind auf ihrem Handy. Keine Konten anlegen, keine Passwörter
+        erklären.</p>
+      <ol class="share-steps">
+        <li><b>Wähle, was du teilst.</b> Such die Mediatheken aus. Deine Fotos bleiben privat, außer du fügst
+          sie hinzu.</li>
+        <li><b>Schick den Link</b> über einen beliebigen Messenger. Er funktioniert einmal, für eine Person,
+          7 Tage lang.</li>
+        <li><b>Sie tippen auf „Add to OwnMedia“.</b> Kein Name, kein Passwort. Sie können schauen und hören,
+          aber nichts löschen und den Zugang nicht weitergeben.</li>
+      </ol>
+      <div class="share-control">
+        <h3>Du behältst die Kontrolle</h3>
+        <p>„Who has access“ zeigt das Handy jeder Person, wann sie zuletzt geschaut hat und was gerade läuft.
+          „End access“ schließt den Zugang sofort, und ihre App sagt es ihnen.</p>
+      </div>
+      <p class="muted share-note">Freunde erreichen deinen Server über das Internet: Das
+        Windows-Installationsprogramm richtet das für dich ein. <a href="../de/guides/remote-access/#friends">So
+        funktioniert das Teilen</a>.</p>
+    </div>
+    <div class="share-shots">
+      <figure class="shot share-shot-owner"><div class="phone"><img src="../img/screens/share.webp?v=8e21f995" width="600" height="1300" alt="Share with friends: die Mediatheken zum Teilen und die Liste, wer Zugang hat" loading="lazy"></div>
+        <figcaption>Du<span>Mediatheken wählen, sehen, wer Zugang hat</span></figcaption></figure>
+      <figure class="shot share-shot-friend"><div class="phone"><img src="../img/screens/invite.webp?v=1fffdc40" width="600" height="1300" alt="Die Einladung auf dem Handy eines Freundes mit dem Knopf Add to OwnMedia" loading="lazy"></div>
+        <figcaption>Dein Freund<span>Ein Tippen, um deinen Server hinzuzufügen</span></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section id="start">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>In drei Schritten loslegen</h2>
+      <p>Ein paar Minuten unter Windows, etwa eine halbe Stunde auf einem NAS. Einmal.</p>
+    </div>
+    <div class="grid grid-3 steps">
+      <div class="step glass">
+        <div class="step-num">1</div>
+        <h3>Server einrichten</h3>
+        <p class="muted">Auf einem Windows-PC erledigt ein Installationsprogramm alles: Jellyfin, deine Ordner,
+          Zugriff aus dem Internet. Auf einem NAS oder mit Docker hilft eine kurze Anleitung.</p>
+        <div class="links"><a href="../de/guides/windows/">Windows</a><a href="../de/guides/synology/">Synology</a><a href="../de/guides/docker/">Docker</a></div>
+      </div>
+      <div class="step glass">
+        <div class="step-num">2</div>
+        <h3>In der App hinzufügen</h3>
+        <p class="muted">Zu Hause findet OwnMedia den Server in deinem WLAN von selbst. Melde dich mit dem Namen
+          und Passwort an, die du bei der Einrichtung gewählt hast.</p>
+        <div class="links"><a href="../de/download/#android">App holen</a></div>
+      </div>
+      <div class="step glass">
+        <div class="step-num">3</div>
+        <h3>Deine Leute einladen</h3>
+        <p class="muted">Wähle, was du teilst, und schick den Link. Freunde schauen von überall; sie können
+          nichts löschen und den Zugang nicht weitergeben.</p>
+        <div class="links"><a href="../de/guides/remote-access/">So funktioniert das Teilen</a></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="different">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Was anders ist</h2>
+      <p>Es gibt gute kostenlose Jellyfin-Apps. Hier ist, was OwnMedia auf eigene Art macht und was es noch
+        nicht kann.</p>
+    </div>
+    <div class="diff">
+      <div class="card glass">
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12 5 5 9-10"/></svg><div><b>Video und Musik zusammen</b><span>Filme und Serien aus Jellyfin, Musik aus
+            Jellyfin und Navidrome oder einem anderen Subsonic-Server, in einer App mit einem Player.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12 5 5 9-10"/></svg><div><b>Das Handy macht die schwere Arbeit</b><span>Der mpv-Player spielt die
+            Originaldatei. Ein Server ohne starke Grafikkarte muss HEVC oder DTS nicht live umwandeln.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12 5 5 9-10"/></svg><div><b>Mit der Serverseite</b><span>Ein Windows-Installationsprogramm, das Jellyfin
+            und den Internetzugang einrichtet, ein Plugin für NAS und Docker, Foto-Backup und Einladungen für
+            Freunde, gemacht, um zusammenzuarbeiten.</span></div></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12 5 5 9-10"/></svg><div><b>Für Leute, die keine Admins sind</b><span>Keine Ports öffnen, kein Reverse
+            Proxy, keine Konten, die Freunde anlegen müssen.</span></div></li>
+        </ul>
+      </div>
+      <div class="card glass">
+        <h3>Noch nicht</h3>
+        <p>Keine App für den Fernseher selbst: „Play on TV“ schickt das Video stattdessen vom Handy an einen
+          Smart-TV (<a href="../de/guides/tv/">so geht’s</a>).</p>
+        <p>Plex- und Emby-Server werden nicht unterstützt; OwnMedia funktioniert mit Jellyfin und
+          Navidrome/Subsonic.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screens">
+  <div class="wrap">
+    <div class="section-head center center">
+      <h2>Ein Blick hinein</h2>
+      <p>Der „Liquid Glass“-Look: mattierte Karten über deinen Farben, hell oder dunkel.</p>
+    </div>
+    <div class="gallery">
+      <div class="gallery-track" tabindex="0" aria-label="Screenshots, seitwärts blättern">
+        <figure class="shot"><div class="phone"><img src="../img/screens/home.webp?v=8f043a1c" width="600" height="1300" alt="Die Mediatheken eines Servers als Glaskacheln" loading="lazy"></div>
+          <figcaption>Dein Server<span>Mediatheken als große Glaskacheln, darunter der Mini-Player</span></figcaption></figure>
+        <figure class="shot"><div class="phone"><img src="../img/screens/library.webp?v=28ce7e5e" width="600" height="1300" alt="Eine Filmmediathek als Raster aus Postern" loading="lazy"></div>
+          <figcaption>Mediatheken<span>Poster, Sortierung und „Weiterschauen“</span></figcaption></figure>
+        <figure class="shot"><div class="phone"><img src="../img/screens/movie.webp?v=6c5e7ebb" width="600" height="1300" alt="Die Seite des Films Sintel mit den Knöpfen Play und Play on TV" loading="lazy"></div>
+          <figcaption>Filmseite<span>Abspielen, fortsetzen oder an den Fernseher schicken</span></figcaption></figure>
+        <figure class="shot shot-wide"><div class="phone landscape"><img src="../img/screens/player.webp?v=7af46a7c" width="1300" height="566" alt="Der Video-Player über einer Sonnenuntergangsszene aus Sintel, mit Bedienelementen und Untertiteln" loading="lazy"></div>
+          <figcaption>Video-Player<span>Gesten, Ton- und Untertitelspuren, Geschwindigkeit, Bild-im-Bild</span></figcaption></figure>
+        <figure class="shot"><div class="phone"><img src="../img/screens/music.webp?v=3c7d1fbf" width="600" height="1300" alt="Der Musik-Player mit großem Albumcover" loading="lazy"></div>
+          <figcaption>Musik-Player<span>Cover wischen, Warteschlange, Equalizer, Sleep-Timer</span></figcaption></figure>
+        <figure class="shot"><div class="phone"><img src="../img/screens/photos.webp?v=91a52bb9" width="600" height="1300" alt="Fotos vom Server als Raster" loading="lazy"></div>
+          <figcaption>Fotos<span>Die Fotos deines Servers im Raster, im Vollbild, mit Zoom</span></figcaption></figure>
+      </div>
+      <div class="gallery-nav" hidden>
+        <button class="glass" type="button" data-dir="prev" aria-label="Vorherige Screenshots zeigen" data-tip="Vorherige Screenshots zeigen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 5-7 7 7 7"/></svg></button>
+        <button class="glass" type="button" data-dir="next" aria-label="Nächste Screenshots zeigen" data-tip="Nächste Screenshots zeigen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 5 7 7-7 7"/></svg></button>
+      </div>
+      <p class="credits">Screenshots auf einem Demo-Server mit freien Inhalten: <i>Sintel</i>, <i>Big Buck Bunny</i>,
+        <i>Elephants Dream</i>, <i>Tears of Steel</i> und <i>Caminandes</i> © Blender Foundation (CC BY), Musik aus
+        <i>Tears of Steel</i> © Joram Letwory (CC BY-ND 3.0), Fotos NASA. <a href="../legal/#credits">Details</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="wrap">
+    <div class="section-head center">
+      <h2>Fragen</h2>
+    </div>
+    <div class="faq">
+      <details class="glass">
+        <summary>Brauche ich einen eigenen Server?</summary>
+        <div class="answer">
+          <p>Ja. OwnMedia spielt ab, was auf deinem Jellyfin- oder Navidrome-Server liegt; es verkauft oder
+            streamt keine eigenen Inhalte. Noch keinen Server? Jeder Windows-PC, der eingeschaltet bleibt, kann
+            einer sein: Das <a href="../de/guides/windows/">OwnMedia-Installationsprogramm</a> richtet ihn mit
+            wenigen Klicks ein. Ein NAS geht auch.</p>
+        </div>
+      </details>
+      <details class="glass">
+        <summary>Was ist Jellyfin?</summary>
+        <div class="answer">
+          <p>Ein kostenloser Open-Source-Medienserver. Er sortiert die Filme, Serien, Musik und Fotos in deinen
+            Ordnern, holt Poster und Beschreibungen und liefert sie an Apps wie OwnMedia. Navidrome ist dieselbe
+            Idee nur für Musik. OwnMedia stammt von keinem der beiden Projekte.</p>
+        </div>
+      </details>
+      <details class="glass">
+        <summary>Brauche ich Tailscale?</summary>
+        <div class="answer">
+          <p>Zu Hause nicht: Dort spricht das Handy über dein WLAN mit dem Server. Für unterwegs kann das
+            Windows-Installationsprogramm Tailscale für dich einrichten (ein kostenloser Dienst; du meldest dich
+            einmal im Browser an). Erreichst du deinen Server schon anders, per VPN oder eigener Domain, nutzt
+            OwnMedia das. <a href="../de/guides/remote-access/">Mehr zum Fernzugriff</a>.</p>
+        </div>
+      </details>
+      <details class="glass">
+        <summary>Was passiert mit meinen Daten?</summary>
+        <div class="answer">
+          <p>Sie bleiben zwischen deinem Handy und deinem Server. Es gibt kein OwnMedia-Konto, und die App
+            schickt uns nichts über dich: keine Statistik, keine Absturzberichte, keine Werbung. Die App von
+            dieser Website fragt einmal am Tag bei ownmedia.app nach einer neuen Version; das kannst du
+            abschalten. Details in der <a href="../privacy/">Datenschutzerklärung</a> (auf Englisch).</p>
+        </div>
+      </details>
+      <details class="glass">
+        <summary>Wie bekomme ich neue Versionen?</summary>
+        <div class="answer">
+          <p>Die App sagt dir, wenn eine neue Version da ist (Settings → Updates). Tippe darauf, um sie
+            herunterzuladen, und installiere sie über die alte: Deine Server, Downloads und Einstellungen bleiben.
+            Die neueste Version gibt es immer unter <a href="../de/download/#android">ownmedia.app/download</a>.</p>
+        </div>
+      </details>
+      <details class="glass">
+        <summary>Kann ich auf meinem Fernseher schauen?</summary>
+        <div class="answer">
+          <p>Ja. „Play on TV“ schickt einen Film oder eine Folge an die meisten Smart-TVs in deinem WLAN (sie
+            nehmen Video von Handys über UPnP/DLNA an), und dein Handy wird zur Fernbedienung. Eine eigene App
+            für Android TV, LG- oder Samsung-Fernseher gibt es nicht. <a href="../de/guides/tv/">So
+            funktioniert’s</a>.</p>
+        </div>
+      </details>
+      <details class="glass">
+        <summary>Wer kann meinen Server noch sehen?</summary>
+        <div class="answer">
+          <p>Nur die Leute, die du einlädst. „Share with friends“ in der App erstellt einen Einladungslink für die
+            Mediatheken, die du auswählst; er funktioniert einmal, 7 Tage lang. Der Freund fügt deinen Server mit
+            einem Tippen hinzu, ohne Passwort, und kann nur schauen und hören. Unter „Who has access“ siehst du das
+            Handy jedes Freundes, wann er zuletzt geschaut hat und was er gerade schaut, und „End access“ beendet
+            seinen Zugang sofort. <a href="../de/guides/remote-access/#friends">So funktionieren
+            Einladungen</a>.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section id="play">
+  <span id="beta"></span><span id="waitlist"></span>
+  <div class="wrap beta">
+    <div>
+      <h2>Bald bei Google Play</h2>
+      <p class="lead">OwnMedia funktioniert schon heute: <a href="../de/download/#android">hier
+        herunterladen</a>. Außerdem ist es auf dem Weg zu Google Play. Hinterlasse deine E-Mail, wenn du eine
+        Nachricht möchtest, sobald es dort ist.</p>
+      <ul>
+        <li>Eine E-Mail, wenn OwnMedia bei Google Play ist. Kein Newsletter, kein Spam.</li>
+        <li>Google verlangt von neuen Apps zuerst einen geschlossenen Test über 14 Tage. Wenn du helfen
+          kannst, setz das Häkchen.</li>
+        <li>Deine Antworten gehen an Formspree, den Dienst, der dieses Formular zustellt, und werden nur dafür
+          verwendet.</li>
+      </ul>
+    </div>
+    <form id="beta-form" class="glass" novalidate>
+      <div class="field">
+        <label for="email">E-Mail</label>
+        <input id="email" name="email" type="email" required autocomplete="email" placeholder="name@example.com" aria-describedby="email-error">
+        <p class="field-error" id="email-error" hidden></p>
+      </div>
+      <fieldset class="field choices">
+        <legend>Welchen Server nutzt du? <span class="hint">(alles Zutreffende wählen)</span></legend>
+        <label class="choice"><input type="checkbox" name="server" value="jellyfin"><span>Jellyfin</span></label>
+        <label class="choice"><input type="checkbox" name="server" value="navidrome"><span>Navidrome / Subsonic</span></label>
+        <label class="choice"><input type="checkbox" name="server" value="plex"><span>Plex</span></label>
+        <label class="choice"><input type="checkbox" name="server" value="emby"><span>Emby</span></label>
+        <label class="choice"><input type="checkbox" name="server" value="nas"><span>Ein NAS oder freigegebener Ordner</span></label>
+        <label class="choice"><input type="checkbox" name="server" value="none"><span>Noch nichts</span></label>
+      </fieldset>
+      <div class="field">
+        <label for="pain">Was stört dich an deinem jetzigen Player am meisten? <span class="hint">(optional)</span></label>
+        <textarea id="pain" name="pain" maxlength="1000"></textarea>
+      </div>
+      <div class="field">
+        <label class="check"><input type="checkbox" name="tester" value="yes">
+          <span>Ich kann die App 14 Tage lang testen <span class="hint">Optional. Google verlangt einen geschlossenen Test, bevor eine App öffentlich wird.</span></span></label>
+      </div>
+      <div class="hp" aria-hidden="true"><label>Leer lassen <input type="text" name="_gotcha" tabindex="-1" autocomplete="off"></label></div>
+      <button class="btn" type="submit">Benachrichtigen</button>
+      <div id="form-status" role="status" aria-live="polite"></div>
+      <p class="form-note">Mit dem Absenden bist du einverstanden, dass wir dir wegen OwnMedia bei Google Play
+        schreiben. Siehe die <a href="../privacy/#website">Datenschutzerklärung</a> (auf Englisch).</p>
+    </form>
+  </div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../de/"><img src="../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Filme, Serien, Musik und Fotos von deinem eigenen Server, auf deinem Android-Handy.</p>
+      </div>
+      <div>
+        <h2>App</h2>
+        <ul>
+          <li><a href="../de/#features">Funktionen</a></li>
+          <li><a href="../de/#whats-new">Neuigkeiten</a></li>
+          <li><a href="../de/#share">Mit Freunden teilen</a></li>
+          <li><a href="../de/download/">Download</a></li>
+          <li><a href="../de/#screens">Screenshots</a></li>
+          <li><a href="../de/#faq">Fragen &amp; Antworten</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Hilfe</h2>
+        <ul>
+          <li><a href="../de/guides/windows/">Server unter Windows</a></li>
+          <li><a href="../de/guides/synology/">Synology NAS</a></li>
+          <li><a href="../de/guides/docker/">Docker</a></li>
+          <li><a href="../de/guides/remote-access/">Unterwegs &amp; Freunde</a></li>
+          <li><a href="../de/guides/tv/">Auf dem Fernseher</a></li>
+          <li><a href="../de/support/">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Unternehmen</h2>
+        <address>
+          MROYA SIA<br>
+          Reg.-Nr. 50203370261<br>
+          Riga, Ganibu dambis 20A, LV-1045<br>
+          <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>
+        </address>
+        <ul>
+          <li><a href="../legal/">Firmenangaben (Englisch)</a></li>
+          <li><a href="../privacy/">Datenschutzerklärung (Englisch)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 MROYA SIA. Keine Cookies, keine Statistik, kein Tracking.</span>
+      <span>OwnMedia ist ein unabhängiges Projekt und steht in keiner Verbindung zu Jellyfin, Navidrome, Plex oder Tailscale.</span>
+    </div>
+    <nav class="footer-langs" aria-label="Sprache"><div class="footer-langs-list"><a href="../" hreflang="en" lang="en">English</a><a href="../de/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../fr/" hreflang="fr" lang="fr">Français</a><a href="../es/" hreflang="es" lang="es">Español</a></div></nav>
+  </div>
+</footer>
+</body>
+</html>

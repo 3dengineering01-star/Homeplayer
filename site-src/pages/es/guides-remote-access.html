@@ -1,0 +1,87 @@
+title: Fuera de casa e invitaciones
+description: Cómo llega OwnMedia a tu servidor por internet con Tailscale, cómo hacerlo más rápido y cómo funcionan los enlaces de invitación para amigos.
+path: guides/remote-access/
+---
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="{{root}}guides/">Guías</a> / Acceso remoto</div>
+    <h1>Fuera de casa y amigos</h1>
+    <p class="lead">Mira tu servidor desde cualquier sitio y compártelo con quien tú elijas, sin abrir puertos en
+      el router.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <ul class="toc">
+      <li><a href="#how">Cómo funciona</a></li>
+      <li><a href="#you">Tú, fuera de casa</a></li>
+      <li><a href="#friends">Invitar a amigos</a></li>
+      <li><a href="#access">Quién tiene acceso</a></li>
+      <li><a href="#speed">Velocidad</a></li>
+    </ul>
+
+    <h2 id="how">Cómo funciona</h2>
+    <p>En casa, el teléfono habla con el servidor por tu Wi-Fi. Para internet, OwnMedia usa
+      <b>Tailscale Funnel</b>: Tailscale, un servicio gratuito, da a tu servidor una dirección segura como
+      <code>https://my-pc.tail1234.ts.net</code>. Por ella solo se llega a Jellyfin; no se abre nada más del
+      ordenador o del NAS, y no cambias nada en el router.</p>
+    <ul>
+      <li><b>Windows:</b> deja marcada <i>«Let friends watch from anywhere»</i> en el instalador. Instala
+        Tailscale, inicias sesión una vez en el navegador y activa Funnel. ¿No la marcaste la primera vez? Vuelve
+        a ejecutar OwnMediaSetup. <a href="{{root}}guides/windows/">Guía de Windows</a>.</li>
+      <li><b>Synology:</b> <a href="{{root}}guides/synology/#internet">paso 7 de la guía de Synology</a>.</li>
+      <li><b>Docker:</b> <a href="{{root}}guides/docker/">un comando</a> en el equipo.</li>
+    </ul>
+    <p>¿Ya tienes tu propia forma, una VPN o tu propio dominio? OwnMedia funciona con cualquier dirección a la
+      que llegue tu teléfono.</p>
+
+    <h2 id="you">Tú, fuera de casa</h2>
+    <p>Añade el servidor en OwnMedia con su dirección <code>https://….ts.net</code>, o mantén la dirección de casa
+      y activa la app de Tailscale en tu teléfono, con la misma cuenta que el servidor. Con la app de Tailscale la
+      conexión suele ser más rápida (ver <a href="#speed">Velocidad</a>).</p>
+    <p>Con datos móviles, OwnMedia puede ahorrar datos: elige una calidad para la Wi-Fi y otra para los datos
+      móviles (icono del engranaje en la lista de servidores). «Auto» mide la conexión antes de un vídeo, y el
+      servidor solo convierte lo que no cabría.</p>
+
+    <h2 id="friends">Invitar a amigos</h2>
+    <ol class="ol-steps">
+      <li>En OwnMedia, abre el menú del servidor ⋮ → <b>Share with friends</b>.</li>
+      <li>Escribe el nombre de tu amigo y elige las bibliotecas que compartes. Las fotos no se incluyen, salvo
+        que las añadas.</li>
+      <li>Envía el enlace por cualquier app de mensajería o por correo.</li>
+      <li>Tu amigo abre el enlace en su teléfono Android, instala OwnMedia si no la tiene y añade tu servidor con
+        un toque: sin nombre ni contraseña que escribir.</li>
+    </ol>
+    <div class="note">
+      <p>El enlace funciona <b>una vez</b>, durante <b>7 días</b>: la primera persona que lo usa se queda con el
+        acceso. Envíalo solo al amigo para el que es.</p>
+    </div>
+    <p>Un amigo solo puede ver y escuchar: no puede borrar nada, copiar fotos a tu servidor ni compartirlo con
+      otros. Comparte solo lo que tienes derecho a compartir.</p>
+    <p>¿Ya tienes un enlace de invitación? En OwnMedia: <b>Add your server</b> → <i>Have an invite link?</i> y
+      pégalo.</p>
+
+    <h3>Un servidor propio</h3>
+    <p>A los amigos que les guste pueden montar su propio servidor: la página de invitación y la app muestran
+      tres pasos, y <i>Send the link to my computer</i> les envía el instalador de Windows desde tu servidor.</p>
+
+    <h2 id="access">Quién tiene acceso</h2>
+    <p>En <b>Share with friends</b>, la lista <b>Who has access</b> muestra a cada amigo: el teléfono con el que se
+      unió, cuándo usó el servidor por última vez y qué está viendo ahora. <b>End access</b> elimina al instante
+      su sesión de tu servidor, y su app le dice que el propietario cerró el acceso. (Necesita el plugin 1.7 o
+      posterior.)</p>
+
+    <h2 id="speed">Velocidad</h2>
+    <ul>
+      <li>Por Funnel (así se conectan tus amigos), y por el relé de Tailscale cuando no es posible una conexión
+        directa, consigues unos 20 Mbit/s. Es de sobra para películas y series normales en 1080p (5–10 Mbit/s),
+        pero no para archivos 4K pesados: el 4K a 60 fotogramas por segundo necesita unos 40 Mbit/s.</li>
+      <li>Con la app de Tailscale en el teléfono, la conexión suele ser directa y tan rápida como permita
+        internet en los dos extremos.</li>
+      <li>Para archivos pesados de viaje: descárgalos en casa (pulsación larga → <b>Download</b>) o elige una
+        calidad más baja en el reproductor y el servidor convierte el vídeo.</li>
+    </ul>
+    <p>Más detalles para dueños de un NAS: <a href="{{root}}guides/synology/#slow">si el vídeo se corta</a>.</p>
+  </article>
+</div>

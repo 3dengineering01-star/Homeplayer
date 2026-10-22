@@ -1,0 +1,93 @@
+title: Server unter Windows einrichten
+description: OwnMediaSetup.exe Schritt für Schritt: Jellyfin, deine Ordner, Zugriff aus dem Internet mit Tailscale und ein QR-Code für dein Handy.
+path: guides/windows/
+---
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="{{root}}guides/">Anleitungen</a> / Windows</div>
+    <h1>Server unter Windows</h1>
+    <p class="lead">Ein Programm macht aus einem Windows-PC den Server für OwnMedia. Ein paar Minuten,
+      einmal.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <p class="muted">Das Installationsprogramm und die App sind auf Englisch; ihre Knöpfe und Texte stehen hier
+      so, wie du sie siehst.</p>
+
+    <h2 id="before">Bevor du anfängst</h2>
+    <ul>
+      <li>Ein PC mit Windows 10 oder 11 (64-Bit), der eingeschaltet bleibt, während du schaust. Deine Filme,
+        Serien und Musik liegen darauf oder auf einem angeschlossenen Laufwerk.</li>
+      <li>Administratorrechte und eine Internetverbindung: Die Einrichtung lädt Jellyfin herunter, etwa
+        200 MB.</li>
+      <li>Jellyfin ist schon auf diesem PC? Gut: Die Einrichtung fügt nur OwnMedia hinzu. Benutzer und
+        Mediatheken bleiben, wie sie sind, und die Schritte für Ordner und Passwort entfallen.</li>
+    </ul>
+    <div class="btn-row">{{INSTALLER_BUTTON}}</div>
+    {{INSTALLER_META}}
+
+    <h2 id="steps">Schritt für Schritt</h2>
+    <ol class="ol-steps">
+      <li><b>Starte OwnMediaSetup.exe</b> und erlaube ihm, Änderungen vorzunehmen. Meldet Windows <i>„Der
+        Computer wurde durch Windows geschützt“</i>, klicke auf <i>Weitere Informationen</i> → <i>Trotzdem
+        ausführen</i>: Das Installationsprogramm ist noch nicht digital signiert.</li>
+      <li><b>Deine Filme, Serien, Musik und Fotos.</b> Weise jeder Zeile einen Ordner zu. Serien brauchen einen
+        Ordner pro Serie. Lass eine Zeile leer, um sie zu überspringen. Neue Dateien, die du später in diese
+        Ordner legst, erscheinen von selbst. Fotos, die vom Handy gesichert werden, kommen in den letzten
+        Ordner.</li>
+      <li><b>Dein Name und Passwort.</b> Damit meldest du dich in der App an; das Passwort braucht mindestens
+        4 Zeichen. Lass <i>„This computer is at home: let phones on this Wi-Fi connect to it“</i> angehakt, damit
+        Handys zu Hause den Server finden.</li>
+      <li><b>Von überall schauen.</b> Lass <i>„Let friends watch from anywhere“</i> angehakt, wenn du unterwegs
+        schauen oder Freunde einladen willst. Die Einrichtung installiert Tailscale, einen kostenlosen Dienst,
+        der dem Server ohne Router-Einstellungen eine sichere Internetadresse gibt.</li>
+      <li><b>Installieren.</b> Die Einrichtung lädt Jellyfin herunter, installiert es und richtet es ein; das
+        dauert ein bis zwei Minuten.</li>
+      <li><b>Bei Tailscale anmelden</b> (nur mit „von überall schauen“). Ein Browserfenster öffnet sich: Melde
+        dich an (am schnellsten mit dem Google-, Microsoft- oder Apple-Knopf) und drücke <i>Connect</i>. Wenn
+        Tailscale fragt, drücke <i>Enable Funnel</i>. Danach wartet die Einrichtung, bis die Adresse im Internet
+        funktioniert, bis zu 10 Minuten.</li>
+      <li><b>Fertig.</b> Die Seite <i>„Your server is ready“</i> öffnet sich im Browser, mit einem QR-Code und der
+        Adresse des Servers. Sie bleibt im Startmenü als <i>OwnMedia – connect a phone</i>, fürs nächste
+        Handy.</li>
+    </ol>
+
+    <h2 id="phone">Auf dem Handy</h2>
+    <ol class="ol-steps">
+      <li>Verbinde das Handy mit demselben WLAN wie den PC.</li>
+      <li>Hol dir die App: Richte die Kamera des Handys auf den QR-Code und öffne den Link, dann wird OwnMedia
+        heruntergeladen. Öffne die Datei und tippe auf <i>Installieren</i>; wenn das Handy fragt, erlaube die
+        Installation aus dieser Quelle, und wenn Google Play Protect vor einem unbekannten Entwickler warnt, tippe
+        auf <i>Weitere Details</i> → <i>Trotzdem installieren</i>. Oder lade sie auf dem Handy von
+        <a href="{{root}}download/#android">ownmedia.app/download</a> herunter.</li>
+      <li>Öffne OwnMedia und tippe auf <i>Add your server</i>. Die App findet deinen PC von selbst. Falls nicht,
+        tippe die Adresse ein, die auf der Seite steht, zum Beispiel <code>http://192.168.1.10:8096</code>.</li>
+      <li>Gib den Namen und das Passwort aus Schritt 3 ein und tippe auf <i>Connect</i>.</li>
+    </ol>
+    <p>Als Nächstes: <a href="{{root}}guides/remote-access/#friends">Freunde einladen</a>.</p>
+
+    <h2 id="if-something-goes-wrong">Wenn etwas schiefgeht</h2>
+    <ul>
+      <li><b>„Jellyfin could not be downloaded.“</b> Prüfe die Internetverbindung und starte die Einrichtung
+        noch einmal.</li>
+      <li><b>Das Öffnen fürs Internet hat nicht geklappt</b> (niemand hat sich rechtzeitig bei Tailscale
+        angemeldet, oder Funnel wurde nicht erlaubt). Zu Hause funktioniert der Server wie vorher. Starte
+        OwnMediaSetup noch einmal, um es erneut zu versuchen: Erledigte Schritte werden übersprungen.</li>
+      <li><b>„Its address is still new.“</b> Der Server ist im Internet, aber Einladungslinks öffnen sich
+        vielleicht noch ein paar Minuten lang nicht. Warte kurz, bevor du sie verschickst.</li>
+      <li><b>Das Handy findet den Server nicht.</b> Achte darauf, dass es im selben WLAN ist, oder tippe die
+        Adresse von Hand ein.</li>
+      <li>Was bei der Einrichtung passiert ist, steht in <code>C:\ProgramData\Homeplay\setup.log</code> (die Datei
+        enthält nie dein Passwort). Schick sie an den <a href="{{root}}support/">Support</a>, wenn du nicht
+        weiterkommst.</li>
+    </ul>
+
+    <h2 id="updates">Updates und Entfernen</h2>
+    <p>Eine neue Version von OwnMediaSetup installiert sich über die alte; deine Einstellungen, Benutzer und
+      Mediatheken bleiben. Zum Entfernen nutze die Windows-<i>Einstellungen → Apps</i>: <i>OwnMedia Server</i>,
+      und Jellyfin und Tailscale einzeln, falls du sie nicht mehr brauchst. Deine Filme, Musik und Fotos werden
+      nie angefasst.</p>
+  </article>
+</div>

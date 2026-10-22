@@ -5,6 +5,25 @@
 (function () {
   "use strict";
 
+  // Messages in the page's language (<html lang>); English when it isn't one of these.
+  var TEXT = {
+    en: { email: "Enter an email like name@example.com.", sending: "Sending…",
+      thanks: "Thanks! We'll write once OwnMedia is on Google Play.",
+      failed: "The sign-up didn’t reach us. Check your connection, then select Notify me again.", copied: "Copied" },
+    de: { email: "Gib eine E-Mail-Adresse wie name@example.com ein.", sending: "Wird gesendet…",
+      thanks: "Danke! Wir schreiben dir, sobald OwnMedia bei Google Play ist.",
+      failed: "Die Anmeldung ist nicht bei uns angekommen. Prüfe deine Verbindung und wähle dann noch einmal „Benachrichtigen“.",
+      copied: "Kopiert" },
+    fr: { email: "Saisissez une adresse comme nom@exemple.com.", sending: "Envoi…",
+      thanks: "Merci ! Nous vous écrirons dès qu’OwnMedia sera sur Google Play.",
+      failed: "L’inscription ne nous est pas parvenue. Vérifiez votre connexion, puis sélectionnez à nouveau « Me prévenir ».",
+      copied: "Copié" },
+    es: { email: "Escribe un correo como nombre@ejemplo.com.", sending: "Enviando…",
+      thanks: "¡Gracias! Te escribiremos cuando OwnMedia esté en Google Play.",
+      failed: "La inscripción no nos llegó. Revisa tu conexión y vuelve a pulsar «Avísame».", copied: "Copiado" }
+  };
+  var T = TEXT[document.documentElement.lang] || TEXT.en;
+
   // Beta sign-up: the same Formspree form as the old waitlist page.
   var FORM_ENDPOINT = "https://formspree.io/f/mqpawabz";
   var form = document.getElementById("beta-form");
@@ -27,14 +46,14 @@
     };
     // Checked when the person leaves the field (not while typing); cleared on the next keystroke.
     form.email.addEventListener("blur", function () {
-      if (form.email.value.trim() && !emailOk()) setEmailError("Enter an email like name@example.com.");
+      if (form.email.value.trim() && !emailOk()) setEmailError(T.email);
     });
     form.email.addEventListener("input", function () { setEmailError(""); });
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var email = form.email.value.trim();
       if (!emailOk()) {
-        setEmailError("Enter an email like name@example.com.");
+        setEmailError(T.email);
         form.email.focus();
         return;
       }
@@ -49,7 +68,7 @@
         _gotcha: form._gotcha.value
       };
       button.disabled = true;
-      show("Sending…", "");
+      show(T.sending, "");
       fetch(FORM_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -57,9 +76,9 @@
       }).then(function (res) {
         if (!res.ok) throw new Error(String(res.status));
         form.reset();
-        show("Thanks! We'll write once OwnMedia is on Google Play.", "ok");
+        show(T.thanks, "ok");
       }).catch(function () {
-        show("The sign-up didn’t reach us. Check your connection, then select Notify me again.", "err");
+        show(T.failed, "err");
       }).then(function () {
         button.disabled = false;
       });
@@ -88,9 +107,10 @@
     update();
   }
 
-  // The phone menu (a <details>) closes after a tap on one of its links, outside it, or Escape.
-  var menu = document.querySelector(".menu");
-  if (menu) {
+  // The phone menu and the language list (each a <details>) close after a tap on one of their links,
+  // outside them, or Escape.
+  var popups = document.querySelectorAll("details.menu, details.lang");
+  Array.prototype.forEach.call(popups, function (menu) {
     menu.addEventListener("click", function (e) {
       if (e.target.closest("a")) menu.open = false;
     });
@@ -103,7 +123,7 @@
         menu.querySelector("summary").focus();
       }
     });
-  }
+  });
 
   // Copy buttons next to addresses and commands.
   var buttons = document.querySelectorAll("[data-copy]");
@@ -114,7 +134,7 @@
       if (!target || !navigator.clipboard) return;
       navigator.clipboard.writeText(target.textContent.trim()).then(function () {
         var label = btn.textContent;
-        btn.textContent = "Copied";
+        btn.textContent = T.copied;
         setTimeout(function () { btn.textContent = label; }, 1600);
       });
     });

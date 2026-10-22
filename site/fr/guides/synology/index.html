@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>OwnMedia sur un NAS Synology — OwnMedia</title>
+<meta name="description" content="Jellyfin dans Container Manager, le plugin OwnMedia depuis le catalogue, l’accès depuis Internet avec Tailscale. Environ une demi-heure, une seule fois.">
+<link rel="canonical" href="https://ownmedia.app/fr/guides/synology/">
+<link rel="alternate" hreflang="en" href="https://ownmedia.app/guides/synology/">
+<link rel="alternate" hreflang="de" href="https://ownmedia.app/de/guides/synology/">
+<link rel="alternate" hreflang="fr" href="https://ownmedia.app/fr/guides/synology/">
+<link rel="alternate" hreflang="es" href="https://ownmedia.app/es/guides/synology/">
+<link rel="alternate" hreflang="x-default" href="https://ownmedia.app/guides/synology/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="OwnMedia sur un NAS Synology — OwnMedia">
+<meta property="og:description" content="Jellyfin dans Container Manager, le plugin OwnMedia depuis le catalogue, l’accès depuis Internet avec Tailscale. Environ une demi-heure, une seule fois.">
+<meta property="og:url" content="https://ownmedia.app/fr/guides/synology/">
+<meta property="og:image" content="https://ownmedia.app/img/og-image.jpg?v=bcb906ff">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia : films, musique et photos de votre propre serveur">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../../../favicon.ico" sizes="any">
+<link rel="icon" href="../../../img/favicon-32.png?v=670ec50d" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../../../img/apple-touch-icon.png?v=71be1fb5">
+<link rel="preload" href="../../../fonts/bricolage-grotesque-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../../css/site.css?v=474fd499">
+<script src="../../../js/site.js?v=474fd499" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Aller au contenu</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../../../fr/" aria-label="Accueil OwnMedia">
+      <img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../../../fr/download/">Télécharger</a>
+      <a href="../../../fr/guides/" aria-current="page">Guides</a>
+      <a href="../../../privacy/">Confidentialité</a>
+      <a href="../../../fr/support/">Assistance</a>
+      <details class="lang">
+        <summary aria-label="Langue: Français"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>FR</span></summary>
+        <div class="lang-panel"><a href="../../../guides/synology/" hreflang="en" lang="en">English</a><a href="../../../de/guides/synology/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/synology/" hreflang="fr" lang="fr" aria-current="true">Français</a><a href="../../../es/guides/synology/" hreflang="es" lang="es">Español</a></div>
+      </details>
+      <a class="btn btn-small" href="../../../fr/download/#android">Obtenir l’app</a>
+    </nav>
+    <details class="menu">
+      <summary class="tip-below" aria-label="Ouvrir le menu" data-tip="Ouvrir le menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../../../fr/">Accueil</a>
+        <a href="../../../fr/download/">Télécharger</a>
+      <a href="../../../fr/guides/" aria-current="page">Guides</a>
+      <a href="../../../privacy/">Confidentialité</a>
+      <a href="../../../fr/support/">Assistance</a>
+        <a class="btn" href="../../../fr/download/#android">Obtenir l’app</a>
+        <div class="menu-langs"><a href="../../../guides/synology/" hreflang="en" lang="en">English</a><a href="../../../de/guides/synology/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/synology/" hreflang="fr" lang="fr" aria-current="true">Français</a><a href="../../../es/guides/synology/" hreflang="es" lang="es">Español</a></div>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="../../../fr/guides/">Guides</a> / Synology</div>
+    <h1>OwnMedia sur Synology</h1>
+    <p class="lead">Jellyfin dans Container Manager et le plugin OwnMedia depuis le catalogue de plugins. Pas
+      besoin du programme d’installation pour Windows. Environ une demi-heure, une seule fois.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <p>Ce que vous obtenez : les films, séries, musiques et photos du NAS sur votre téléphone, la sauvegarde
+      des photos du téléphone vers le NAS, les invitations pour vos amis et l’accès depuis Internet.</p>
+    <p class="muted">Les menus de DSM, de Jellyfin et de l’app sont cités en anglais, tels qu’ils s’appellent
+      dans l’interface anglaise.</p>
+    <ul class="toc">
+      <li><a href="#check">1. Vérifier</a></li>
+      <li><a href="#folders">2. Dossiers</a></li>
+      <li><a href="#jellyfin">3. Jellyfin</a></li>
+      <li><a href="#setup">4. Configuration</a></li>
+      <li><a href="#plugin">5. Plugin</a></li>
+      <li><a href="#phone">6. Téléphone</a></li>
+      <li><a href="#internet">7. Internet</a></li>
+      <li><a href="#slow">Vidéo lente</a></li>
+      <li><a href="#remove">Désinstaller</a></li>
+    </ul>
+
+    <h2 id="check">1. Ce NAS peut-il le faire tourner ?</h2>
+    <p>Ouvrez le <b>Package Center</b> et cherchez <b>Container Manager</b>. S’il y est, suivez ce guide.</p>
+    <p>S’il n’y est pas (petits modèles), Jellyfin existe en paquet SynoCommunity, mais généralement dans une
+      ancienne version, et le plugin OwnMedia demande Jellyfin 12.1 ou plus récent. Dans ce cas,
+      <a href="../../../fr/support/">écrivez-nous</a> et nous trouverons une autre solution.</p>
+
+    <h2 id="folders">2. Dossiers</h2>
+    <p>Le dossier partagé <code>docker</code> apparaît quand Container Manager est installé. Dans
+      <b>File Station</b>, créez :</p>
+    <ul>
+      <li><code>docker/jellyfin/config</code> et <code>docker/jellyfin/cache</code> pour Jellyfin lui-même ;</li>
+      <li>un dossier pour les photos sauvegardées depuis les téléphones, par exemple
+        <code>photo/OwnMedia</code>.</li>
+    </ul>
+    <p>Laissez vos films, séries et musiques où ils sont ; il vous faut seulement les chemins de leurs dossiers
+      (par exemple <code>/volume1/video</code>, <code>/volume1/music</code>). File Station affiche le chemin :
+      clic droit sur un dossier → <b>Properties</b>.</p>
+    <div class="note"><p>Chaque dossier a son propre numéro de volume : sur un NAS à plusieurs volumes,
+      <code>docker</code> peut être sur <code>/volume1</code> et les films et photos sur <code>/volume4</code>. À
+      l’étape 3, saisissez les chemins exactement comme Properties les affiche.</p></div>
+
+    <h2 id="jellyfin">3. Jellyfin dans Container Manager</h2>
+    <p><b>Container Manager → Project → Create</b> :</p>
+    <ul>
+      <li>Project name : <code>ownmedia</code></li>
+      <li>Path : <code>/volume1/docker/jellyfin</code></li>
+      <li>Source : <b>Create docker-compose.yml</b>, et collez le fichier ci-dessous. Remplacez les chemins à
+        gauche des deux-points par les vôtres de l’étape 2, numéro de volume compris ; ne touchez pas au côté
+        droit.</li>
+    </ul>
+<pre><code id="compose">services:
+  jellyfin:
+    image: jellyfin/jellyfin:12.1
+    container_name: jellyfin
+    # Le réseau du NAS : les téléphones du Wi-Fi trouvent le serveur tout seuls ("Add your server").
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /volume1/docker/jellyfin/config:/config
+      - /volume1/docker/jellyfin/cache:/cache
+      - /volume1/video:/media/video:ro
+      - /volume1/music:/media/music:ro
+      - /volume1/photo/OwnMedia:/media/photos</code></pre>
+    <p><button class="btn btn-glass btn-small" type="button" data-copy="compose">Copier le fichier</button></p>
+    <p><b>Next → Done.</b> Container Manager télécharge Jellyfin (environ 300 Mo) et le démarre.</p>
+    <p><code>:ro</code> signifie lecture seule : Jellyfin ne peut rien modifier dans vos films et votre musique.
+      Le dossier des photos n’a pas de <code>:ro</code>, car les sauvegardes du téléphone y sont écrites.</p>
+
+    <h2 id="setup">4. Première configuration de Jellyfin</h2>
+    <p>Dans un navigateur sur votre ordinateur, ouvrez <code>http://&lt;adresse du NAS&gt;:8096</code>, la même
+      adresse que pour DSM, par exemple <code>http://192.168.1.50:8096</code> :</p>
+    <ol>
+      <li>Langue → créez un utilisateur : un nom et un mot de passe (vous les saisirez sur le téléphone).</li>
+      <li>Bibliothèques : « Movies » → dossier <code>/media/video</code>, « Music » → <code>/media/music</code>,
+        et si vous voulez « Photos » → <code>/media/photos</code>.</li>
+      <li>Accès à distance : laissez-le activé. Terminé.</li>
+    </ol>
+
+    <h2 id="plugin">5. Le plugin OwnMedia</h2>
+    <p>Dans Jellyfin : <b>Dashboard → Plugins → Manage Repositories → +</b> :</p>
+    <ul>
+      <li>Nom : <code>OwnMedia</code></li>
+      <li>URL :</li>
+    </ul>
+    <div class="copy">
+      <code id="catalog">https://raw.githubusercontent.com/3dengineering01-star/Homeplayer/main/jellyfin-repo/manifest.json</code>
+      <button class="btn btn-glass btn-small" type="button" data-copy="catalog">Copier</button>
+    </div>
+    <p>Enregistrez → revenez dans <b>Plugins</b>, choisissez le filtre <b>All</b> (ou cherchez) → <b>Homeplay
+      Backup</b> → Install. Redémarrez ensuite Jellyfin avec le bouton <b>Restart</b> de la page principale du
+      <b>Dashboard</b> (pas dans Plugins). Après le redémarrage, le plugin apparaît sous le filtre
+      <b>Installed</b>, marqué Active.</p>
+    <p>Dans les réglages de <b>Homeplay Backup</b>, indiquez le dossier des sauvegardes de photos :
+      <code>/media/photos</code>.</p>
+    <p>Jellyfin signale de lui-même les nouvelles versions du plugin, dans Plugins.</p>
+
+    <h2 id="phone">6. Le téléphone</h2>
+    <p>Dans OwnMedia, touchez <b>Add your server</b> : le NAS est trouvé tout seul si le téléphone est sur le
+      même Wi-Fi. Sinon, saisissez <code>&lt;adresse du NAS&gt;:8096</code>. Utilisez le nom et le mot de passe de
+      l’étape 4.</p>
+    <p>Une page avec un QR code pour les téléphones : <code>http://&lt;adresse du NAS&gt;:8096/Homeplay/Phone</code>.</p>
+    <div class="note"><p>Si <code>http://&lt;adresse du NAS&gt;:8096</code> ne s’ouvre pas dans le navigateur, ou si
+      le téléphone ne trouve pas le NAS, et que le pare-feu de DSM est actif (<b>Control Panel → Security →
+      Firewall</b>), ajoutez à son profil une règle <b>Allow</b> pour les ports 8096 (TCP) et 7359 (UDP ; les
+      téléphones s’en servent pour trouver le serveur sur le Wi-Fi).</p></div>
+
+    <h2 id="internet">7. Accès depuis Internet et invitations (Tailscale)</h2>
+    <p>Seul Jellyfin (port 8096) est ouvert sur Internet ; DSM reste fermé, et rien ne change sur votre
+      box.</p>
+    <ol class="ol-steps">
+      <li><b>Package Center → Tailscale</b> → installer → ouvrir → connectez-vous avec votre compte Tailscale. Si
+        Tailscale était déjà sur ce NAS, vous verrez plutôt <i>« Your device’s key has expired →
+        Reauthenticate »</i> : c’est normal, appuyez dessus et connectez-vous.</li>
+      <li>Un dossier pour les résultats des tâches (utile à l’étape 4) : dans <b>File Station</b>, créez par
+        exemple <code>docker/tasklogs</code>. Puis <b>Control Panel → Task Scheduler → Settings</b> → <b>Save
+        output results</b> → ce dossier.</li>
+      <li><b>Task Scheduler → Create → Triggered Task → User-defined script</b> :
+        <ul>
+          <li>onglet <b>General</b> : nom <code>OwnMedia Funnel</code>, utilisateur <code>root</code>, événement
+            <b>Boot-up</b>, <b>Enabled</b> ;</li>
+          <li>onglet <b>Task Settings</b>, script :</li>
+        </ul>
+<pre><code id="funnel">/var/packages/Tailscale/target/bin/tailscale funnel --bg 8096</code></pre>
+        <p>À l’enregistrement, DSM avertit qu’une tâche s’exécute en <code>root</code> et demande le <b>mot de
+          passe de votre compte DSM</b> (celui avec lequel vous êtes connecté à DSM). Gardez-le sous la
+          main.</p></li>
+      <li>Sélectionnez la tâche → <b>Run</b>. Le résultat est dans le dossier de l’étape 2 :
+        <code>&lt;dossier&gt;/OwnMedia Funnel/&lt;heure&gt;/output.log</code>. Il doit indiquer :
+<pre><code>Available on the internet:
+https://&lt;nom du NAS&gt;.&lt;votre tailnet&gt;.ts.net/
+|-- proxy http://127.0.0.1:8096</code></pre>
+        <p>S’il affiche à la place un lien pour activer Funnel, ouvrez-le, appuyez sur <b>Enable Funnel</b> et
+          relancez la tâche. Le réglage est conservé ; la tâche au démarrage est un filet de sécurité après un
+          redémarrage du NAS.</p></li>
+      <li>Vérifiez : ouvrez <code>https://&lt;nom du NAS&gt;.&lt;votre tailnet&gt;.ts.net/Homeplay/Phone</code> sur un
+        téléphone <b>avec le Wi-Fi désactivé</b>. Les premières minutes, l’adresse peut parfois refuser de s’ouvrir
+        (erreur de connexion sécurisée) : attendez 2 à 3 minutes.</li>
+      <li>Dans OwnMedia : le menu du serveur ⋮ → <b>Share with friends</b> → <i>I have an address already</i> →
+        cette adresse.</li>
+    </ol>
+    <p class="muted">Testé sur un RS2423+ avec DSM 7.3.2 et le paquet Tailscale 1.58.2.</p>
+
+    <h2 id="slow">Si la vidéo saccade</h2>
+    <p>Vérifiez d’abord si le serveur convertit la vidéo : pendant la lecture, ouvrez Jellyfin dans un
+      navigateur → <b>Dashboard</b> → l’icône « i » à côté de la lecture. <i>Direct playing</i> signifie que le
+      serveur envoie le fichier tel quel, et que le goulot d’étranglement est le chemin vers le téléphone, pas le
+      NAS.</p>
+    <p>La vitesse de ce chemin :</p>
+    <ul>
+      <li><b>À la maison</b>, ajoutez une seconde fois le NAS dans OwnMedia avec son adresse locale
+        (<code>&lt;adresse du NAS&gt;:8096</code>) et regardez par elle : la vidéo passe directement par le Wi-Fi, à
+        pleine vitesse.</li>
+      <li><b>Hors de chez vous</b>, installez l’app Tailscale sur le téléphone et connectez-vous au même compte
+        que sur le NAS. L’adresse <code>https://….ts.net</code> passe alors par Tailscale et non par Funnel.</li>
+      <li>Tailscale relie le téléphone au NAS directement ou, quand la box ne le permet pas, par son serveur
+        relais. Par le relais, comme par Funnel (pour vos amis), vous obtenez environ 20 Mbit/s. C’est assez
+        pour des films et séries ordinaires en 1080p (5–10 Mbit/s), mais pas pour des fichiers 4K lourds : la 4K
+        à 60 images par seconde demande environ 40 Mbit/s et saccade (« lit 2 secondes, attend 2 secondes »).</li>
+      <li>Un ordinateur du même tailnet indique si la connexion est directe :
+        <code>tailscale ping &lt;nom du NAS&gt;</code> ; « via DERP » signifie par le relais. Une connexion directe
+        vient souvent avec un paquet Tailscale récent sur le NAS (celui du Package Center peut être ancien ; le
+        nouveau est sur pkgs.tailscale.com), ou avec le port UDP 41641 ouvert sur la box du NAS vers le NAS
+        (seul le trafic chiffré de Tailscale y passe ; DSM reste fermé).</li>
+    </ul>
+    <p>Que faire des fichiers lourds sans connexion directe :</p>
+    <ul>
+      <li>téléchargez-les à l’avance quand vous êtes à la maison : appui long → <b>Download</b>, puis regardez
+        depuis Downloads ;</li>
+      <li>choisissez une qualité plus basse (1080p) dans le lecteur : le serveur convertit la vidéo. Un NAS sans
+        carte graphique convertit avec le processeur et risque de ne pas suivre en 4K.</li>
+    </ul>
+
+    <h2 id="app-for-friends">L’app pour vos amis</h2>
+    <p>Rien à configurer : la page d’invitation et le QR code envoient vos amis télécharger la dernière app sur
+      <a href="../../../fr/download/#android">ownmedia.app</a>. Il faut pour cela le plugin 1.8 ou plus récent ;
+      Jellyfin propose la mise à jour dans Dashboard → Plugins.</p>
+
+    <h2 id="remove">Désinstaller OwnMedia du NAS</h2>
+    <ol>
+      <li><b>Container Manager → Project → <code>ownmedia</code> → Stop → Delete</b>, puis <b>Image →
+        <code>jellyfin/jellyfin</code> → Delete</b> (environ 1,7 Go).</li>
+      <li><b>Task Scheduler → <code>OwnMedia Funnel</code> → Delete.</b> Cela ne coupe pas l’accès depuis
+        Internet : Funnel reste actif dans Tailscale (l’adresse s’ouvre, avec une erreur). Pour le couper, soit
+        désinstallez le paquet Tailscale (<b>Package Center → Tailscale → Uninstall</b>, puis retirez le NAS de la
+        liste Machines sur le site de Tailscale), soit, si vous avez besoin de Tailscale pour autre chose,
+        exécutez une fois une tâche en <code>root</code> :
+        <code>/var/packages/Tailscale/target/bin/tailscale funnel --https=443 off</code>.</li>
+      <li><b>File Station :</b> supprimez <code>docker/jellyfin</code> et <code>docker/tasklogs</code>. Si le dossier
+        partagé <code>docker</code> est maintenant vide, vous pouvez le supprimer dans <b>Control Panel → Shared
+        Folder</b> (au prochain projet, il faudra le recréer).</li>
+      <li>Vos films, musiques et sauvegardes de photos ne sont pas touchés : supprimez vous-même le dossier des
+        sauvegardes si vous n’en avez plus besoin.</li>
+      <li>Dans OwnMedia sur le téléphone : le menu du serveur ⋮ → supprimer le serveur.</li>
+    </ol>
+  </article>
+</div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../../../fr/"><img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Films, séries, musique et photos de votre propre serveur, sur votre téléphone Android.</p>
+      </div>
+      <div>
+        <h2>Application</h2>
+        <ul>
+          <li><a href="../../../fr/#features">Fonctionnalités</a></li>
+          <li><a href="../../../fr/#whats-new">Nouveautés</a></li>
+          <li><a href="../../../fr/#share">Partager avec vos proches</a></li>
+          <li><a href="../../../fr/download/">Télécharger</a></li>
+          <li><a href="../../../fr/#screens">Captures d’écran</a></li>
+          <li><a href="../../../fr/#faq">Questions fréquentes</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Aide</h2>
+        <ul>
+          <li><a href="../../../fr/guides/windows/">Serveur sous Windows</a></li>
+          <li><a href="../../../fr/guides/synology/">NAS Synology</a></li>
+          <li><a href="../../../fr/guides/docker/">Docker</a></li>
+          <li><a href="../../../fr/guides/remote-access/">Hors de chez vous et amis</a></li>
+          <li><a href="../../../fr/guides/tv/">Regarder sur la télé</a></li>
+          <li><a href="../../../fr/support/">Assistance</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Société</h2>
+        <address>
+          MROYA SIA<br>
+          N° d’immatriculation 50203370261<br>
+          Riga, Ganibu dambis 20A, LV-1045<br>
+          <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>
+        </address>
+        <ul>
+          <li><a href="../../../legal/">Informations sur la société (en anglais)</a></li>
+          <li><a href="../../../privacy/">Politique de confidentialité (en anglais)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 MROYA SIA. Pas de cookies, pas de statistiques, pas de pistage.</span>
+      <span>OwnMedia est un projet indépendant, sans lien avec Jellyfin, Navidrome, Plex ou Tailscale.</span>
+    </div>
+    <nav class="footer-langs" aria-label="Langue"><div class="footer-langs-list"><a href="../../../guides/synology/" hreflang="en" lang="en">English</a><a href="../../../de/guides/synology/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/synology/" hreflang="fr" lang="fr" aria-current="true">Français</a><a href="../../../es/guides/synology/" hreflang="es" lang="es">Español</a></div></nav>
+  </div>
+</footer>
+</body>
+</html>
