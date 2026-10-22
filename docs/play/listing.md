@@ -54,6 +54,11 @@ SHARE WITH FRIENDS
 IN THE CAR
 • Android Auto: your music from the server and from downloads, with voice search.
 
+FREE FOR A MONTH, THEN ONE PURCHASE
+• Everything works for free for the first 30 days.
+• After that, OwnMedia Pro keeps it all working: a one-time purchase in Google Play, not a subscription.
+• Friends you invite to your server watch and listen for free when you have Pro.
+
 NO STRINGS
 • No account, no ads, no analytics, no tracking. The app talks to your servers, and only if you allow it to LRCLIB for lyrics.
 
@@ -110,6 +115,11 @@ OwnMedia играет музыку и фильмы с вашего собств�
 
 В МАШИНЕ
 • Android Auto: музыка с сервера и из загрузок, голосовой поиск.
+
+МЕСЯЦ БЕСПЛАТНО, ПОТОМ ОДНА ПОКУПКА
+• Первые 30 дней всё работает бесплатно.
+• Дальше всё работает с OwnMedia Pro: это разовая покупка в Google Play, не подписка.
+• Друзья, которых вы пригласили на свой сервер, смотрят и слушают бесплатно, если у вас есть Pro.
 
 БЕЗ ЛИШНЕГО
 • Без учётной записи, рекламы, аналитики и слежки. Приложение общается с вашими серверами и, если вы разрешите, с LRCLIB за текстами песен.
