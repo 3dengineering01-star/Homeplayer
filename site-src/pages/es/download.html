@@ -1,0 +1,70 @@
+title: Descargar
+description: OwnMedia para Android, el instalador del servidor OwnMedia para Windows y el catálogo de plugins para NAS y Docker.
+path: download/
+---
+<div class="page-hero">
+  <div class="wrap">
+    <h1>Descargar</h1>
+    <p class="lead">La app para tu teléfono y la parte del servidor para tu ordenador o tu NAS.</p>
+  </div>
+</div>
+
+<section class="dl">
+  <div class="wrap">
+    <div class="grid grid-3">
+      <article class="dl-card glass" id="android">
+        <div class="icon i-orange">{{icon:phone}}</div>
+        <h2 class="h3">App para Android</h2>
+        <p class="muted">{{ANDROID_STATE}}</p>
+        <ul>
+          <li>Android 7 o posterior</li>
+          <li>Jellyfin y Navidrome / Subsonic</li>
+          <li>Pronto en Google Play</li>
+        </ul>
+        {{APK_META}}
+        <p class="dl-note">Android Auto solo muestra una app instalada desde un archivo después de activar
+          <i>Fuentes desconocidas</i> en los ajustes para desarrolladores de Android Auto.</p>
+        <div class="btn-row">{{APK_BUTTON}}<a class="btn btn-glass" href="{{root}}#whats-new">Novedades</a></div>
+      </article>
+
+      <article class="dl-card glass" id="windows">
+        <div class="icon i-cyan">{{icon:windows}}</div>
+        <h2 class="h3">Servidor para Windows</h2>
+        <p class="muted"><b>OwnMediaSetup.exe</b> instala Jellyfin, añade tus carpetas, pone el plugin de
+          OwnMedia y, si quieres, abre el servidor a internet. Al final muestra un código QR para tu
+          teléfono.</p>
+        <ul>
+          <li>Windows 10 u 11, de 64 bits</li>
+          <li>Permisos de administrador, internet durante la instalación</li>
+          <li>¿Ya tienes Jellyfin? Solo se añade el plugin</li>
+        </ul>
+        {{INSTALLER_META}}
+        <div class="btn-row">{{INSTALLER_BUTTON}}<a class="btn btn-glass" href="{{root}}guides/windows/">Leer la guía</a></div>
+      </article>
+
+      <article class="dl-card glass" id="nas">
+        <div class="icon i-violet">{{icon:nas}}</div>
+        <h2 class="h3">NAS y Docker</h2>
+        <p class="muted">Ejecuta Jellyfin 12.1 o posterior en un contenedor y añade en Jellyfin el catálogo de
+          plugins de OwnMedia: Dashboard → Plugins → Manage Repositories → +.</p>
+        <div class="copy">
+          <code id="catalog">{{CATALOG_URL}}</code>
+          <button class="btn btn-glass btn-small" type="button" data-copy="catalog">Copiar</button>
+        </div>
+        <div class="btn-row"><a class="btn btn-glass" href="{{root}}guides/synology/">Guía de Synology</a><a class="btn btn-glass" href="{{root}}guides/docker/">Guía de Docker</a></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap narrow">
+    <div class="card glass">
+      <h2 class="h3">Qué hace el plugin</h2>
+      <p>«Homeplay Backup» es la parte del servidor de OwnMedia: recibe la copia de fotos de los teléfonos, crea
+        enlaces de invitación para amigos y muestra la página con el código QR para conectar un teléfono. Su
+        código es abierto, bajo la GPL (<a href="{{SOURCE_URL}}" rel="noopener">código fuente</a>). Las versiones
+        nuevas aparecen solas en Jellyfin, en Plugins.</p>
+    </div>
+  </div>
+</section>

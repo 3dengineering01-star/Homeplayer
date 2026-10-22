@@ -19,7 +19,10 @@ In a page, {{root}} is the way back to the site's root from that page ("./", "..
 so that every link inside the site is relative; {{icon:film}} is an icon; {{NAME}} is one of the
 SETTINGS or of the snippets made from them (see snippets()).
 
-Another language later: the same pages in site-src/pages/ru/ with "lang: ru" and paths under ru/.
+Other languages: the same pages in site-src/pages/<lang>/ (de, fr, es) with the same "path:" as the
+English page; they are built under de/, fr/, es/. Links to {{root}}<path> inside such a page go to the
+page in the same language when it is translated, and to the English one when it isn't (privacy,
+company details). The words of the header, footer and buttons are in strings.py.
 No third-party code: Python's standard library only.
 """
 
@@ -33,6 +36,8 @@ import sys
 import zipfile
 from datetime import date
 from pathlib import Path
+
+from strings import LANGS, NBSP, OG_LOCALE, UI
 
 # ---------------------------------------------------------------------------------------------
 # SETTINGS: the owner's answers. Empty means "not given yet": the site shows a placeholder and
@@ -122,43 +127,40 @@ def icon(name):
 # Snippets made from the settings.
 # ---------------------------------------------------------------------------------------------
 
-def snippets(s):
+def snippets(s, lang="en"):
+    u = UI[lang]
     e = {k: html.escape(v) for k, v in s.items()}
     email = s["CONTACT_EMAIL"]
     out = dict(e)
     out["EMAIL_LINK"] = (f'<a href="mailto:{e["CONTACT_EMAIL"]}">{e["CONTACT_EMAIL"]}</a>' if email
-                         else "<em>(email address coming soon)</em>")
+                         else f"<em>{u['email_soon']}</em>")
     if s["PLAY_URL"]:
         out["PLAY_BUTTON"] = (f'<a class="btn" href="{e["PLAY_URL"]}" rel="noopener">{icon("play")} '
-                              'Get it on Google Play</a>')
-        out["PLAY_STATE"] = "Available on Google Play."
+                              f'{u["play_button"]}</a>')
+        out["PLAY_STATE"] = u["play_state"]
     else:
-        out["PLAY_BUTTON"] = (f'<a class="btn" href="{{{{root}}}}#play">{icon("phone")} Get notified</a>')
-        out["PLAY_STATE"] = "Coming to Google Play: leave your email and we’ll write when it’s there."
+        out["PLAY_BUTTON"] = f'<a class="btn" href="{{{{root}}}}#play">{icon("phone")} {u["notify_button"]}</a>'
+        out["PLAY_STATE"] = u["play_soon"]
     if s["INSTALLER_URL"]:
         out["INSTALLER_BUTTON"] = (f'<a class="btn" href="{e["INSTALLER_URL"]}" download>{icon("download")} '
-                                   'Download OwnMediaSetup.exe</a>')
+                                   f'{u["installer_button"]}</a>')
     else:
         out["INSTALLER_BUTTON"] = (f'<a class="btn" aria-disabled="true" role="link">{icon("download")} '
-                                   'Download link coming soon</a>')
-    out["INSTALLER_META"] = installer_meta(s)
+                                   f'{u["installer_soon"]}</a>')
+    out["INSTALLER_META"] = installer_meta(s, u)
     apk = Path(s["APK_FILE"])
     if s["APK_URL"] and apk.is_file():
         v = html.escape(apk_version(apk))
         out["APP_VERSION"] = v
         out["APK_BUTTON"] = (f'<a class="btn" href="{e["APK_URL"]}" download type="application/vnd.android.package-archive">'
-                             f'{icon("download")} Download for Android</a>')
+                             f'{icon("download")} {u["apk_button"]}</a>')
         mb = round(apk.stat().st_size / 1_000_000)
         sha = hashlib.sha256(apk.read_bytes()).hexdigest()
-        warn = ('If the phone warns about an unknown developer, tap <i>More details</i> → '
-                '<i>Install anyway</i>.')
-        out["APK_NOTE"] = (f'<p class="hero-note">Version {v} for Android phones. {warn} The app tells you '
-                           'when a new version is out.<small>Coming to Google Play.</small></p>')
-        out["APK_META"] = (f'<p class="dl-note">Version {v} for Android phones, {mb} MB. {warn} If it asks, '
-                           'allow installing apps from your browser. The app tells you when a new version is '
-                           'out; it installs over the old one, and your servers and settings stay.</p>'
+        warn = u["apk_warn"]
+        out["APK_NOTE"] = f'<p class="hero-note">{u["apk_note"].format(v=v, warn=warn)}</p>'
+        out["APK_META"] = (f'<p class="dl-note">{u["apk_meta"].format(v=v, mb=mb, warn=warn)}</p>'
                            f'<p class="dl-meta">SHA-256: <code class="sha">{sha}</code></p>')
-        out["ANDROID_STATE"] = "The app for your phone: movies, shows, music and photos from your servers."
+        out["ANDROID_STATE"] = u["android_state"]
     else:
         out["APP_VERSION"] = ""
         out["APK_BUTTON"] = out["PLAY_BUTTON"]
@@ -178,143 +180,171 @@ def apk_version(apk):
         raise SystemExit(f"No version for the app: {info} ({err})")
 
 
-def installer_meta(s):
+def installer_meta(s, u):
     """Version, size and checksum of the installer, and what to do about Windows' warning."""
     f = Path(s["INSTALLER_FILE"])
     if not (s["INSTALLER_URL"] and f.is_file()):
         return ""
     sha = hashlib.sha256(f.read_bytes()).hexdigest()
     mb = round(f.stat().st_size / 1_000_000)
-    return (f'<p class="dl-meta">Version {html.escape(s["INSTALLER_VERSION"])}, {mb} MB. '
+    return (f'<p class="dl-meta">{u["version"]} {html.escape(s["INSTALLER_VERSION"])}, {mb} {u["mb"]}. '
             f'SHA-256: <code class="sha">{sha}</code></p>'
-            '<p class="dl-note">The installer isn’t digitally signed yet, so Windows may say '
-            '<i>“Windows protected your PC”</i>. Click <i>More info</i>, then <i>Run anyway</i>.</p>')
+            f'<p class="dl-note">{u["installer_unsigned"]}</p>')
 
 
 # ---------------------------------------------------------------------------------------------
 # The page around the content.
 # ---------------------------------------------------------------------------------------------
 
-NAV = [
-    ("download/", "Download"),
-    ("guides/", "Guides"),
-    ("privacy/", "Privacy"),
-    ("support/", "Support"),
-]
+NAV = ["download/", "guides/", "privacy/", "support/"]
 
 CSP = ("default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
        "connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; "
        "base-uri 'self'; object-src 'none'")
 
 
-def header(root, path):
-    def item(href, label):
-        current = ' aria-current="page"' if path.startswith(href) else ""
-        return f'<a href="{root}{href}"{current}>{label}</a>'
+def prefix(lang):
+    """Where a language's pages live: "" for English, "de/" for German."""
+    return "" if lang == "en" else f"{lang}/"
 
-    links = "\n      ".join(item(h, l) for h, l in NAV)
-    return f"""<a class="skip" href="#main">Skip to content</a>
+
+def lang_links(lang, key, keys, cls):
+    """Links to this page in each language (to that language's home where it isn't translated).
+    {{top}} is the site's root like {{root}}, but these links are never moved into the page's language."""
+    items = []
+    for code, name in LANGS.items():
+        target = prefix(code) + (key if key in keys[code] else "")
+        current = ' aria-current="true"' if code == lang else ""
+        items.append(f'<a href="{{{{top}}}}{target}" hreflang="{code}" lang="{code}"{current}>{name}</a>')
+    return f'<div class="{cls}">' + "".join(items) + "</div>"
+
+
+def header(key, lang, keys):
+    u = UI[lang]
+
+    def item(href):
+        current = ' aria-current="page"' if key.startswith(href) else ""
+        return f'<a href="{{{{root}}}}{href}"{current}>{u["nav"][href]}</a>'
+
+    links = "\n      ".join(item(h) for h in NAV)
+    return f"""<a class="skip" href="#main">{u["skip"]}</a>
 <header class="site-header">
   <div class="wrap">
-    <a class="brand" href="{root}" aria-label="OwnMedia home">
-      <img src="{root}img/logo-64.webp" width="34" height="34" alt="">OwnMedia
+    <a class="brand" href="{{{{root}}}}" aria-label="{u["home_aria"]}">
+      <img src="{{{{root}}}}img/logo-64.webp" width="34" height="34" alt="">OwnMedia
     </a>
     <nav class="nav" aria-label="Main">
       {links}
-      <a class="btn btn-small" href="{root}download/#android">Get the app</a>
+      <details class="lang">
+        <summary aria-label="{u["language"]}: {LANGS[lang]}">{icon("globe")}<span>{lang.upper()}</span></summary>
+        {lang_links(lang, key, keys, "lang-panel")}
+      </details>
+      <a class="btn btn-small" href="{{{{root}}}}download/#android">{u["get_app"]}</a>
     </nav>
     <details class="menu">
-      <summary class="tip-below" aria-label="Open menu" data-tip="Open menu">{icon("menu")}</summary>
+      <summary class="tip-below" aria-label="{u["open_menu"]}" data-tip="{u["open_menu"]}">{icon("menu")}</summary>
       <nav class="menu-panel" aria-label="Main">
-        <a href="{root}">Home</a>
+        <a href="{{{{root}}}}">{u["home"]}</a>
         {links}
-        <a class="btn" href="{root}download/#android">Get the app</a>
+        <a class="btn" href="{{{{root}}}}download/#android">{u["get_app"]}</a>
+        {lang_links(lang, key, keys, "menu-langs")}
       </nav>
     </details>
   </div>
 </header>"""
 
 
-def footer(root, sn):
+def footer(sn, lang, key, keys):
+    u = UI[lang]
     return f"""<footer class="site-footer">
   <div class="wrap">
     <div class="footer-grid">
       <div class="footer-brand">
-        <a class="brand" href="{root}"><img src="{root}img/logo-64.webp" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
-        <p>Movies, shows, music and photos from your own server, on your Android phone.</p>
+        <a class="brand" href="{{{{root}}}}"><img src="{{{{root}}}}img/logo-64.webp" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>{u["tagline"]}</p>
       </div>
       <div>
-        <h2>App</h2>
+        <h2>{u["f_app"]}</h2>
         <ul>
-          <li><a href="{root}#features">Features</a></li>
-          <li><a href="{root}#whats-new">What’s new</a></li>
-          <li><a href="{root}#share">Sharing with friends</a></li>
-          <li><a href="{root}download/">Download</a></li>
-          <li><a href="{root}#screens">Screenshots</a></li>
-          <li><a href="{root}#faq">FAQ</a></li>
+          <li><a href="{{{{root}}}}#features">{u["f_features"]}</a></li>
+          <li><a href="{{{{root}}}}#whats-new">{u["f_whatsnew"]}</a></li>
+          <li><a href="{{{{root}}}}#share">{u["f_sharing"]}</a></li>
+          <li><a href="{{{{root}}}}download/">{u["f_download"]}</a></li>
+          <li><a href="{{{{root}}}}#screens">{u["f_screens"]}</a></li>
+          <li><a href="{{{{root}}}}#faq">{u["f_faq"]}</a></li>
         </ul>
       </div>
       <div>
-        <h2>Help</h2>
+        <h2>{u["f_help"]}</h2>
         <ul>
-          <li><a href="{root}guides/windows/">Windows server</a></li>
-          <li><a href="{root}guides/synology/">Synology NAS</a></li>
-          <li><a href="{root}guides/docker/">Docker</a></li>
-          <li><a href="{root}guides/remote-access/">Remote access &amp; friends</a></li>
-          <li><a href="{root}guides/tv/">Watch on TV</a></li>
-          <li><a href="{root}support/">Support</a></li>
+          <li><a href="{{{{root}}}}guides/windows/">{u["f_windows"]}</a></li>
+          <li><a href="{{{{root}}}}guides/synology/">{u["f_synology"]}</a></li>
+          <li><a href="{{{{root}}}}guides/docker/">{u["f_docker"]}</a></li>
+          <li><a href="{{{{root}}}}guides/remote-access/">{u["f_remote"]}</a></li>
+          <li><a href="{{{{root}}}}guides/tv/">{u["f_tv"]}</a></li>
+          <li><a href="{{{{root}}}}support/">{u["f_support"]}</a></li>
         </ul>
       </div>
       <div>
-        <h2>Company</h2>
+        <h2>{u["f_company"]}</h2>
         <address>
           {sn["COMPANY_NAME"]}<br>
-          Reg. No. {sn["COMPANY_REG"]}<br>
+          {u["reg_no"]} {sn["COMPANY_REG"]}<br>
           {sn["COMPANY_ADDRESS"]}<br>
           {sn["EMAIL_LINK"]}
         </address>
         <ul>
-          <li><a href="{root}legal/">Company details</a></li>
-          <li><a href="{root}privacy/">Privacy policy</a></li>
+          <li><a href="{{{{root}}}}legal/">{u["company_details"]}</a></li>
+          <li><a href="{{{{root}}}}privacy/">{u["privacy_policy"]}</a></li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; {sn["YEAR"]} {sn["COMPANY_NAME"]}. No cookies, no analytics, no tracking.</span>
-      <span>OwnMedia is an independent project, not affiliated with Jellyfin, Navidrome, Plex or Tailscale.</span>
+      <span>&copy; {sn["YEAR"]} {sn["COMPANY_NAME"]}. {u["no_cookies"]}</span>
+      <span>{u["independent"]}</span>
     </div>
+    <nav class="footer-langs" aria-label="{u["language"]}">{lang_links(lang, key, keys, "footer-langs-list")}</nav>
   </div>
 </footer>"""
 
 
-def page(meta, body, sn, asset_v):
-    path = meta["path"]
+def page(meta, body, sn, asset_v, keys):
+    key, lang = meta["path"], meta["lang"]
+    path = prefix(lang) + key
     if meta.get("absolute"):
         root = "/"  # the 404 page is shown at any address: its links start at the site's root
     else:
         root = "../" * path.count("/") or "./"
     url = sn["SITE_URL"] + "/" + path
-    title = meta["title"] if path == "" else f'{meta["title"]} — OwnMedia'
+    title = meta["title"] if key == "" else f'{meta["title"]} — OwnMedia'
     title_e, desc_e = html.escape(title), html.escape(meta["description"])
     robots = '\n<meta name="robots" content="noindex">' if meta.get("noindex") else ""
+    # The same page in the other languages, for search engines; English is the default.
+    langs = [code for code in LANGS if key in keys[code]]
+    alternates = ""
+    if len(langs) > 1 and not meta.get("noindex"):
+        alternates = "".join(f'\n<link rel="alternate" hreflang="{code}" href="{sn["SITE_URL"]}/{prefix(code)}{key}">'
+                             for code in langs)
+        alternates += f'\n<link rel="alternate" hreflang="x-default" href="{sn["SITE_URL"]}/{key}">'
     head = f"""<!doctype html>
-<html lang="{meta.get("lang", "en")}">
+<html lang="{lang}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="{CSP}">
 <title>{title_e}</title>
 <meta name="description" content="{desc_e}">{robots}
-<link rel="canonical" href="{url}">
+<link rel="canonical" href="{url}">{alternates}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OwnMedia">
+<meta property="og:locale" content="{OG_LOCALE[lang]}">
 <meta property="og:title" content="{title_e}">
 <meta property="og:description" content="{desc_e}">
 <meta property="og:url" content="{url}">
 <meta property="og:image" content="{sn["SITE_URL"]}/img/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="OwnMedia: movies, music and photos from your own server">
+<meta property="og:image:alt" content="{UI[lang]["og_alt"]}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
@@ -327,9 +357,9 @@ def page(meta, body, sn, asset_v):
 </head>
 <body>
 """
-    text = (head + header(root, path) + '\n<main id="main">\n' + body.strip() + "\n</main>\n"
-            + footer(root, sn) + "\n</body>\n</html>\n")
-    return fill(text, sn, root)
+    text = (head + header(key, lang, keys) + '\n<main id="main">\n' + body.strip() + "\n</main>\n"
+            + footer(sn, lang, key, keys) + "\n</body>\n</html>\n")
+    return fill(text, sn, root, lang, keys)
 
 
 # A screenshot that may not be taken yet: {{shot:name|alt text|caption|small caption}} shows
@@ -352,11 +382,39 @@ def shot(m):
     return ""
 
 
-def fill(text, sn, root):
+def localize(text, lang, keys):
+    """Links to pages of the site go to the page in the same language, when it has one."""
+    if lang == "en":
+        return text
+
+    def move(m):
+        target = m.group(2)
+        return f"{m.group(1)}{{{{root}}}}{prefix(lang)}{target}" if target in keys[lang] else m.group(0)
+
+    return re.sub(r'(href=")\{\{root\}\}([^"#?]*)', move, text)
+
+
+def french_spaces(body):
+    """French puts a no-break space before : ; ? ! and inside « »; not in code, tags or placeholders."""
+    out, skip = [], 0
+    for part in re.split(r"(<[^>]+>|\{\{[^}]*\}\})", body):
+        if part.startswith("<"):
+            tag = re.match(r"</?(\w+)", part)
+            if tag and tag.group(1).lower() in ("pre", "code"):
+                skip += -1 if part.startswith("</") else 1
+        elif not part.startswith("{{") and not skip:
+            part = re.sub(r" ([:;?!»])", NBSP + r"\1", part).replace("« ", "«" + NBSP)
+        out.append(part)
+    return "".join(out)
+
+
+def fill(text, sn, root, lang="en", keys=None):
     text = re.sub(r"\{\{icon:([a-z-]+)\}\}", lambda m: icon(m.group(1)), text)
     text = re.sub(r"\{\{shot:([a-z0-9-]+)\|([^|}]*)\|([^|}]*)\|([^|}]*)\}\}", shot, text)
     for _ in range(2):  # snippets may hold {{root}}
-        text = text.replace("{{root}}", root)
+        if keys:
+            text = localize(text, lang, keys)
+        text = text.replace("{{root}}", root).replace("{{top}}", root)
         text = re.sub(r"\{\{([A-Z_]+)\}\}", lambda m: sn[m.group(1)], text)
     left = re.findall(r"\{\{[^}]*\}\}", text)
     if left:
@@ -367,7 +425,10 @@ def fill(text, sn, root):
 def read_page(file):
     raw = file.read_text(encoding="utf-8")
     top, body = raw.split("\n---\n", 1)
-    meta = {}
+    lang = file.parent.name if file.parent != PAGES else "en"
+    if lang == "fr":
+        body = french_spaces(body)
+    meta = {"lang": lang}
     for line in top.strip().splitlines():
         key, value = line.split(":", 1)
         meta[key.strip()] = value.strip()
@@ -398,7 +459,6 @@ def write(rel, text):
 
 def main():
     s = SETTINGS
-    sn = snippets(s)
     # Empty site/ and fill it again. The folder itself stays: it may be open in Explorer or a shell.
     OUT.mkdir(exist_ok=True)
     for old in OUT.iterdir():
@@ -427,12 +487,22 @@ def main():
         if f.is_file():
             IMG_VERSIONS[f.relative_to(OUT).as_posix()] = hashlib.sha1(f.read_bytes()).hexdigest()[:8]
 
+    pages = []
+    for lang in LANGS:
+        folder = PAGES if lang == "en" else PAGES / lang
+        pages += [read_page(f) for f in sorted(folder.glob("*.html"))]
+    unknown = {f.parent.name for f in PAGES.glob("*/*.html")} - set(LANGS)
+    if unknown:
+        raise SystemExit(f"Pages in a language strings.py doesn't know: {sorted(unknown)}")
+    # Which pages each language has, by their path: links and the language switcher use it.
+    keys = {lang: {m["path"] for m, _ in pages if m["lang"] == lang} for lang in LANGS}
+    snips = {lang: snippets(s, lang) for lang in LANGS}
+
     sitemap = []
-    for file in sorted(PAGES.rglob("*.html")):
-        meta, body = read_page(file)
-        path = meta["path"]
+    for meta, body in pages:
+        path = prefix(meta["lang"]) + meta["path"]
         out_file = meta.get("file") or (path + "index.html")
-        write(out_file, version_images(page(meta, body, sn, asset_v)))
+        write(out_file, version_images(page(meta, body, snips[meta["lang"]], asset_v, keys)))
         if not (meta["noindex"] or meta["nositemap"]):
             sitemap.append(path)
 

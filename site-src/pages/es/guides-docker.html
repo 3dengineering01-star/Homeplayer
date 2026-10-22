@@ -1,0 +1,90 @@
+title: OwnMedia con Docker
+description: Jellyfin en Docker en Linux o en cualquier NAS, más el plugin de OwnMedia desde el catálogo de plugins. El mismo archivo compose que para Synology.
+path: guides/docker/
+---
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="{{root}}guides/">Guías</a> / Docker</div>
+    <h1>OwnMedia con Docker</h1>
+    <p class="lead">Para una máquina Linux o cualquier NAS que ejecute Docker Compose. En Synology, sigue mejor
+      la <a href="{{root}}guides/synology/">guía paso a paso de Synology</a>.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <p class="muted">Los menús de Jellyfin y de la app aparecen en inglés, como se llaman en la interfaz en
+      inglés.</p>
+
+    <h2>1. Jellyfin</h2>
+    <p>Crea carpetas para los ajustes y la caché de Jellyfin, y otra para las fotos copiadas desde los
+      teléfonos. Después, un <code>docker-compose.yml</code>; cambia las rutas a la izquierda de los dos puntos
+      por las tuyas:</p>
+<pre><code id="compose">services:
+  jellyfin:
+    image: jellyfin/jellyfin:12.1
+    container_name: jellyfin
+    # La red del propio equipo: los teléfonos de la Wi-Fi encuentran el servidor solos ("Add your server").
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /srv/jellyfin/config:/config
+      - /srv/jellyfin/cache:/cache
+      - /srv/media/video:/media/video:ro
+      - /srv/media/music:/media/music:ro
+      - /srv/media/photos/OwnMedia:/media/photos</code></pre>
+    <p><button class="btn btn-glass btn-small" type="button" data-copy="compose">Copiar el archivo</button></p>
+    <p>Arráncalo con <code>docker compose up -d</code>. <code>:ro</code> deja tus películas y tu música en solo
+      lectura; la carpeta de fotos tiene que admitir escritura, porque allí llegan las copias del teléfono.</p>
+    <div class="note"><p>El plugin de OwnMedia necesita Jellyfin 12.1 o posterior. <code>network_mode: host</code>
+      permite que los teléfonos encuentren el servidor en tu Wi-Fi (puerto UDP 7359). Si hay un cortafuegos
+      activo, permite TCP 8096 y UDP 7359.</p></div>
+
+    <h2>2. Primera configuración</h2>
+    <p>Abre <code>http://&lt;dirección del servidor&gt;:8096</code> en un navegador, crea un usuario (nombre y
+      contraseña para el teléfono) y añade bibliotecas: Movies → <code>/media/video</code>, Music →
+      <code>/media/music</code>, y Photos → <code>/media/photos</code> si quieres.</p>
+
+    <h2>3. El plugin de OwnMedia</h2>
+    <p>En Jellyfin: <b>Dashboard → Plugins → Manage Repositories → +</b>, nombre <code>OwnMedia</code>, URL:</p>
+    <div class="copy">
+      <code id="catalog">{{CATALOG_URL}}</code>
+      <button class="btn btn-glass btn-small" type="button" data-copy="catalog">Copiar</button>
+    </div>
+    <p>Después <b>Plugins</b> → filtro <b>All</b> → <b>Homeplay Backup</b> → Install, y reinicia Jellyfin desde la
+      página principal del <b>Dashboard</b>. En los ajustes del plugin, pon como carpeta de fotos
+      <code>/media/photos</code>.</p>
+
+    <h2>4. El teléfono</h2>
+    <p>En OwnMedia, toca <b>Add your server</b>; en la misma Wi-Fi se encuentra solo, si no, escribe
+      <code>&lt;dirección del servidor&gt;:8096</code>. Una página con código QR para teléfonos:
+      <code>http://&lt;dirección del servidor&gt;:8096/Homeplay/Phone</code>.</p>
+
+    <h2>5. Acceso desde internet</h2>
+    <p>Instala Tailscale en el equipo, inicia sesión y abre el puerto de Jellyfin con Funnel:</p>
+<pre><code>sudo tailscale funnel --bg 8096</code></pre>
+    <p>Muestra la dirección, <code>https://&lt;máquina&gt;.&lt;tu tailnet&gt;.ts.net/</code>. La primera vez,
+      Tailscale puede pedirte que actives Funnel en el navegador. Solo se abre el puerto 8096; en el router no
+      cambia nada. Después, en OwnMedia: el menú del servidor ⋮ → <b>Share with friends</b> → <i>I have an
+      address already</i> → esta dirección.</p>
+    <p>¿Ya llegas al servidor de otra forma, con tu propio dominio y un proxy inverso o una VPN? Usa esa
+      dirección. Más en <a href="{{root}}guides/remote-access/">Fuera de casa y amigos</a>.</p>
+
+    <h2>La app para tus amigos</h2>
+    <p>No hay nada que configurar: las páginas de invitación y el código QR llevan a tus amigos a descargar la
+      app más reciente desde <a href="{{root}}download/#android">ownmedia.app</a>. Hace falta el plugin 1.8 o
+      posterior; Jellyfin ofrece la actualización en Dashboard → Plugins.</p>
+
+    <h2 id="remove">Quitar OwnMedia</h2>
+    <ol>
+      <li><code>docker compose down</code> en la carpeta del archivo compose, y después
+        <code>docker image rm jellyfin/jellyfin:12.1</code>.</li>
+      <li>Desactiva el acceso desde internet: <code>sudo tailscale funnel --https=443 off</code>. Parar Jellyfin
+        no basta: Funnel sigue activo en Tailscale (la dirección se abre, con un error) hasta que lo desactives o
+        quites Tailscale y borres la máquina de la lista Machines en la web de Tailscale.</li>
+      <li>Borra las carpetas de ajustes y caché de Jellyfin. Tus películas, tu música y las copias de fotos no se
+        tocan.</li>
+      <li>En OwnMedia, en el teléfono: el menú del servidor ⋮ → quitar el servidor.</li>
+    </ol>
+  </article>
+</div>

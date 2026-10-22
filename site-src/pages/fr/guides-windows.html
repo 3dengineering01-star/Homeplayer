@@ -1,0 +1,93 @@
+title: Installer le serveur sous Windows
+description: OwnMediaSetup.exe pas à pas : Jellyfin, vos dossiers, l’accès depuis Internet avec Tailscale et un QR code pour votre téléphone.
+path: guides/windows/
+---
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="{{root}}guides/">Guides</a> / Windows</div>
+    <h1>Serveur sous Windows</h1>
+    <p class="lead">Un seul programme transforme un PC Windows en serveur pour OwnMedia. Quelques minutes, une
+      seule fois.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <p class="muted">Le programme d’installation et l’app sont en anglais ; leurs boutons et messages sont cités
+      ici tels que vous les verrez.</p>
+
+    <h2 id="before">Avant de commencer</h2>
+    <ul>
+      <li>Un PC sous Windows 10 ou 11 (64 bits) qui reste allumé pendant que vous regardez. Vos films, séries et
+        musiques sont dessus, ou sur un disque qui y est branché.</li>
+      <li>Des droits d’administrateur et une connexion Internet : l’installation télécharge Jellyfin, environ
+        200 Mo.</li>
+      <li>Jellyfin est déjà sur ce PC ? Très bien : l’installation y ajoute seulement OwnMedia. Ses utilisateurs
+        et bibliothèques restent tels quels, et les étapes des dossiers et du mot de passe sont sautées.</li>
+    </ul>
+    <div class="btn-row">{{INSTALLER_BUTTON}}</div>
+    {{INSTALLER_META}}
+
+    <h2 id="steps">Pas à pas</h2>
+    <ol class="ol-steps">
+      <li><b>Lancez OwnMediaSetup.exe</b> et autorisez-le à apporter des modifications. Si Windows affiche
+        <i>« Windows a protégé votre ordinateur »</i>, cliquez sur <i>Informations complémentaires</i> →
+        <i>Exécuter quand même</i> : le programme d’installation n’est pas encore signé numériquement.</li>
+      <li><b>Vos films, séries, musiques et photos.</b> Indiquez un dossier pour chaque ligne. Les séries veulent
+        un dossier par série. Laissez une ligne vide pour la sauter. Les nouveaux fichiers que vous mettrez plus
+        tard dans ces dossiers apparaîtront d’eux-mêmes. Les photos sauvegardées depuis votre téléphone vont dans
+        le dernier dossier.</li>
+      <li><b>Votre nom et votre mot de passe.</b> Vous vous connecterez avec dans l’app ; le mot de passe doit
+        compter au moins 4 caractères. Laissez <i>« This computer is at home: let phones on this Wi-Fi connect to
+        it »</i> coché pour que les téléphones de la maison trouvent le serveur.</li>
+      <li><b>Regarder de partout.</b> Laissez <i>« Let friends watch from anywhere »</i> coché si vous voulez
+        regarder hors de chez vous ou inviter des amis. L’installation met en place Tailscale, un service gratuit
+        qui donne au serveur une adresse Internet sûre sans toucher à votre box.</li>
+      <li><b>Installer.</b> L’installation télécharge, installe et configure Jellyfin ; cela prend une minute ou
+        deux.</li>
+      <li><b>Connexion à Tailscale</b> (seulement avec « regarder de partout »). Une fenêtre du navigateur
+        s’ouvre : connectez-vous (le bouton Google, Microsoft ou Apple est le plus rapide) et appuyez sur
+        <i>Connect</i>. Si Tailscale le demande, appuyez sur <i>Enable Funnel</i>. L’installation attend ensuite
+        que l’adresse fonctionne sur Internet, jusqu’à 10 minutes.</li>
+      <li><b>Terminer.</b> La page <i>« Your server is ready »</i> s’ouvre dans le navigateur, avec un QR code et
+        l’adresse du serveur. Elle reste dans le menu Démarrer sous le nom <i>OwnMedia – connect a phone</i>, pour
+        le téléphone suivant.</li>
+    </ol>
+
+    <h2 id="phone">Sur le téléphone</h2>
+    <ol class="ol-steps">
+      <li>Connectez le téléphone au même Wi-Fi que le PC.</li>
+      <li>Obtenez l’app : visez le QR code avec l’appareil photo du téléphone et ouvrez le lien, OwnMedia se
+        télécharge. Ouvrez le fichier et touchez <i>Installer</i> ; si le téléphone le demande, autorisez
+        l’installation depuis cette source, et si Google Play Protect signale un développeur inconnu, touchez
+        <i>Plus de détails</i> → <i>Installer quand même</i>. Ou téléchargez-la sur le téléphone depuis
+        <a href="{{root}}download/#android">ownmedia.app/download</a>.</li>
+      <li>Ouvrez OwnMedia et touchez <i>Add your server</i>. L’app trouve votre PC toute seule. Sinon, saisissez
+        l’adresse affichée sur la page, par exemple <code>http://192.168.1.10:8096</code>.</li>
+      <li>Saisissez le nom et le mot de passe de l’étape 3 et touchez <i>Connect</i>.</li>
+    </ol>
+    <p>Ensuite : <a href="{{root}}guides/remote-access/#friends">inviter des amis</a>.</p>
+
+    <h2 id="if-something-goes-wrong">En cas de problème</h2>
+    <ul>
+      <li><b>« Jellyfin could not be downloaded. »</b> Vérifiez la connexion Internet et relancez
+        l’installation.</li>
+      <li><b>L’ouverture sur Internet n’a pas marché</b> (personne ne s’est connecté à Tailscale à temps, ou
+        Funnel n’a pas été autorisé). Le serveur fonctionne à la maison comme avant. Relancez OwnMediaSetup pour
+        réessayer : les étapes déjà faites sont sautées.</li>
+      <li><b>« Its address is still new. »</b> Le serveur est sur Internet, mais les liens d’invitation peuvent
+        ne pas s’ouvrir pendant encore quelques minutes. Attendez un peu avant de les envoyer.</li>
+      <li><b>Le téléphone ne trouve pas le serveur.</b> Vérifiez qu’il est sur le même Wi-Fi, ou saisissez
+        l’adresse à la main.</li>
+      <li>Le déroulement de l’installation est écrit dans <code>C:\ProgramData\Homeplay\setup.log</code> (il ne
+        contient jamais votre mot de passe). Envoyez-le à l’<a href="{{root}}support/">assistance</a> si vous êtes
+        bloqué.</li>
+    </ul>
+
+    <h2 id="updates">Mises à jour et désinstallation</h2>
+    <p>Une nouvelle version d’OwnMediaSetup s’installe par-dessus l’ancienne ; vos réglages, utilisateurs et
+      bibliothèques sont conservés. Pour la désinstaller, passez par les <i>Paramètres → Applications</i> de
+      Windows : <i>OwnMedia Server</i>, puis Jellyfin et Tailscale séparément si vous n’en avez plus besoin. Vos
+      films, musiques et photos ne sont jamais touchés.</p>
+  </article>
+</div>

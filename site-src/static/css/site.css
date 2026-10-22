@@ -218,7 +218,48 @@ pre code { background: none; padding: 0; overflow-wrap: normal; }
 .menu-panel a { color: var(--text); text-decoration: none; font-weight: 600; padding: 13px 14px; border-radius: 12px; }
 .menu-panel a:hover, .menu-panel a[aria-current="page"] { background: var(--chip); }
 .menu-panel .btn { margin-top: 6px; justify-content: center; }
-@media (max-width: 860px) {
+/* Language switcher: a <details> in the header, a row in the phone menu and in the footer. */
+.lang { position: relative; }
+.lang summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+.lang summary::-webkit-details-marker { display: none; }
+.lang summary svg { width: 18px; height: 18px; }
+.lang summary:hover, .lang[open] summary { background: var(--chip); }
+.lang-panel {
+  position: absolute;
+  right: 0;
+  top: 52px;
+  min-width: 180px;
+  padding: 8px;
+  display: grid;
+  gap: 2px;
+  background: var(--menu-bg);
+  border: 1px solid var(--rim);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+}
+.nav .lang-panel a { border-radius: 12px; }
+.lang-panel a[aria-current], .menu-langs a[aria-current] { background: var(--chip); font-weight: 600; }
+.menu-langs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.menu-panel .menu-langs a { padding: 10px 12px; font-weight: 500; }
+.footer-langs { margin-top: 16px; }
+.footer-langs-list { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 0.9rem; }
+.footer-langs-list a { color: var(--muted); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.footer-langs-list a:hover { color: var(--text); text-decoration: underline; }
+.footer-langs-list a[aria-current] { color: var(--text); font-weight: 600; }
+@media (max-width: 960px) {
   .nav { display: none; }
   .menu { display: block; }
 }

@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>Preparar el servidor en Windows — OwnMedia</title>
+<meta name="description" content="OwnMediaSetup.exe paso a paso: Jellyfin, tus carpetas, el acceso desde internet con Tailscale y un código QR para tu teléfono.">
+<link rel="canonical" href="https://ownmedia.app/es/guides/windows/">
+<link rel="alternate" hreflang="en" href="https://ownmedia.app/guides/windows/">
+<link rel="alternate" hreflang="de" href="https://ownmedia.app/de/guides/windows/">
+<link rel="alternate" hreflang="fr" href="https://ownmedia.app/fr/guides/windows/">
+<link rel="alternate" hreflang="es" href="https://ownmedia.app/es/guides/windows/">
+<link rel="alternate" hreflang="x-default" href="https://ownmedia.app/guides/windows/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:locale" content="es_ES">
+<meta property="og:title" content="Preparar el servidor en Windows — OwnMedia">
+<meta property="og:description" content="OwnMediaSetup.exe paso a paso: Jellyfin, tus carpetas, el acceso desde internet con Tailscale y un código QR para tu teléfono.">
+<meta property="og:url" content="https://ownmedia.app/es/guides/windows/">
+<meta property="og:image" content="https://ownmedia.app/img/og-image.jpg?v=bcb906ff">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia: películas, música y fotos de tu propio servidor">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../../../favicon.ico" sizes="any">
+<link rel="icon" href="../../../img/favicon-32.png?v=670ec50d" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../../../img/apple-touch-icon.png?v=71be1fb5">
+<link rel="preload" href="../../../fonts/bricolage-grotesque-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../../css/site.css?v=474fd499">
+<script src="../../../js/site.js?v=474fd499" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Saltar al contenido</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../../../es/" aria-label="Inicio de OwnMedia">
+      <img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../../../es/download/">Descargar</a>
+      <a href="../../../es/guides/" aria-current="page">Guías</a>
+      <a href="../../../privacy/">Privacidad</a>
+      <a href="../../../es/support/">Soporte</a>
+      <details class="lang">
+        <summary aria-label="Idioma: Español"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>ES</span></summary>
+        <div class="lang-panel"><a href="../../../guides/windows/" hreflang="en" lang="en">English</a><a href="../../../de/guides/windows/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/windows/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/windows/" hreflang="es" lang="es" aria-current="true">Español</a></div>
+      </details>
+      <a class="btn btn-small" href="../../../es/download/#android">Obtener la app</a>
+    </nav>
+    <details class="menu">
+      <summary class="tip-below" aria-label="Abrir menú" data-tip="Abrir menú"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../../../es/">Inicio</a>
+        <a href="../../../es/download/">Descargar</a>
+      <a href="../../../es/guides/" aria-current="page">Guías</a>
+      <a href="../../../privacy/">Privacidad</a>
+      <a href="../../../es/support/">Soporte</a>
+        <a class="btn" href="../../../es/download/#android">Obtener la app</a>
+        <div class="menu-langs"><a href="../../../guides/windows/" hreflang="en" lang="en">English</a><a href="../../../de/guides/windows/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/windows/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/windows/" hreflang="es" lang="es" aria-current="true">Español</a></div>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="../../../es/guides/">Guías</a> / Windows</div>
+    <h1>Servidor en Windows</h1>
+    <p class="lead">Un solo programa convierte un PC con Windows en el servidor de OwnMedia. Unos minutos, una
+      sola vez.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <p class="muted">El instalador y la app están en inglés; sus botones y mensajes aparecen aquí tal como los
+      verás.</p>
+
+    <h2 id="before">Antes de empezar</h2>
+    <ul>
+      <li>Un PC con Windows 10 u 11 (64 bits) que siga encendido mientras ves algo. Tus películas, series y
+        música están en él o en un disco conectado.</li>
+      <li>Permisos de administrador y conexión a internet: la instalación descarga Jellyfin, unos 200 MB.</li>
+      <li>¿Ya tienes Jellyfin en este PC? Bien: la instalación solo le añade OwnMedia. Sus usuarios y
+        bibliotecas se quedan como están, y se saltan los pasos de carpetas y contraseña.</li>
+    </ul>
+    <div class="btn-row"><a class="btn" href="../../../download/OwnMediaSetup.exe" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg> Descargar OwnMediaSetup.exe</a></div>
+    <p class="dl-meta">Versión 0.3.13, 26 MB. SHA-256: <code class="sha">bd54e4d5ef11a54a8e6793ba451914f8c728282d1a8a18dbfedd86e2522d3d50</code></p><p class="dl-note">El instalador aún no tiene firma digital, así que Windows puede mostrar <i>«Windows protegió su PC»</i>. Haz clic en <i>Más información</i> y luego en <i>Ejecutar de todas formas</i>.</p>
+
+    <h2 id="steps">Paso a paso</h2>
+    <ol class="ol-steps">
+      <li><b>Ejecuta OwnMediaSetup.exe</b> y permite que haga cambios. Si Windows muestra <i>«Windows protegió su
+        PC»</i>, haz clic en <i>Más información</i> → <i>Ejecutar de todas formas</i>: el instalador aún no tiene
+        firma digital.</li>
+      <li><b>Tus películas, series, música y fotos.</b> Indica una carpeta en cada línea. Las series necesitan una
+        carpeta por serie. Deja una línea vacía para saltarla. Los archivos nuevos que pongas después en esas
+        carpetas aparecen solos. Las fotos copiadas desde tu teléfono van a la última carpeta.</li>
+      <li><b>Tu nombre y contraseña.</b> Con ellos iniciarás sesión en la app; la contraseña necesita al menos
+        4 caracteres. Deja marcada <i>«This computer is at home: let phones on this Wi-Fi connect to it»</i> para
+        que los teléfonos de casa encuentren el servidor.</li>
+      <li><b>Ver desde cualquier sitio.</b> Deja marcada <i>«Let friends watch from anywhere»</i> si quieres ver
+        fuera de casa o invitar a amigos. La instalación pone Tailscale, un servicio gratuito que da al servidor
+        una dirección segura en internet sin tocar el router.</li>
+      <li><b>Instalar.</b> La instalación descarga, instala y configura Jellyfin; tarda uno o dos minutos.</li>
+      <li><b>Inicia sesión en Tailscale</b> (solo con «ver desde cualquier sitio»). Se abre una ventana del
+        navegador: inicia sesión (el botón de Google, Microsoft o Apple es lo más rápido) y pulsa
+        <i>Connect</i>. Si Tailscale lo pide, pulsa <i>Enable Funnel</i>. Después la instalación espera a que la
+        dirección funcione en internet, hasta 10 minutos.</li>
+      <li><b>Terminar.</b> Se abre en el navegador la página <i>«Your server is ready»</i>, con un código QR y la
+        dirección del servidor. Queda en el menú Inicio como <i>OwnMedia – connect a phone</i>, para el siguiente
+        teléfono.</li>
+    </ol>
+
+    <h2 id="phone">En el teléfono</h2>
+    <ol class="ol-steps">
+      <li>Conecta el teléfono a la misma Wi-Fi que el PC.</li>
+      <li>Consigue la app: apunta la cámara del teléfono al código QR y abre el enlace, y OwnMedia se descarga.
+        Abre el archivo y toca <i>Instalar</i>; si el teléfono lo pide, permite instalar desde esta fuente, y si
+        Google Play Protect avisa de un desarrollador desconocido, toca <i>Más detalles</i> → <i>Instalar de todas
+        formas</i>. O descárgala en el teléfono desde <a href="../../../es/download/#android">ownmedia.app/download</a>.</li>
+      <li>Abre OwnMedia y toca <i>Add your server</i>. Encuentra tu PC sola. Si no, escribe la dirección que
+        muestra la página, por ejemplo <code>http://192.168.1.10:8096</code>.</li>
+      <li>Escribe el nombre y la contraseña del paso 3 y toca <i>Connect</i>.</li>
+    </ol>
+    <p>Lo siguiente: <a href="../../../es/guides/remote-access/#friends">invitar a amigos</a>.</p>
+
+    <h2 id="if-something-goes-wrong">Si algo sale mal</h2>
+    <ul>
+      <li><b>«Jellyfin could not be downloaded.»</b> Comprueba la conexión a internet y vuelve a ejecutar la
+        instalación.</li>
+      <li><b>No se pudo abrir a internet</b> (nadie inició sesión en Tailscale a tiempo, o no se permitió
+        Funnel). En casa el servidor funciona como antes. Vuelve a ejecutar OwnMediaSetup para intentarlo otra
+        vez: los pasos ya hechos se saltan.</li>
+      <li><b>«Its address is still new.»</b> El servidor está en internet, pero puede que los enlaces de
+        invitación no se abran durante unos minutos más. Espera un poco antes de enviarlos.</li>
+      <li><b>El teléfono no encuentra el servidor.</b> Asegúrate de que está en la misma Wi-Fi, o escribe la
+        dirección a mano.</li>
+      <li>Lo que pasó durante la instalación queda escrito en <code>C:\ProgramData\Homeplay\setup.log</code> (nunca
+        contiene tu contraseña). Envíalo a <a href="../../../es/support/">soporte</a> si te atascas.</li>
+    </ul>
+
+    <h2 id="updates">Actualizaciones y desinstalación</h2>
+    <p>Una versión nueva de OwnMediaSetup se instala encima de la anterior; tus ajustes, usuarios y bibliotecas
+      se conservan. Para quitarlo, usa <i>Configuración → Aplicaciones</i> de Windows: <i>OwnMedia Server</i>, y
+      Jellyfin y Tailscale por separado si ya no los necesitas. Tus películas, música y fotos nunca se tocan.</p>
+  </article>
+</div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../../../es/"><img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Películas, series, música y fotos de tu propio servidor, en tu teléfono Android.</p>
+      </div>
+      <div>
+        <h2>App</h2>
+        <ul>
+          <li><a href="../../../es/#features">Funciones</a></li>
+          <li><a href="../../../es/#whats-new">Novedades</a></li>
+          <li><a href="../../../es/#share">Compartir con amigos</a></li>
+          <li><a href="../../../es/download/">Descargar</a></li>
+          <li><a href="../../../es/#screens">Capturas de pantalla</a></li>
+          <li><a href="../../../es/#faq">Preguntas frecuentes</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Ayuda</h2>
+        <ul>
+          <li><a href="../../../es/guides/windows/">Servidor en Windows</a></li>
+          <li><a href="../../../es/guides/synology/">NAS Synology</a></li>
+          <li><a href="../../../es/guides/docker/">Docker</a></li>
+          <li><a href="../../../es/guides/remote-access/">Fuera de casa y amigos</a></li>
+          <li><a href="../../../es/guides/tv/">Ver en la tele</a></li>
+          <li><a href="../../../es/support/">Soporte</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Empresa</h2>
+        <address>
+          MROYA SIA<br>
+          N.º de registro 50203370261<br>
+          Riga, Ganibu dambis 20A, LV-1045<br>
+          <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>
+        </address>
+        <ul>
+          <li><a href="../../../legal/">Datos de la empresa (en inglés)</a></li>
+          <li><a href="../../../privacy/">Política de privacidad (en inglés)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 MROYA SIA. Sin cookies, sin analítica, sin rastreo.</span>
+      <span>OwnMedia es un proyecto independiente, sin relación con Jellyfin, Navidrome, Plex ni Tailscale.</span>
+    </div>
+    <nav class="footer-langs" aria-label="Idioma"><div class="footer-langs-list"><a href="../../../guides/windows/" hreflang="en" lang="en">English</a><a href="../../../de/guides/windows/" hreflang="de" lang="de">Deutsch</a><a href="../../../fr/guides/windows/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/windows/" hreflang="es" lang="es" aria-current="true">Español</a></div></nav>
+  </div>
+</footer>
+</body>
+</html>

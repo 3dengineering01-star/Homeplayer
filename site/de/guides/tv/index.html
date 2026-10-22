@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>Auf dem Fernseher schauen — OwnMedia</title>
+<meta name="description" content="Play on TV schickt einen Film aus OwnMedia an einen Smart-TV in deinem WLAN (UPnP/DLNA: LG, Samsung, Sony, Philips und andere), und dein Handy wird zur Fernbedienung.">
+<link rel="canonical" href="https://ownmedia.app/de/guides/tv/">
+<link rel="alternate" hreflang="en" href="https://ownmedia.app/guides/tv/">
+<link rel="alternate" hreflang="de" href="https://ownmedia.app/de/guides/tv/">
+<link rel="alternate" hreflang="fr" href="https://ownmedia.app/fr/guides/tv/">
+<link rel="alternate" hreflang="es" href="https://ownmedia.app/es/guides/tv/">
+<link rel="alternate" hreflang="x-default" href="https://ownmedia.app/guides/tv/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:locale" content="de_DE">
+<meta property="og:title" content="Auf dem Fernseher schauen — OwnMedia">
+<meta property="og:description" content="Play on TV schickt einen Film aus OwnMedia an einen Smart-TV in deinem WLAN (UPnP/DLNA: LG, Samsung, Sony, Philips und andere), und dein Handy wird zur Fernbedienung.">
+<meta property="og:url" content="https://ownmedia.app/de/guides/tv/">
+<meta property="og:image" content="https://ownmedia.app/img/og-image.jpg?v=bcb906ff">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia: Filme, Musik und Fotos von deinem eigenen Server">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../../../favicon.ico" sizes="any">
+<link rel="icon" href="../../../img/favicon-32.png?v=670ec50d" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../../../img/apple-touch-icon.png?v=71be1fb5">
+<link rel="preload" href="../../../fonts/bricolage-grotesque-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../../css/site.css?v=474fd499">
+<script src="../../../js/site.js?v=474fd499" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../../../de/" aria-label="OwnMedia Startseite">
+      <img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../../../de/download/">Download</a>
+      <a href="../../../de/guides/" aria-current="page">Anleitungen</a>
+      <a href="../../../privacy/">Datenschutz</a>
+      <a href="../../../de/support/">Support</a>
+      <details class="lang">
+        <summary aria-label="Sprache: Deutsch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>DE</span></summary>
+        <div class="lang-panel"><a href="../../../guides/tv/" hreflang="en" lang="en">English</a><a href="../../../de/guides/tv/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../../fr/guides/tv/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/tv/" hreflang="es" lang="es">Español</a></div>
+      </details>
+      <a class="btn btn-small" href="../../../de/download/#android">App holen</a>
+    </nav>
+    <details class="menu">
+      <summary class="tip-below" aria-label="Menü öffnen" data-tip="Menü öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../../../de/">Startseite</a>
+        <a href="../../../de/download/">Download</a>
+      <a href="../../../de/guides/" aria-current="page">Anleitungen</a>
+      <a href="../../../privacy/">Datenschutz</a>
+      <a href="../../../de/support/">Support</a>
+        <a class="btn" href="../../../de/download/#android">App holen</a>
+        <div class="menu-langs"><a href="../../../guides/tv/" hreflang="en" lang="en">English</a><a href="../../../de/guides/tv/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../../fr/guides/tv/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/tv/" hreflang="es" lang="es">Español</a></div>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="../../../de/guides/">Anleitungen</a> / Fernseher</div>
+    <h1>Auf dem Fernseher schauen</h1>
+    <p class="lead">„Play on TV“ schickt einen Film oder eine Folge an einen Smart-TV zu Hause, und dein Handy
+      wird zur Fernbedienung. Auf dem Fernseher ist keine App nötig.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <h2 id="needs">Was du brauchst</h2>
+    <ul>
+      <li>Einen Smart-TV oder Receiver, der Video von Handys über UPnP/DLNA annimmt: Das können die meisten
+        Modelle von LG, Samsung, Sony, Philips und anderen. Getestet auf LG webOS.</li>
+      <li>Der Fernseher ist an und im selben WLAN (oder Kabelnetz) wie dein Handy.</li>
+      <li>Der Fernseher erreicht deinen Server zu Hause: Er holt die Datei selbst vom Server.</li>
+    </ul>
+
+    <h2 id="how">So startest du</h2>
+    <ol class="ol-steps">
+      <li>Tippe auf den Knopf <b>Play on TV</b> (das Cast-Symbol) auf der Filmseite, im Menü bei langem Drücken
+        oder im Video-Player, wo der Fernseher an derselben Stelle weitermacht.</li>
+      <li>Wähle deinen Fernseher aus der Liste. OwnMedia findet Fernseher in deinem WLAN von selbst.</li>
+      <li>Das Handy wird zur Fernbedienung: Pause, ±10 Sekunden, Spulen und Stopp.</li>
+    </ol>
+    <p>Du kannst die Fernbedienung verlassen: Der Film läuft weiter, und eine Leiste <i>„On &lt;dein
+      Fernseher&gt;“</i> unten auf jedem Bildschirm hat Pause und Stopp; tippe darauf, um die Fernbedienung
+      zurückzuholen. Drückst du für denselben Film noch einmal auf Play on TV, öffnet sich die Fernbedienung,
+      statt von vorn zu beginnen. Wo du aufgehört hast, geht an deinen Server, wie beim normalen Abspielen.</p>
+
+    <h2 id="not-found">Wenn der Fernseher nicht gefunden wird</h2>
+    <ul>
+      <li>Prüfe, ob der Fernseher an ist und das Handy im selben WLAN ist (kein Gastnetz, keine mobilen
+        Daten).</li>
+      <li>Bei LG erlaube Verbindungen von Handys: Such in den Netzwerk- oder Verbindungseinstellungen des
+        Fernsehers nach <b>LG Connect Apps</b> oder einer ähnlichen Einstellung. Andere Marken haben einen
+        ähnlichen Schalter, oft „Bildschirmfreigabe“, „DLNA“ oder „Media Renderer“ genannt.</li>
+      <li>Reagiert der Fernseher nicht mehr, sagt es die Fernbedienung.</li>
+    </ul>
+
+    <h2 id="limits">Gut zu wissen</h2>
+    <ul>
+      <li>Der eigene Player des Fernsehers spielt die Datei. Formate, die der Fernseher nicht kennt, öffnen sich
+        dort nicht; spiel sie dann auf dem Handy ab.</li>
+      <li>Schweres 4K über das WLAN des Fernsehers kann zum Nachladen pausieren. Ein Netzwerkkabel oder
+        5-GHz-WLAN für den Fernseher hilft.</li>
+      <li>Downloads und für eine langsame Verbindung umgewandelte Videos werden nicht an den Fernseher
+        geschickt: Er bekommt immer die Originaldatei vom Server.</li>
+      <li>Deinen Server über seine Internetadresse hinzugefügt (<code>https://….ts.net</code>)? Zu Hause gibt die
+        App dem Fernseher die Heimadresse des Servers, sodass das Video über dein Heimnetz läuft.</li>
+      <li>Es gibt keine OwnMedia-App für Android TV, LG- oder Samsung-Fernseher, und vorerst ist keine
+        geplant.</li>
+    </ul>
+    <p class="muted">Was der Fernseher erhält: siehe <a href="../../../privacy/#tv">Play on TV in der
+      Datenschutzerklärung</a> (auf Englisch).</p>
+  </article>
+</div>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../../../de/"><img src="../../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Filme, Serien, Musik und Fotos von deinem eigenen Server, auf deinem Android-Handy.</p>
+      </div>
+      <div>
+        <h2>App</h2>
+        <ul>
+          <li><a href="../../../de/#features">Funktionen</a></li>
+          <li><a href="../../../de/#whats-new">Neuigkeiten</a></li>
+          <li><a href="../../../de/#share">Mit Freunden teilen</a></li>
+          <li><a href="../../../de/download/">Download</a></li>
+          <li><a href="../../../de/#screens">Screenshots</a></li>
+          <li><a href="../../../de/#faq">Fragen &amp; Antworten</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Hilfe</h2>
+        <ul>
+          <li><a href="../../../de/guides/windows/">Server unter Windows</a></li>
+          <li><a href="../../../de/guides/synology/">Synology NAS</a></li>
+          <li><a href="../../../de/guides/docker/">Docker</a></li>
+          <li><a href="../../../de/guides/remote-access/">Unterwegs &amp; Freunde</a></li>
+          <li><a href="../../../de/guides/tv/">Auf dem Fernseher</a></li>
+          <li><a href="../../../de/support/">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Unternehmen</h2>
+        <address>
+          MROYA SIA<br>
+          Reg.-Nr. 50203370261<br>
+          Riga, Ganibu dambis 20A, LV-1045<br>
+          <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>
+        </address>
+        <ul>
+          <li><a href="../../../legal/">Firmenangaben (Englisch)</a></li>
+          <li><a href="../../../privacy/">Datenschutzerklärung (Englisch)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 MROYA SIA. Keine Cookies, keine Statistik, kein Tracking.</span>
+      <span>OwnMedia ist ein unabhängiges Projekt und steht in keiner Verbindung zu Jellyfin, Navidrome, Plex oder Tailscale.</span>
+    </div>
+    <nav class="footer-langs" aria-label="Sprache"><div class="footer-langs-list"><a href="../../../guides/tv/" hreflang="en" lang="en">English</a><a href="../../../de/guides/tv/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../../fr/guides/tv/" hreflang="fr" lang="fr">Français</a><a href="../../../es/guides/tv/" hreflang="es" lang="es">Español</a></div></nav>
+  </div>
+</footer>
+</body>
+</html>

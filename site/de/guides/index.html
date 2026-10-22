@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://formspree.io; form-action 'self' https://formspree.io; base-uri 'self'; object-src 'none'">
+<title>Anleitungen — OwnMedia</title>
+<meta name="description" content="So richtest du einen Server für OwnMedia unter Windows, auf Synology oder mit Docker ein, schaust unterwegs und lädst Freunde ein.">
+<link rel="canonical" href="https://ownmedia.app/de/guides/">
+<link rel="alternate" hreflang="en" href="https://ownmedia.app/guides/">
+<link rel="alternate" hreflang="de" href="https://ownmedia.app/de/guides/">
+<link rel="alternate" hreflang="fr" href="https://ownmedia.app/fr/guides/">
+<link rel="alternate" hreflang="es" href="https://ownmedia.app/es/guides/">
+<link rel="alternate" hreflang="x-default" href="https://ownmedia.app/guides/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OwnMedia">
+<meta property="og:locale" content="de_DE">
+<meta property="og:title" content="Anleitungen — OwnMedia">
+<meta property="og:description" content="So richtest du einen Server für OwnMedia unter Windows, auf Synology oder mit Docker ein, schaust unterwegs und lädst Freunde ein.">
+<meta property="og:url" content="https://ownmedia.app/de/guides/">
+<meta property="og:image" content="https://ownmedia.app/img/og-image.jpg?v=bcb906ff">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OwnMedia: Filme, Musik und Fotos von deinem eigenen Server">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#080a0f" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../../favicon.ico" sizes="any">
+<link rel="icon" href="../../img/favicon-32.png?v=670ec50d" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../../img/apple-touch-icon.png?v=71be1fb5">
+<link rel="preload" href="../../fonts/bricolage-grotesque-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../css/site.css?v=474fd499">
+<script src="../../js/site.js?v=474fd499" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Zum Inhalt springen</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="../../de/" aria-label="OwnMedia Startseite">
+      <img src="../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="">OwnMedia
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="../../de/download/">Download</a>
+      <a href="../../de/guides/" aria-current="page">Anleitungen</a>
+      <a href="../../privacy/">Datenschutz</a>
+      <a href="../../de/support/">Support</a>
+      <details class="lang">
+        <summary aria-label="Sprache: Deutsch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span>DE</span></summary>
+        <div class="lang-panel"><a href="../../guides/" hreflang="en" lang="en">English</a><a href="../../de/guides/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../fr/guides/" hreflang="fr" lang="fr">Français</a><a href="../../es/guides/" hreflang="es" lang="es">Español</a></div>
+      </details>
+      <a class="btn btn-small" href="../../de/download/#android">App holen</a>
+    </nav>
+    <details class="menu">
+      <summary class="tip-below" aria-label="Menü öffnen" data-tip="Menü öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <nav class="menu-panel" aria-label="Main">
+        <a href="../../de/">Startseite</a>
+        <a href="../../de/download/">Download</a>
+      <a href="../../de/guides/" aria-current="page">Anleitungen</a>
+      <a href="../../privacy/">Datenschutz</a>
+      <a href="../../de/support/">Support</a>
+        <a class="btn" href="../../de/download/#android">App holen</a>
+        <div class="menu-langs"><a href="../../guides/" hreflang="en" lang="en">English</a><a href="../../de/guides/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../fr/guides/" hreflang="fr" lang="fr">Français</a><a href="../../es/guides/" hreflang="es" lang="es">Español</a></div>
+      </nav>
+    </details>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero">
+  <div class="wrap">
+    <h1>Anleitungen</h1>
+    <p class="lead">Den Server einmal einrichten, danach passiert alles in der App. Wähle, wo deine Filme und
+      deine Musik liegen.</p>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="grid grid-2">
+      <a class="card glass card-link" href="../../de/guides/windows/">
+        <div class="icon i-cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 5.5 10.5 4.5v7H3zM12.5 4.2 21 3v8.5h-8.5zM3 12.5h7.5v7L3 18.5zM12.5 12.5H21V21l-8.5-1.2z"/></svg></div>
+        <h2 class="h3">Windows-PC</h2>
+        <p>Ein Installationsprogramm: Jellyfin, deine Ordner, Zugriff aus dem Internet und ein QR-Code fürs
+          Handy. Der schnellste Start.</p>
+      </a>
+      <a class="card glass card-link" href="../../de/guides/synology/">
+        <div class="icon i-violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 7h8M8 11h8"/><circle cx="12" cy="16.5" r="1.5"/></svg></div>
+        <h2 class="h3">Synology NAS</h2>
+        <p>Jellyfin im Container Manager, das OwnMedia-Plugin aus dem Katalog, Tailscale fürs Internet. Etwa
+          eine halbe Stunde.</p>
+      </a>
+      <a class="card glass card-link" href="../../de/guides/docker/">
+        <div class="icon i-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5M12 12v9"/></svg></div>
+        <h2 class="h3">Docker unter Linux oder auf einem anderen NAS</h2>
+        <p>Dieselbe Compose-Datei und derselbe Plugin-Katalog, für jedes Gerät, auf dem Docker läuft.</p>
+      </a>
+      <a class="card glass card-link" href="../../de/guides/tv/">
+        <div class="icon i-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+        <h2 class="h3">Auf dem Fernseher schauen</h2>
+        <p>Schick einen Film vom Handy an einen Smart-TV in deinem WLAN und nutze das Handy als
+          Fernbedienung.</p>
+      </a>
+      <a class="card glass card-link" href="../../de/guides/remote-access/">
+        <div class="icon i-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
+        <h2 class="h3">Unterwegs und Freunde</h2>
+        <p>Wie OwnMedia deinen Server über das Internet erreicht, wie es schneller wird, wie Einladungen für
+          Freunde funktionieren und wie du jemandem den Zugang wieder entziehst.</p>
+      </a>
+    </div>
+  </div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="../../de/"><img src="../../img/logo-64.webp?v=64fb83cc" width="34" height="34" alt="" loading="lazy">OwnMedia</a>
+        <p>Filme, Serien, Musik und Fotos von deinem eigenen Server, auf deinem Android-Handy.</p>
+      </div>
+      <div>
+        <h2>App</h2>
+        <ul>
+          <li><a href="../../de/#features">Funktionen</a></li>
+          <li><a href="../../de/#whats-new">Neuigkeiten</a></li>
+          <li><a href="../../de/#share">Mit Freunden teilen</a></li>
+          <li><a href="../../de/download/">Download</a></li>
+          <li><a href="../../de/#screens">Screenshots</a></li>
+          <li><a href="../../de/#faq">Fragen &amp; Antworten</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Hilfe</h2>
+        <ul>
+          <li><a href="../../de/guides/windows/">Server unter Windows</a></li>
+          <li><a href="../../de/guides/synology/">Synology NAS</a></li>
+          <li><a href="../../de/guides/docker/">Docker</a></li>
+          <li><a href="../../de/guides/remote-access/">Unterwegs &amp; Freunde</a></li>
+          <li><a href="../../de/guides/tv/">Auf dem Fernseher</a></li>
+          <li><a href="../../de/support/">Support</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Unternehmen</h2>
+        <address>
+          MROYA SIA<br>
+          Reg.-Nr. 50203370261<br>
+          Riga, Ganibu dambis 20A, LV-1045<br>
+          <a href="mailto:support@ownmedia.app">support@ownmedia.app</a>
+        </address>
+        <ul>
+          <li><a href="../../legal/">Firmenangaben (Englisch)</a></li>
+          <li><a href="../../privacy/">Datenschutzerklärung (Englisch)</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 MROYA SIA. Keine Cookies, keine Statistik, kein Tracking.</span>
+      <span>OwnMedia ist ein unabhängiges Projekt und steht in keiner Verbindung zu Jellyfin, Navidrome, Plex oder Tailscale.</span>
+    </div>
+    <nav class="footer-langs" aria-label="Sprache"><div class="footer-langs-list"><a href="../../guides/" hreflang="en" lang="en">English</a><a href="../../de/guides/" hreflang="de" lang="de" aria-current="true">Deutsch</a><a href="../../fr/guides/" hreflang="fr" lang="fr">Français</a><a href="../../es/guides/" hreflang="es" lang="es">Español</a></div></nav>
+  </div>
+</footer>
+</body>
+</html>
