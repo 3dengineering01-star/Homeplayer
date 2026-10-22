@@ -266,6 +266,8 @@ def header(key, lang, keys):
 
 
 def footer(sn, lang, key, keys):
+    # Only the company name and the email here: the registration number and the address are on
+    # legal/ and in the privacy policy, one click away, as the e-commerce rules ask.
     u = UI[lang]
     return f"""<footer class="site-footer">
   <div class="wrap">
@@ -300,8 +302,6 @@ def footer(sn, lang, key, keys):
         <h2>{u["f_company"]}</h2>
         <address>
           {sn["COMPANY_NAME"]}<br>
-          {u["reg_no"]} {sn["COMPANY_REG"]}<br>
-          {sn["COMPANY_ADDRESS"]}<br>
           {sn["EMAIL_LINK"]}
         </address>
         <ul>
