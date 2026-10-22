@@ -209,9 +209,10 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
         ],
         bottom: TabBar(
           controller: _tabs,
-          // With big letters the four names do not fit side by side: they scroll instead.
-          isScrollable: MediaQuery.textScalerOf(context).scale(1) > 1.2,
-          tabAlignment: MediaQuery.textScalerOf(context).scale(1) > 1.2 ? TabAlignment.start : null,
+          // Six names with their counts ("Albums · 120") do not fit side by side on a phone: fixed
+          // tabs cut them to "Albun", so the tabs scroll instead.
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
             for (final (i, name) in _tabNames.indexed)
               Tab(text: switch (_tabCounts) {
