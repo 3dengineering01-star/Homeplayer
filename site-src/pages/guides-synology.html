@@ -1,0 +1,196 @@
+title: OwnMedia on a Synology NAS
+description: Jellyfin in Container Manager, the OwnMedia plugin from the catalogue, access from the internet with Tailscale. About half an hour, once.
+path: guides/synology/
+---
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="{{root}}guides/">Guides</a> / Synology</div>
+    <h1>OwnMedia on Synology</h1>
+    <p class="lead">Jellyfin in Container Manager and the OwnMedia plugin from the plugin catalogue. No
+      Windows installer needed. About half an hour, once.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <p>What you get: movies, shows, music and photos from the NAS on your phone, photo backup from the phone
+      to the NAS, invites for friends and access from the internet.</p>
+    <ul class="toc">
+      <li><a href="#check">1. Check</a></li>
+      <li><a href="#folders">2. Folders</a></li>
+      <li><a href="#jellyfin">3. Jellyfin</a></li>
+      <li><a href="#setup">4. First setup</a></li>
+      <li><a href="#plugin">5. Plugin</a></li>
+      <li><a href="#phone">6. Phone</a></li>
+      <li><a href="#internet">7. Internet</a></li>
+      <li><a href="#slow">Slow video</a></li>
+      <li><a href="#remove">Removing</a></li>
+    </ul>
+
+    <h2 id="check">1. Can this NAS run it?</h2>
+    <p>Open <b>Package Center</b> and look for <b>Container Manager</b>. If it is there, follow this guide.</p>
+    <p>If it isn’t (smaller models), Jellyfin comes as a SynoCommunity package, but usually an old version,
+      and the OwnMedia plugin needs Jellyfin 12.1 or newer. In that case <a href="{{root}}support/">write to
+      us</a> and we’ll find another way.</p>
+
+    <h2 id="folders">2. Folders</h2>
+    <p>The shared folder <code>docker</code> appears when Container Manager is installed. In
+      <b>File Station</b>, create:</p>
+    <ul>
+      <li><code>docker/jellyfin/config</code> and <code>docker/jellyfin/cache</code> for Jellyfin itself;</li>
+      <li>a folder for photos backed up from phones, for example <code>photo/OwnMedia</code>.</li>
+    </ul>
+    <p>Leave your movies, shows and music where they are; below you only need the paths to their folders
+      (for example <code>/volume1/video</code>, <code>/volume1/music</code>). File Station shows the path:
+      right-click a folder → <b>Properties</b>.</p>
+    <div class="note"><p>Each folder has its own volume number: on a NAS with several volumes,
+      <code>docker</code> may be on <code>/volume1</code> while movies and photos are on
+      <code>/volume4</code>. In step 3, type the paths exactly as Properties shows them.</p></div>
+
+    <h2 id="jellyfin">3. Jellyfin in Container Manager</h2>
+    <p><b>Container Manager → Project → Create</b>:</p>
+    <ul>
+      <li>Project name: <code>ownmedia</code></li>
+      <li>Path: <code>/volume1/docker/jellyfin</code></li>
+      <li>Source: <b>Create docker-compose.yml</b>, and paste the file below. Replace the paths left of the
+        colon with yours from step 2, volume number included; don’t touch the right side.</li>
+    </ul>
+<pre><code id="compose">services:
+  jellyfin:
+    image: jellyfin/jellyfin:12.1
+    container_name: jellyfin
+    # The NAS's own network: phones on the Wi-Fi find the server by themselves ("Add your server").
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /volume1/docker/jellyfin/config:/config
+      - /volume1/docker/jellyfin/cache:/cache
+      - /volume1/video:/media/video:ro
+      - /volume1/music:/media/music:ro
+      - /volume1/photo/OwnMedia:/media/photos</code></pre>
+    <p><button class="btn btn-glass btn-small" type="button" data-copy="compose">Copy the file</button></p>
+    <p><b>Next → Done.</b> Container Manager downloads Jellyfin (about 300 MB) and starts it.</p>
+    <p><code>:ro</code> means read-only: Jellyfin can’t change anything in your movies and music. The photo
+      folder has no <code>:ro</code>, because backups from the phone are written there.</p>
+
+    <h2 id="setup">4. First setup of Jellyfin</h2>
+    <p>In a browser on your computer, open <code>http://&lt;NAS address&gt;:8096</code>, the same address
+      you open DSM at, for example <code>http://192.168.1.50:8096</code>:</p>
+    <ol>
+      <li>Language → create a user: a name and a password (you’ll type them on the phone).</li>
+      <li>Libraries: “Movies” → folder <code>/media/video</code>, “Music” → <code>/media/music</code>, and if
+        you like “Photos” → <code>/media/photos</code>.</li>
+      <li>Remote access: leave it on. Done.</li>
+    </ol>
+
+    <h2 id="plugin">5. The OwnMedia plugin</h2>
+    <p>In Jellyfin: <b>Dashboard → Plugins → Manage Repositories → +</b>:</p>
+    <ul>
+      <li>Name: <code>OwnMedia</code></li>
+      <li>URL:</li>
+    </ul>
+    <div class="copy">
+      <code id="catalog">{{CATALOG_URL}}</code>
+      <button class="btn btn-glass btn-small" type="button" data-copy="catalog">Copy</button>
+    </div>
+    <p>Save → go back to <b>Plugins</b>, choose the <b>All</b> filter (or search) → <b>Homeplay Backup</b> →
+      Install. Then restart Jellyfin with the <b>Restart</b> button on the main <b>Dashboard</b> page (not in
+      Plugins). After the restart the plugin is under the <b>Installed</b> filter, marked Active.</p>
+    <p>In the settings of <b>Homeplay Backup</b>, set the folder for photo backups: <code>/media/photos</code>.</p>
+    <p>Jellyfin shows new versions of the plugin by itself, under Plugins.</p>
+
+    <h2 id="phone">6. The phone</h2>
+    <p>In OwnMedia, tap <b>Add your server</b>: the NAS is found by itself if the phone is on the same Wi-Fi.
+      If not, type <code>&lt;NAS address&gt;:8096</code>. Use the name and password from step 4.</p>
+    <p>A page with a QR code for phones: <code>http://&lt;NAS address&gt;:8096/Homeplay/Phone</code>.</p>
+    <div class="note"><p>If <code>http://&lt;NAS address&gt;:8096</code> doesn’t open in the browser, or the
+      phone doesn’t find the NAS, and the DSM firewall is on (<b>Control Panel → Security → Firewall</b>),
+      add an <b>Allow</b> rule to its profile for ports 8096 (TCP) and 7359 (UDP; phones use it to find the
+      server on the Wi-Fi).</p></div>
+
+    <h2 id="internet">7. Access from the internet and invites for friends (Tailscale)</h2>
+    <p>Only Jellyfin (port 8096) is opened to the internet; DSM stays closed, and nothing changes on the
+      router.</p>
+    <ol class="ol-steps">
+      <li><b>Package Center → Tailscale</b> → install → open → sign in with your Tailscale account. If
+        Tailscale was on this NAS before, you’ll see <i>“Your device’s key has expired → Reauthenticate”</i>
+        instead: that’s fine, press it and sign in.</li>
+      <li>A folder for task results (needed in step 4): in <b>File Station</b> create, for example,
+        <code>docker/tasklogs</code>. Then <b>Control Panel → Task Scheduler → Settings</b> → <b>Save output
+        results</b> → this folder.</li>
+      <li><b>Task Scheduler → Create → Triggered Task → User-defined script</b>:
+        <ul>
+          <li><b>General</b> tab: name <code>OwnMedia Funnel</code>, user <code>root</code>, event
+            <b>Boot-up</b>, <b>Enabled</b>;</li>
+          <li><b>Task Settings</b> tab, script:</li>
+        </ul>
+<pre><code id="funnel">/var/packages/Tailscale/target/bin/tailscale funnel --bg 8096</code></pre>
+        <p>When you save, DSM warns about a task run as <code>root</code> and asks for the <b>password of
+          your DSM account</b> (the one you are signed in to DSM with). Have it ready.</p></li>
+      <li>Select the task → <b>Run</b>. The result is in the folder from step 2:
+        <code>&lt;folder&gt;/OwnMedia Funnel/&lt;time&gt;/output.log</code>. It should say:
+<pre><code>Available on the internet:
+https://&lt;NAS name&gt;.&lt;your tailnet&gt;.ts.net/
+|-- proxy http://127.0.0.1:8096</code></pre>
+        <p>If it shows a link to enable Funnel instead, open it, press <b>Enable Funnel</b> and run the task
+          again. The setting is kept; the boot-up task is a safety net after the NAS restarts.</p></li>
+      <li>Check: open <code>https://&lt;NAS name&gt;.&lt;your tailnet&gt;.ts.net/Homeplay/Phone</code> on a phone
+        <b>with Wi-Fi turned off</b>. In the first minutes the address may sometimes fail to open (a secure
+        connection error): wait 2–3 minutes.</li>
+      <li>In OwnMedia: the server’s menu ⋮ → <b>Share with friends</b> → <i>I have an address already</i> → this
+        address.</li>
+    </ol>
+    <p class="muted">Tested on an RS2423+ with DSM 7.3.2 and the Tailscale package 1.58.2.</p>
+
+    <h2 id="slow">If video stutters</h2>
+    <p>First find out whether the server converts the video: while it plays, open Jellyfin in a browser →
+      <b>Dashboard</b> → the “i” icon next to the playback. <i>Direct playing</i> means the server sends the
+      file as it is, and the bottleneck is the way to the phone, not the NAS.</p>
+    <p>How fast that way is:</p>
+    <ul>
+      <li><b>At home</b>, add the NAS to OwnMedia once more by its home address (<code>&lt;NAS address&gt;:8096</code>)
+        and watch through it: video goes over the Wi-Fi directly, at full speed.</li>
+      <li><b>Away from home</b>, install the Tailscale app on the phone and sign in to the same account as on
+        the NAS. Then the <code>https://….ts.net</code> address goes through Tailscale rather than Funnel.</li>
+      <li>Tailscale connects the phone to the NAS directly or, when the router doesn’t allow it, through its
+        relay server. Through the relay, as through Funnel (for friends), you get around 20 Mbit/s. That is
+        enough for ordinary 1080p movies and shows (5–10 Mbit/s), but not for heavy 4K files: 4K at
+        60 frames per second needs about 40 Mbit/s and will stutter (“plays 2 seconds, waits 2 seconds”).</li>
+      <li>Whether the connection is direct shows on a computer in the same tailnet:
+        <code>tailscale ping &lt;NAS name&gt;</code>; “via DERP” means through the relay. A direct connection
+        usually comes with a fresh Tailscale package on the NAS (Package Center may have an old one; the new
+        one is at pkgs.tailscale.com), or with UDP port 41641 opened on the NAS’s router towards the NAS
+        (only Tailscale’s encrypted traffic goes through it; DSM stays closed).</li>
+    </ul>
+    <p>What to do with heavy files without a direct connection:</p>
+    <ul>
+      <li>download them in advance while you’re at home: long-press → <b>Download</b>, then watch from
+        Downloads;</li>
+      <li>pick a lower quality (1080p) in the player: the server converts the video. A NAS without a graphics
+        card converts on the processor and may not keep up with 4K.</li>
+    </ul>
+
+    <h2 id="app-for-friends">The app for friends</h2>
+    <p>Nothing to set up: the invite page and the QR code send friends to download the newest app from
+      <a href="{{root}}download/#android">ownmedia.app</a>. This needs the plugin 1.8 or newer; Jellyfin
+      offers the update under Dashboard → Plugins.</p>
+
+    <h2 id="remove">Removing OwnMedia from the NAS</h2>
+    <ol>
+      <li><b>Container Manager → Project → <code>ownmedia</code> → Stop → Delete</b>, then <b>Image →
+        <code>jellyfin/jellyfin</code> → Delete</b> (about 1.7 GB).</li>
+      <li><b>Task Scheduler → <code>OwnMedia Funnel</code> → Delete.</b> This doesn’t turn off access from the
+        internet: Funnel stays on in Tailscale itself (the address opens, with an error). To turn it off,
+        either remove the Tailscale package (<b>Package Center → Tailscale → Uninstall</b>, then remove the NAS
+        from the Machines list on the Tailscale website), or, if you need Tailscale for something else, run a
+        one-time task as <code>root</code>:
+        <code>/var/packages/Tailscale/target/bin/tailscale funnel --https=443 off</code>.</li>
+      <li><b>File Station:</b> delete <code>docker/jellyfin</code> and <code>docker/tasklogs</code>. If the shared
+        folder <code>docker</code> is now empty, you can delete it in <b>Control Panel → Shared Folder</b>
+        (next time you make a project you’ll have to create it again).</li>
+      <li>Your movies, music and photo backups aren’t touched: delete the backup folder yourself if you don’t
+        need it.</li>
+      <li>In OwnMedia on the phone: the server’s menu ⋮ → remove the server.</li>
+    </ol>
+  </article>
+</div>

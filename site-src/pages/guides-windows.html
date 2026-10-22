@@ -1,0 +1,81 @@
+title: Set up the server on Windows
+description: OwnMediaSetup.exe step by step: Jellyfin, your folders, access from the internet with Tailscale and a QR code for your phone.
+path: guides/windows/
+---
+<div class="page-hero">
+  <div class="wrap narrow">
+    <div class="crumbs"><a href="{{root}}guides/">Guides</a> / Windows</div>
+    <h1>Server on Windows</h1>
+    <p class="lead">One program turns a Windows PC into the server for OwnMedia. A few minutes, once.</p>
+  </div>
+</div>
+
+<div class="wrap narrow">
+  <article class="article glass">
+    <h2 id="before">Before you start</h2>
+    <ul>
+      <li>A PC with Windows 10 or 11 (64-bit) that stays on while you watch. Your movies, shows and music
+        are on it, or on a drive connected to it.</li>
+      <li>Administrator rights and an internet connection: setup downloads Jellyfin, about 200 MB.</li>
+      <li>Jellyfin already on this PC? Fine: setup only adds OwnMedia to it. Its users and libraries stay as
+        they are, and the folder and password steps are skipped.</li>
+    </ul>
+    <div class="btn-row">{{INSTALLER_BUTTON}}</div>
+    {{INSTALLER_META}}
+
+    <h2 id="steps">Step by step</h2>
+    <ol class="ol-steps">
+      <li><b>Run OwnMediaSetup.exe</b> and allow it to make changes. If Windows says <i>“Windows protected
+        your PC”</i>, click <i>More info</i> → <i>Run anyway</i>: the installer isn’t digitally signed yet.</li>
+      <li><b>Your movies, shows, music and photos.</b> Point each line to a folder. TV shows want a folder
+        for each show. Leave a line empty to skip it. New files you put into these folders later show up by
+        themselves. Photos backed up from your phone go into the last folder.</li>
+      <li><b>Your name and password.</b> You will sign in with them in the app; the password needs at least
+        4 characters. Keep <i>“This computer is at home: let phones on this Wi-Fi connect to it”</i> ticked
+        so that phones at home find the server.</li>
+      <li><b>Watch from anywhere.</b> Keep <i>“Let friends watch from anywhere”</i> ticked if you want to
+        watch away from home or invite friends. Setup installs Tailscale, a free service that gives the
+        server a safe internet address without router settings.</li>
+      <li><b>Install.</b> Setup downloads and installs Jellyfin and sets it up; this takes a minute or two.</li>
+      <li><b>Sign in to Tailscale</b> (only with “watch from anywhere”). A browser window opens: sign in
+        (the Google, Microsoft or Apple button is quickest) and press <i>Connect</i>. If Tailscale asks,
+        press <i>Enable Funnel</i>. Then setup waits until the address works on the internet, up to
+        10 minutes.</li>
+      <li><b>Finish.</b> The page <i>“Your server is ready”</i> opens in the browser, with a QR code and the
+        server’s address. It stays in the Start menu as <i>OwnMedia – connect a phone</i>, for the next
+        phone.</li>
+    </ol>
+
+    <h2 id="phone">On the phone</h2>
+    <ol class="ol-steps">
+      <li>Connect the phone to the same Wi-Fi as the PC.</li>
+      <li>Get the app: point the phone’s camera at the QR code and open the link, and OwnMedia downloads.
+        Open the file and tap <i>Install</i>; if the phone asks, allow installing from this source, and if
+        Google Play Protect warns about an unknown developer, tap <i>More details</i> → <i>Install anyway</i>.
+        Or download it on the phone from <a href="{{root}}download/#android">ownmedia.app/download</a>.</li>
+      <li>Open OwnMedia and tap <i>Add your server</i>. It finds your PC by itself. If not, type the address
+        shown on the page, for example <code>http://192.168.1.10:8096</code>.</li>
+      <li>Enter the name and password from step 3 and tap <i>Connect</i>.</li>
+    </ol>
+    <p>Next: <a href="{{root}}guides/remote-access/#friends">invite friends</a>.</p>
+
+    <h2 id="if-something-goes-wrong">If something goes wrong</h2>
+    <ul>
+      <li><b>“Jellyfin could not be downloaded.”</b> Check the internet connection and run setup again.</li>
+      <li><b>Opening to the internet didn’t work</b> (nobody signed in to Tailscale in time, or Funnel
+        wasn’t allowed). The server works at home as before. Run OwnMediaSetup again to try once more:
+        steps that are already done are skipped.</li>
+      <li><b>“Its address is still new.”</b> The server is on the internet, but invite links may not open
+        for a few more minutes. Wait a little before sending them.</li>
+      <li><b>The phone doesn’t find the server.</b> Make sure it is on the same Wi-Fi, or type the address
+        by hand.</li>
+      <li>What happened during setup is written in <code>C:\ProgramData\Homeplay\setup.log</code> (it never
+        contains your password). Send it to <a href="{{root}}support/">support</a> if you’re stuck.</li>
+    </ul>
+
+    <h2 id="updates">Updates and removal</h2>
+    <p>A new version of OwnMediaSetup installs over the old one; your settings, users and libraries stay.
+      To remove it, use Windows <i>Settings → Apps</i>: <i>OwnMedia Server</i>, and Jellyfin and Tailscale
+      separately if you no longer need them. Your movies, music and photos are never touched.</p>
+  </article>
+</div>
