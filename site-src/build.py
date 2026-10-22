@@ -326,6 +326,9 @@ def page(meta, body, sn, asset_v, keys):
         alternates = "".join(f'\n<link rel="alternate" hreflang="{code}" href="{sn["SITE_URL"]}/{prefix(code)}{key}">'
                              for code in langs)
         alternates += f'\n<link rel="alternate" hreflang="x-default" href="{sn["SITE_URL"]}/{key}">'
+        if lang == "en":
+            # Opens the page in the browser's language, before anything is drawn (js/lang.js).
+            alternates += f'\n<script src="{root}js/lang.js?v={asset_v}"></script>'
     head = f"""<!doctype html>
 <html lang="{lang}">
 <head>

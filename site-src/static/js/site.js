@@ -1,5 +1,5 @@
-// OwnMedia site: the Google Play sign-up form, the screenshot buttons and the copy buttons. Nothing else:
-// no tracking, no cookies, nothing loaded from other sites. Each part runs only where its
+// OwnMedia site: the Google Play sign-up form, the screenshot buttons, the copy buttons and the remembered
+// language. Nothing else: no tracking, no cookies, nothing loaded from other sites. Each part runs only where its
 // element is on the page.
 
 (function () {
@@ -122,6 +122,15 @@
         menu.open = false;
         menu.querySelector("summary").focus();
       }
+    });
+  });
+
+  // A language picked in the switcher is remembered in this browser only, so that js/lang.js opens
+  // English pages in it (or, for English, stops following the browser's language).
+  var langLinks = document.querySelectorAll(".lang-panel a[hreflang], .menu-langs a[hreflang], .footer-langs-list a[hreflang]");
+  Array.prototype.forEach.call(langLinks, function (a) {
+    a.addEventListener("click", function () {
+      try { window.localStorage.setItem("ownmedia-lang", a.getAttribute("hreflang")); } catch (e) { /* storage blocked */ }
     });
   });
 
