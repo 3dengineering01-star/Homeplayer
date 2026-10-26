@@ -1,5 +1,15 @@
 # OwnMedia site on Hostinger (Apache / LiteSpeed).
 
+# One address per page for search engines: www.ownmedia.app goes to ownmedia.app, and
+# .../index.html to the folder address (the same page, which Google would count twice).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP_HOST} ^www\.ownmedia\.app$ [NC]
+  RewriteRule ^(.*)$ https://ownmedia.app/$1 [R=301,L]
+  RewriteCond %{THE_REQUEST} \s/(.*/)?index\.html[\s?]
+  RewriteRule ^(.*/)?index\.html$ /$1 [R=301,L]
+</IfModule>
+
 # Our own "page not found".
 ErrorDocument 404 /404.html
 
