@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:isolate';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -44,6 +45,20 @@ typedef _Music = ({
   List<AlbumGroup> albums,
   MusicFolder folders,
 });
+
+_Music _buildMusic(List<JellyfinItem> tracks) => (
+  tracks: tracks,
+  artists: groupByArtist(tracks),
+  albums: groupByAlbum(tracks),
+  folders: buildMusicFolders(tracks),
+);
+
+/// The library file at [path], read and sorted in a background isolate. Top-level, so the
+/// isolate gets only the path and none of the screen.
+Future<_Music?> _readKeptMusic(String path) => Isolate.run(() {
+      final tracks = LibraryCache.readFile(path);
+      return tracks == null ? null : _buildMusic(tracks);
+    });
 
 const _tabNames = ['Home', 'Artists', 'Albums', 'Tracks', 'Folders', 'Playlists'];
 const _homeTab = 0;
@@ -103,19 +118,31 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   /// A fresh list from the server, while the kept one shows; null when none is on its way.
   Future<void>? _update;
 
-  _Music _build(List<JellyfinItem> tracks) => (
-    tracks: tracks,
-    artists: groupByArtist(tracks),
-    albums: groupByAlbum(tracks),
-    folders: buildMusicFolders(tracks),
-  );
+  _Music _build(List<JellyfinItem> tracks) => _buildMusic(tracks);
+
+  /// The library kept on the phone: from this run's memory, or read and sorted into artists,
+  /// albums and folders in the background (tens of thousands of tracks would stall the screen).
+  Future<_Music?> _kept() async {
+    final known = LibraryCache.inMemory(_cacheKey);
+    if (known != null) return _build(known);
+    final path = await LibraryCache.pathOf(_cacheKey);
+    if (path == null) return null;
+    try {
+      final m = await _readKeptMusic(path);
+      if (m != null) LibraryCache.remember(_cacheKey, m.tracks);
+      return m;
+    } catch (e) {
+      debugPrint('homeplay music cache: $e');
+      return null;
+    }
+  }
 
   /// The tracks kept on the phone at once, then the server's in the background; the server's
   /// right away when nothing is kept yet (the first time), with a count while they come.
   Future<_Music> _load() async {
-    final kept = await LibraryCache.read(_cacheKey);
+    final kept = await _kept();
     if (kept != null) {
-      final m = _build(kept);
+      final m = kept;
       if (mounted) setState(() => _data = m);
       _update ??= _fetchFresh();
       return m;

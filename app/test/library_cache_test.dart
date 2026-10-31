@@ -65,10 +65,25 @@ void main() {
     test('a damaged file or one of another layout is not used', () {
       expect(decodeTracks('not json'), isNull);
       expect(decodeTracks('{"v":99,"items":[]}'), isNull);
-      expect(decodeTracks('{"v":1}'), isNull);
-      expect(decodeTracks('{"v":1,"items":[{"Name":"no id"},{"Id":"ok"}]}'), [
+      expect(decodeTracks('{"v":1,"items":[]}'), isNull, reason: 'an older layout');
+      expect(decodeTracks('{"v":2}'), isNull);
+      expect(decodeTracks('{"v":2,"items":[{"Name":"no id"},{"Id":"ok"}]}'), [
         {'Id': 'ok'}
       ]);
+    });
+
+    test('keeps only what the app reads of a record', () {
+      final slim = slimTrack({
+        'Id': 't1',
+        'Name': 'One',
+        'UserData': {'PlayCount': 3},
+        'ImageBlurHashes': {'Primary': {'abc': 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH'}},
+        'ServerId': 's',
+        'ArtistItems': [{'Name': 'A', 'Id': 'a'}],
+        'Album': null,
+      });
+      expect(slim, {'Id': 't1', 'Name': 'One', 'UserData': {'PlayCount': 3}});
+      expect(JellyfinItem(slim).playCount, 3);
     });
 
     test('a folder per server and user, a file per library', () {
