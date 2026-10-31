@@ -29,8 +29,14 @@ Write-Host "Для сайта: $site\version.json ($version, сборка $build
 # pages and serves its own copy of version.json: rebuild it, so nothing there stays at the old version.
 $python = Get-Command py, python -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($python) {
-    & $python.Source (Join-Path $repo 'site-src\build.py')
-    if ($LASTEXITCODE -ne 0) { throw 'site-src\build.py failed' }
+    # build.py notes what is not given yet (the Google Play link) on stderr. Windows PowerShell
+    # turns any stderr line of a program into an error, and with 'Stop' that ended the script
+    # before the plugin folder: only the exit code says whether the build failed.
+    $ErrorActionPreference = 'Continue'
+    & $python.Source (Join-Path $repo 'site-src\build.py') 2>&1 | ForEach-Object { Write-Host "$_" }
+    $built = $LASTEXITCODE
+    $ErrorActionPreference = 'Stop'
+    if ($built -ne 0) { throw 'site-src\build.py failed' }
     Write-Host "Сайт пересобран: $repo\site и $repo\ownmedia-site.zip"
 } else {
     Write-Host 'Python не найден, сайт не пересобран: запустите python site-src\build.py.'
