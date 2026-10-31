@@ -11,8 +11,8 @@ import 'package:path_provider/path_provider.dart';
 
 /// Covers, posters and photos from the server, kept on the phone: lists show what was seen
 /// before without a connection or on a slow one, and nothing is fetched twice. Files live in
-/// the app's cache folder (Android may clear it when space runs out) and the oldest unused go
-/// once they pass [maxBytes].
+/// the app's own folder, so they stay from one start to the next (the cache folder, where they
+/// were before, Android may empty by itself), and the oldest unused go once they pass [maxBytes].
 class ArtworkCache {
   ArtworkCache._();
 
@@ -29,13 +29,16 @@ class ArtworkCache {
   /// Pictures being fetched, by file name: the same one asked twice is fetched once.
   final _pending = <String, Future<Uint8List>>{};
 
-  /// Null when the phone gives no cache folder: pictures then come from the server each time.
+  /// Null when the phone gives no folder: pictures then come from the server each time.
   Future<Directory?> _folder() => _dir ??= () async {
         try {
-          final d = Directory('${(await getApplicationCacheDirectory()).path}/artwork');
+          final d = Directory('${(await getApplicationSupportDirectory()).path}/artwork');
           await d.create(recursive: true);
           // Once per start, after the first pictures are on screen.
-          Timer(const Duration(seconds: 30), () => unawaited(_prune(d)));
+          Timer(const Duration(seconds: 30), () {
+            unawaited(_prune(d));
+            unawaited(_dropOldFolder());
+          });
           return d;
         } catch (e) {
           debugPrint('homeplay artwork cache off: ${e.runtimeType}');
@@ -47,7 +50,17 @@ class ArtworkCache {
   /// Throws [ArtworkUnavailable], whose message has no address (the address may carry a token).
   Future<Uint8List> load(Uri url, Map<String, String> headers) {
     final name = artworkCacheName(url);
-    return _pending[name] ??= _load(name, url, headers).whenComplete(() => _pending.remove(name));
+    return sharedLoad(_pending, name, () => _load(name, url, headers));
+  }
+
+  /// Version 0.3.19 kept pictures in the cache folder; they are fetched again into the new one.
+  Future<void> _dropOldFolder() async {
+    try {
+      final old = Directory('${(await getApplicationCacheDirectory()).path}/artwork');
+      if (await old.exists()) await old.delete(recursive: true);
+    } catch (e) {
+      debugPrint('homeplay artwork old folder: ${e.runtimeType}');
+    }
   }
 
   Future<Uint8List> _load(String name, Uri url, Map<String, String> headers) async {
@@ -107,6 +120,24 @@ class ArtworkCache {
       debugPrint('homeplay artwork prune: ${e.runtimeType}');
     }
   }
+}
+
+/// [start]'s future for [key], shared by everyone who asks while it runs, and forgotten from
+/// [pending] once it is done, with a picture or an error. Pure.
+///
+/// The forgetting must not hand back a future: a whenComplete callback returning the removed
+/// entry (which is this very future) made it wait for itself, and no picture ever showed.
+Future<T> sharedLoad<T>(Map<String, Future<T>> pending, String key, Future<T> Function() start) {
+  final running = pending[key];
+  if (running != null) return running;
+  final future = start();
+  pending[key] = future;
+  future.then<void>((_) {
+    pending.remove(key);
+  }, onError: (Object _) {
+    pending.remove(key);
+  });
+  return future;
 }
 
 /// A picture that could not be had. The message never has the address.

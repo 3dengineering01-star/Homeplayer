@@ -159,4 +159,34 @@ void main() {
       expect(ArtworkUnavailable('timeout').toString(), isNot(contains('http')));
     });
   });
+
+  group('one picture asked many times', () {
+    test('is fetched once, comes back, and is forgotten once done', () async {
+      final pending = <String, Future<int>>{};
+      var started = 0;
+      Future<int> fetch() async {
+        started++;
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+        return 42;
+      }
+
+      final a = sharedLoad(pending, 'cover', fetch);
+      final b = sharedLoad(pending, 'cover', fetch);
+      expect(identical(a, b), isTrue);
+      // It must complete: it once waited for itself and never did.
+      expect(await a.timeout(const Duration(seconds: 2)), 42);
+      expect(started, 1);
+      expect(pending, isEmpty);
+      // Asked again later: fetched again (from the phone's copy, in the app).
+      await sharedLoad(pending, 'cover', fetch);
+      expect(started, 2);
+    });
+
+    test('a failure reaches whoever waits, and the next ask tries again', () async {
+      final pending = <String, Future<int>>{};
+      Future<int> failing() async => throw StateError('no picture');
+      await expectLater(sharedLoad(pending, 'cover', failing).timeout(const Duration(seconds: 2)), throwsStateError);
+      expect(pending, isEmpty);
+    });
+  });
 }
