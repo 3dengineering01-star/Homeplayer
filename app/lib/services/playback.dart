@@ -582,14 +582,15 @@ class Playback extends BaseAudioHandler with SeekHandler {
 
   /// Android Auto and other media browsers: music from the downloads and the servers.
   late final CarLibrary car = CarLibrary(
-    // After the free month, only servers that may be opened (see Pro).
+    // Android Auto is part of OwnMedia Pro: after its free month, only servers whose owner bought it.
     accounts: () async => [
       for (final a in await AccountStore.load())
-        if (await Pro.instance.mayOpen(a)) a,
+        if (await Pro.instance.mayUse(a)) a,
     ],
     jellyfin: (a) async => JellyfinClient(a, await AccountStore.deviceId()),
     subsonic: SubsonicClient.new,
     downloads: () async {
+      if (!await Pro.instance.mayUseAny()) return const [];
       await Downloads.instance.init();
       return Downloads.instance.entries.value.where((e) => !e.isVideo && e.state == DownloadState.done).toList();
     },

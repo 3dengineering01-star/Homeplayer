@@ -2,16 +2,36 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../models/account.dart';
 import '../services/licence.dart';
 import '../services/pro.dart';
 
-/// OwnMedia Pro: how much of the free month is left, and the one purchase. Opened from the
-/// settings, or instead of a server when the free month is over ([server] is its name); then it
+/// Runs [open] when [feature] may be used here (with [account], or on any server when null);
+/// otherwise shows what OwnMedia Pro is, and runs [open] once it is bought.
+Future<void> withPro(BuildContext context, ProFeature feature, FutureOr<void> Function() open, {Account? account}) async {
+  final ok = account != null ? await Pro.instance.mayUse(account) : await Pro.instance.mayUseAny();
+  if (!context.mounted) return;
+  if (!ok) {
+    final bought = await Navigator.push<bool>(context, MaterialPageRoute(builder: (_) => ProScreen(feature: feature)));
+    if (bought != true || !context.mounted) return;
+  }
+  await open();
+}
+
+const _icons = {
+  ProFeature.share: Icons.group_add_outlined,
+  ProFeature.backup: Icons.backup_outlined,
+  ProFeature.car: Icons.directions_car_outlined,
+  ProFeature.tv: Icons.cast_outlined,
+};
+
+/// OwnMedia Pro: what it adds, how much of the free month is left, and the one purchase. Opened
+/// from the settings, or instead of a [ProFeature] after the free month ([feature]); then it
 /// closes with true once bought.
 class ProScreen extends StatefulWidget {
-  const ProScreen({super.key, this.server, this.pro});
+  const ProScreen({super.key, this.feature, this.pro});
 
-  final String? server;
+  final ProFeature? feature;
 
   /// For tests; the app's own otherwise.
   final Pro? pro;
@@ -41,9 +61,9 @@ class _ProScreenState extends State<ProScreen> {
     super.dispose();
   }
 
-  // Bought while a server waits: open it.
+  // Bought while a feature waits: open it.
   void _changed() {
-    if (widget.server != null && _pro.status.value.bought && !_closing && mounted) {
+    if (widget.feature != null && _pro.status.value.bought && !_closing && mounted) {
       _closing = true;
       Navigator.pop(context, true);
     }
@@ -58,12 +78,12 @@ class _ProScreenState extends State<ProScreen> {
       body: ValueListenableBuilder<ProStatus>(
         valueListenable: _pro.status,
         builder: (context, s, _) {
-          final server = widget.server;
+          final feature = widget.feature;
           final title = s.bought
               ? 'OwnMedia Pro is yours'
               : s.trialLeft > 0
-                  ? 'Free for ${s.trialLeft} more ${s.trialLeft == 1 ? 'day' : 'days'}'
-                  : 'The free month is over';
+                  ? 'Pro free for ${s.trialLeft} more ${s.trialLeft == 1 ? 'day' : 'days'}'
+                  : 'The free month of Pro is over';
           return ListView(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
             children: [
@@ -84,10 +104,10 @@ class _ProScreenState extends State<ProScreen> {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
-              if (server != null && !s.bought) ...[
+              if (feature != null && !s.bought) ...[
                 Text(
-                  'To open $server, buy OwnMedia Pro. If $server is a friend\'s server, you can also ask them: '
-                  'once its owner buys OwnMedia Pro, everyone they invited watches free.',
+                  '${feature.title} is part of OwnMedia Pro. On a friend\'s server you can also ask its owner: '
+                  'once they buy OwnMedia Pro, everyone they invited gets it too.',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge,
                 ),
@@ -95,13 +115,13 @@ class _ProScreenState extends State<ProScreen> {
               ],
               Text(
                 s.bought
-                    ? 'Thank you for supporting OwnMedia. Friends you invite to your server watch free.'
-                    : 'Try everything free for $trialDays days, then buy once and keep it: no subscription. '
-                        'Friends you invite to your server watch free once you have bought it.',
+                    ? 'Thank you for supporting OwnMedia. Friends you invite to your server get Pro too.'
+                    : 'Watching and listening stay free. OwnMedia Pro adds what goes beyond your phone: try it '
+                        'free for $trialDays days, then buy once and keep it. No subscription.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(color: scheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               if (!s.bought) ...[
                 FilledButton.icon(
                   onPressed: s.price == null ? null : _pro.buy,
@@ -112,6 +132,15 @@ class _ProScreenState extends State<ProScreen> {
                 const SizedBox(height: 8),
                 TextButton(onPressed: _pro.restore, child: const Text('I bought it before: restore')),
               ],
+              const SizedBox(height: 16),
+              // The buttons first, so they are in view on a small phone; what Pro adds below.
+              for (final f in ProFeature.values)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(_icons[f], color: scheme.primary),
+                  title: Text(f.title),
+                  subtitle: Text(f.what),
+                ),
             ],
           );
         },

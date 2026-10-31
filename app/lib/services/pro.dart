@@ -37,7 +37,8 @@ class ProStatus {
 }
 
 /// OwnMedia Pro: the free month, the purchase on Google Play, and the purchases owners leave on
-/// their servers for invited friends (see licence.dart for the rules).
+/// their servers for invited friends (see licence.dart for the rules). Only the [ProFeature]s
+/// close after the free month; watching and listening never do.
 class Pro {
   Pro._();
 
@@ -100,8 +101,17 @@ class Pro {
       final found = await iap.queryProductDetails({proProductId});
       if (found.productDetails.isNotEmpty) {
         _product = found.productDetails.first;
-        // From now on the trial counts here, even offline.
-        await _prefs!.setBool(_storeKey, true);
+        // The free month starts the first time it can be bought here, not at the app's first
+        // start: whoever used it before gets a whole month too. From now on it counts, even offline.
+        final prefs = _prefs!;
+        final seenBefore = prefs.getBool(_storeKey) ?? false;
+        if (!seenBefore) {
+          final start = trialStart(
+              stored: DateTime.tryParse(prefs.getString(_trialKey) ?? ''), storeSeenBefore: false, now: DateTime.now());
+          await prefs.setString(_trialKey, start.toIso8601String());
+          _trialStart = start;
+        }
+        await prefs.setBool(_storeKey, true);
       }
       _publish();
       await _refresh();
@@ -218,19 +228,21 @@ class Pro {
     }
   }
 
-  /// Whether [a] may be opened: during the free month, once bought, or when the server's owner
-  /// bought (friends invited to it watch free).
-  Future<bool> mayOpen(Account a) async {
+  /// Whether the [ProFeature]s may be used with [a]: during the free month, once bought, or when
+  /// the server's owner bought (friends invited to it get them too).
+  Future<bool> mayUse(Account a) async {
     await _load();
     _publish();
     final s = status.value;
     if (s.bought) unawaited(_keepOn(a));
-    if (mayOpenServer(enforced: s.enforced, bought: s.bought, trialLeft: s.trialLeft, serverPaid: false)) return true;
+    if (mayUsePro(enforced: s.enforced, bought: s.bought, trialLeft: s.trialLeft, serverPaid: false)) return true;
     return _paidByOwner(a);
   }
 
-  /// Whether anything on this phone may be used: for the downloads.
-  Future<bool> mayUseAny(List<Account> accounts) async {
+  /// Whether the [ProFeature]s may be used somewhere on this phone: for what belongs to no one
+  /// server (the TV, the downloads in the car). [accounts] are the servers; all of them when null.
+  Future<bool> mayUseAny([List<Account>? accounts]) async {
+    accounts ??= await AccountStore.load();
     await _load();
     _publish();
     final s = status.value;
