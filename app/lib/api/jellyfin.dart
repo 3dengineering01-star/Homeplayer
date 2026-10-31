@@ -20,6 +20,9 @@ class JellyfinItem {
   JellyfinItem(this._j);
   final Map<String, dynamic> _j;
 
+  /// The server's own record, as it came: to keep on the phone (see library_cache.dart).
+  Map<String, dynamic> get raw => _j;
+
   String get id => _j['Id'] as String;
   String get name => (_j['Name'] as String?)?.trim() ?? '';
   String get type => (_j['Type'] as String?) ?? '';
@@ -395,9 +398,11 @@ class JellyfinClient {
   }
 
   /// Every track of a music library, page by page: the music screen sorts and groups them
-  /// itself, so it works also where the server has no albums for loose files.
-  Future<List<JellyfinItem>> musicTracks(String libraryId) =>
-      _allPages({'parentId': libraryId, 'recursive': 'true', 'includeItemTypes': 'Audio'});
+  /// itself, so it works also where the server has no albums for loose files. A big library
+  /// comes four pages at a time; [progress] hears how many tracks of how many are in.
+  Future<List<JellyfinItem>> musicTracks(String libraryId, {void Function(int loaded, int total)? progress}) =>
+      _allPages({'parentId': libraryId, 'recursive': 'true', 'includeItemTypes': 'Audio'},
+          parallel: 4, progress: progress);
 
   /// Every file the search can find by its name on disk: videos, tracks and photos, with
   /// their paths. The server's own search looks at titles only.
@@ -452,23 +457,41 @@ class JellyfinClient {
         'sortBy': 'ParentIndexNumber,IndexNumber,SortName',
       });
 
-  Future<List<JellyfinItem>> _allPages(Map<String, String> query, {int page = 2000}) async {
-    final all = <JellyfinItem>[];
-    while (true) {
+  /// Everything [query] finds, page by page. The first page tells the total; the next ones come
+  /// [parallel] at a time and are put in order. A page shorter than the others (the library
+  /// changed meanwhile) drops the rest of its batch, and the next batch starts right after it.
+  Future<List<JellyfinItem>> _allPages(Map<String, String> query,
+      {int page = 2000, int parallel = 1, void Function(int loaded, int total)? progress}) async {
+    Future<({List<JellyfinItem> items, int? total})> fetch(int start) async {
       final j = await _get('/Items', {
         'userId': account.userId!,
         'fields': 'DateCreated,Genres,MediaSourceCount,Path',
         'enableUserData': 'true',
         'excludeLocationTypes': 'Virtual',
-        'startIndex': '${all.length}',
+        'startIndex': '$start',
         'limit': '$page',
         ...query,
       });
-      final items = _items(j);
-      all.addAll(items);
-      final total = (j['TotalRecordCount'] as num?)?.toInt() ?? all.length;
-      if (items.isEmpty || all.length >= total) return all;
+      return (items: _items(j), total: (j['TotalRecordCount'] as num?)?.toInt());
     }
+
+    final first = await fetch(0);
+    final all = [...first.items];
+    final total = first.total ?? all.length;
+    final step = first.items.length;
+    progress?.call(all.length, total);
+    if (step == 0) return all;
+    while (all.length < total) {
+      final starts = [for (var s = all.length; s < total && s < all.length + step * parallel; s += step) s];
+      final pages = await Future.wait(starts.map(fetch));
+      for (final p in pages) {
+        if (p.items.isEmpty) return all;
+        all.addAll(p.items);
+        if (p.items.length < step) break;
+      }
+      progress?.call(all.length, total);
+    }
+    return all;
   }
 
   /// Songs like [itemId] (a song, album, artist or playlist), the server's "Instant Mix".

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api/common.dart';
 import '../api/jellyfin.dart';
+import '../services/library_cache.dart';
 import '../services/music_folders.dart';
 import '../services/alphabet.dart';
 import '../services/music_index.dart';
@@ -90,16 +93,64 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   /// The same once it is there, for the count on the Playlists tab.
   List<PlaylistContents>? _contentsData;
 
+  /// The library's file on the phone (see [LibraryCache]).
+  late final String _cacheKey = LibraryCache.key(
+      baseUrl: client.account.baseUrl, userId: client.account.userId ?? '', libraryId: widget.library.id);
+
+  /// While the first load runs: how many tracks of how many are in.
+  ({int loaded, int total})? _progress;
+
+  /// A fresh list from the server, while the kept one shows; null when none is on its way.
+  Future<void>? _update;
+
+  _Music _build(List<JellyfinItem> tracks) => (
+    tracks: tracks,
+    artists: groupByArtist(tracks),
+    albums: groupByAlbum(tracks),
+    folders: buildMusicFolders(tracks),
+  );
+
+  /// The tracks kept on the phone at once, then the server's in the background; the server's
+  /// right away when nothing is kept yet (the first time), with a count while they come.
   Future<_Music> _load() async {
-    final tracks = await client.musicTracks(widget.library.id);
-    final m = (
-      tracks: tracks,
-      artists: groupByArtist(tracks),
-      albums: groupByAlbum(tracks),
-      folders: buildMusicFolders(tracks),
-    );
+    final kept = await LibraryCache.read(_cacheKey);
+    if (kept != null) {
+      final m = _build(kept);
+      if (mounted) setState(() => _data = m);
+      _update ??= _fetchFresh();
+      return m;
+    }
+    final tracks = await client.musicTracks(widget.library.id, progress: (loaded, total) {
+      if (mounted) setState(() => _progress = (loaded: loaded, total: total));
+    });
+    unawaited(LibraryCache.write(_cacheKey, tracks));
+    final m = _build(tracks);
     if (mounted) setState(() => _data = m);
     return m;
+  }
+
+  /// The server's tracks in place of the kept ones. Without a connection the kept ones stay, with
+  /// a word about it.
+  Future<void> _fetchFresh() async {
+    try {
+      final tracks = await client.musicTracks(widget.library.id);
+      unawaited(LibraryCache.write(_cacheKey, tracks));
+      final m = _build(tracks);
+      if (mounted) {
+        setState(() {
+          _data = m;
+          _music = Future.value(m);
+        });
+      }
+    } catch (e) {
+      debugPrint('homeplay music update failed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('The server did not answer: this is the library as it was last time.')));
+      }
+    } finally {
+      if (mounted) setState(() => _update = null);
+    }
   }
 
   Future<List<PlaylistContents>> _loadContents() async {
@@ -139,9 +190,15 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
     if (first >= 0) _tabs.animateTo(first);
   }
 
+  /// After a change (a pull, a long-press action): the list on screen stays while a fresh one
+  /// comes; only a library never loaded shows the wait.
   @override
   void refresh() => setState(() {
-    _music = _load();
+    if (_data == null) {
+      _music = _load();
+    } else {
+      _update ??= _fetchFresh();
+    }
     _playlists = client.playlists();
   });
 
@@ -255,14 +312,18 @@ class _MusicLibraryScreenState extends State<MusicLibraryScreen> with JellyfinAc
   Widget _withMusic(Widget Function(_Music) build) => FutureBuilder<_Music>(
     future: _music,
     builder: (context, snap) {
-      if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+      if (snap.connectionState != ConnectionState.done) return _Loading(progress: _progress);
       if (snap.hasError) return _Failed(error: snap.error!, onRetry: refresh);
       return RefreshIndicator(
         onRefresh: () async {
           refresh();
-          await _music.then((_) {}, onError: (_) {});
+          await (_update ?? _music.then((_) {})).catchError((_) {});
         },
-        child: build(snap.data!),
+        child: Stack(children: [
+          build(snap.data!),
+          // A fresh list on its way from the server.
+          if (_update != null) const Positioned(top: 0, left: 0, right: 0, child: LinearProgressIndicator(minHeight: 2)),
+        ]),
       );
     },
   );
@@ -767,6 +828,34 @@ class _Empty extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// The first load of a library: how many tracks are in, once the server said how many there are.
+class _Loading extends StatelessWidget {
+  const _Loading({this.progress});
+
+  final ({int loaded, int total})? progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = progress;
+    final part = p == null || p.total == 0 ? null : p.loaded / p.total;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          CircularProgressIndicator(value: part),
+          if (p != null && p.total > 0) ...[
+            const SizedBox(height: 16),
+            Text('Loading tracks: ${p.loaded} of ${p.total}', textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text('Only this once: next time the library opens at once.',
+                textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ]),
+      ),
+    );
+  }
 }
 
 class _Failed extends StatelessWidget {
