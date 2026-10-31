@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:homeplay/services/library_cache.dart';
 import 'package:homeplay/api/jellyfin.dart';
 import 'package:homeplay/models/account.dart';
 import 'package:homeplay/screens/music_library_screen.dart';
@@ -49,6 +50,9 @@ JellyfinClient _server() => JellyfinClient(
     );
 
 void main() {
+  // The copy of the library on the phone reads real files, which never finish under the test clock.
+  setUpAll(() => LibraryCache.enabled = false);
+
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   for (final scale in [1.0, 1.5]) {

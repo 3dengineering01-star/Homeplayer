@@ -105,8 +105,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: Text(s.bought
                             ? 'Bought. Thank you!'
                             : s.trialLeft > 0
-                                ? 'Free for ${s.trialLeft} more days, then one purchase'
-                                : 'The free month is over'),
+                                ? 'Sharing, photo backup, Android Auto and TV: free for ${s.trialLeft} more days'
+                                : 'Sharing, photo backup, Android Auto and TV'),
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProScreen())),
                       ),
               ),

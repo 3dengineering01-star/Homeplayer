@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/jellyfin.dart';
+import '../services/licence.dart';
 import '../services/appearance.dart';
 import '../widgets/library_tiles.dart';
 import '../widgets/media_cards.dart';
@@ -10,6 +11,7 @@ import 'jellyfin_actions.dart';
 import 'jellyfin_browser.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
+import 'pro_screen.dart';
 import 'share_screen.dart';
 import '../widgets/error_view.dart';
 
@@ -112,11 +114,13 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
               ),
               if (_owner)
                 PopupMenuItem(
-                  value: () => _push(ShareScreen(client: client)),
+                  value: () => withPro(context, ProFeature.share, () => _push(ShareScreen(client: client)),
+                      account: client.account),
                   child: const ListTile(leading: Icon(Icons.group_add_outlined), title: Text('Share with friends')),
                 ),
               PopupMenuItem(
-                value: () => _push(BackupScreen(account: client.account)),
+                value: () => withPro(context, ProFeature.backup, () => _push(BackupScreen(account: client.account)),
+                    account: client.account),
                 child: const ListTile(leading: Icon(Icons.backup_outlined), title: Text('Photo backup')),
               ),
               PopupMenuItem(

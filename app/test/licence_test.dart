@@ -55,7 +55,7 @@ void main() {
   group('the trial', () {
     final start = DateTime(2026, 10, 1, 12);
 
-    test('is 30 days from the first start', () {
+    test('is 30 days from its start', () {
       expect(trialDaysLeft(start, start), 30);
       expect(trialDaysLeft(start, start.add(const Duration(hours: 23))), 30);
       expect(trialDaysLeft(start, start.add(const Duration(days: 1))), 29);
@@ -71,11 +71,35 @@ void main() {
     });
   });
 
-  test('a server opens during the trial, when bought, when its owner bought, or while it cannot be bought', () {
-    expect(mayOpenServer(enforced: true, bought: false, trialLeft: 3, serverPaid: false), isTrue);
-    expect(mayOpenServer(enforced: true, bought: true, trialLeft: 0, serverPaid: false), isTrue);
-    expect(mayOpenServer(enforced: true, bought: false, trialLeft: 0, serverPaid: true), isTrue);
-    expect(mayOpenServer(enforced: false, bought: false, trialLeft: 0, serverPaid: false), isTrue);
-    expect(mayOpenServer(enforced: true, bought: false, trialLeft: 0, serverPaid: false), isFalse);
+  test('Pro works during the trial, when bought, when the server owner bought, or while it cannot be bought', () {
+    expect(mayUsePro(enforced: true, bought: false, trialLeft: 3, serverPaid: false), isTrue);
+    expect(mayUsePro(enforced: true, bought: true, trialLeft: 0, serverPaid: false), isTrue);
+    expect(mayUsePro(enforced: true, bought: false, trialLeft: 0, serverPaid: true), isTrue);
+    expect(mayUsePro(enforced: false, bought: false, trialLeft: 0, serverPaid: false), isTrue);
+    expect(mayUsePro(enforced: true, bought: false, trialLeft: 0, serverPaid: false), isFalse);
+  });
+
+  group('the free month starts', () {
+    final firstRun = DateTime(2026, 8, 1);
+    final sold = DateTime(2026, 11, 10);
+
+    test('the day the purchase first becomes possible, not at the first start of the app', () {
+      final start = trialStart(stored: firstRun, storeSeenBefore: false, now: sold);
+      expect(start, sold);
+      expect(trialDaysLeft(start, sold), trialDays);
+    });
+
+    test('and stays put once the purchase was possible before', () {
+      expect(trialStart(stored: sold, storeSeenBefore: true, now: sold.add(const Duration(days: 40))), sold);
+    });
+
+    test('at once when nothing is stored', () {
+      expect(trialStart(stored: null, storeSeenBefore: true, now: sold), sold);
+    });
+  });
+
+  test('Pro is four things; watching and listening are not among them', () {
+    expect(ProFeature.values.map((f) => f.title),
+        ['Sharing with friends', 'Photo backup', 'Android Auto', 'Play on TV']);
   });
 }

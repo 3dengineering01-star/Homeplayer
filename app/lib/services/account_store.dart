@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/account.dart';
+import 'library_cache.dart';
 
 class AccountStore {
   // On iOS the photo backup runs while the phone is locked; the default keychain setting hides
@@ -34,6 +35,10 @@ class AccountStore {
 
   static Future<void> remove(String id) async {
     final accounts = await load();
+    for (final a in accounts.where((a) => a.id == id)) {
+      // Its music list kept on the phone goes too.
+      await LibraryCache.forget(baseUrl: a.baseUrl, userId: a.userId ?? '');
+    }
     accounts.removeWhere((a) => a.id == id);
     await _save(accounts);
   }

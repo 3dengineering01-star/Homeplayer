@@ -169,8 +169,8 @@ class Backup {
         await disable();
         return 0;
       }
-      if (!await Pro.instance.mayOpen(account)) {
-        throw const _BackupStop('The free month of OwnMedia is over. Buy OwnMedia Pro to keep backing up photos.');
+      if (!await Pro.instance.mayUse(account)) {
+        throw const _BackupStop('Photo backup is part of OwnMedia Pro, and its free month is over. Buy OwnMedia Pro to keep backing up photos.');
       }
       if (!background && !(await PhotoManager.getPermissionState(requestOption: permission)).hasAccess) {
         throw const _BackupStop('No access to photos. Open the backup settings in OwnMedia to allow it.');

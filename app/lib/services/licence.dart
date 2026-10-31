@@ -3,9 +3,10 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
-/// OwnMedia Pro: a month to try, then one purchase on Google Play. Friends who joined a server by
-/// invite watch free when the owner of that server bought it: the owner's app leaves the signed
-/// purchase on the server (Homeplay Backup plugin), and the friend's app checks Google's signature.
+/// OwnMedia Pro: watching and listening are free; what goes beyond the phone ([ProFeature]) is
+/// free for a month, then one purchase on Google Play. Friends who joined a server by invite get
+/// it when the owner of that server bought it: the owner's app leaves the signed purchase on the
+/// server (Homeplay Backup plugin), and the friend's app checks Google's signature.
 /// Pure rules here; the store and the servers are in pro.dart.
 
 /// The purchase in Google Play Console (Monetize → Products → In-app products).
@@ -14,8 +15,31 @@ const proProductId = 'ownmedia_pro';
 /// The app's package, as Google writes it in every purchase.
 const appPackage = 'dev.homeplay.homeplay';
 
-/// How long the app is free.
+/// How long OwnMedia Pro is free to try.
 const trialDays = 30;
+
+/// What OwnMedia Pro adds. Everything else (watching, listening, downloads, search, the
+/// equalizer...) is free for good.
+enum ProFeature {
+  share('Sharing with friends', 'Invite friends to your server and see who has access.'),
+  backup('Photo backup', 'New photos and videos go to your own server by themselves.'),
+  car('Android Auto', "Your music on the car's screen, with voice search."),
+  tv('Play on TV', 'Send a movie to a smart TV on your Wi-Fi; the phone is the remote.');
+
+  const ProFeature(this.title, this.what);
+
+  /// Its name, as the app shows it.
+  final String title;
+
+  /// One line on what it does.
+  final String what;
+}
+
+/// When the free month starts: the day the purchase first became possible on this phone, so the
+/// month is a real one even for someone who used the app long before it was sold. [stored] is the
+/// start kept on the phone; [storeSeenBefore] whether the purchase was possible on an earlier run.
+DateTime trialStart({required DateTime? stored, required bool storeSeenBefore, required DateTime now}) =>
+    storeSeenBefore && stored != null ? stored : now;
 
 /// Google Play's public key for this app: Play Console → Monetize → Monetization setup →
 /// Licensing. It is public; Google signs every purchase with the matching private key.
@@ -36,10 +60,10 @@ int trialDaysLeft(DateTime start, DateTime now, {DateTime? lastSeen}) {
   return left.clamp(0, trialDays);
 }
 
-/// Whether a server may be opened. [enforced] is false while the purchase cannot be made on this
-/// phone (no Google Play, or the product is not in the store yet): nobody is locked out of
-/// something they cannot buy.
-bool mayOpenServer({
+/// Whether a [ProFeature] may be used (on a server, when [serverPaid] says its owner bought).
+/// [enforced] is false while the purchase cannot be made on this phone (no Google Play, or the
+/// product is not in the store yet): nobody is locked out of something they cannot buy.
+bool mayUsePro({
   required bool enforced,
   required bool bought,
   required int trialLeft,

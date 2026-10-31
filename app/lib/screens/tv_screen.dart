@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../api/common.dart';
 import '../api/dlna.dart';
+import '../services/licence.dart';
+import '../services/pro.dart';
 import '../services/tv_cast.dart';
 import '../widgets/artwork.dart';
+import 'pro_screen.dart';
 
 /// Picks a TV and opens the remote for [item] on it, from [startAt]. With [replace] the remote
 /// takes the place of the current screen (the player).
@@ -20,6 +23,13 @@ Future<void> playOnTv(BuildContext context, PlayItem item, {Duration startAt = D
             : 'The server is converting this video for the connection. Choose the original quality first.')));
     return;
   }
+  // Play on TV is part of OwnMedia Pro.
+  if (!await Pro.instance.mayUseAny()) {
+    if (!context.mounted) return;
+    final bought = await nav.push<bool>(MaterialPageRoute(builder: (_) => const ProScreen(feature: ProFeature.tv)));
+    if (bought != true || !context.mounted) return;
+  }
+  if (!context.mounted) return;
   final device = await pickTv(context);
   if (device == null) return;
   final url = await item.tvUrl?.call().catchError((_) => item.url) ?? item.url;
