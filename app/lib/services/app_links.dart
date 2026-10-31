@@ -32,6 +32,19 @@ class AppLinks {
     }
   }
 
+  /// Opens the mail app with a message written to [to], not sent; false when there is no mail
+  /// app (or not on Android).
+  static Future<bool> mail({required String to, required String subject, required String body}) async {
+    try {
+      return await _channel.invokeMethod<bool>('mail', {'to': to, 'subject': subject, 'body': body}) ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException catch (e) {
+      debugPrint('homeplay mail: ${e.code}');
+      return false;
+    }
+  }
+
   /// Shares [text] through Android's share sheet.
   static Future<void> share(String text, {String title = 'Share'}) =>
       _channel.invokeMethod('share', {'text': text, 'title': title});

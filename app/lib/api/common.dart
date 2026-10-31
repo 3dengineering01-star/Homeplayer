@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+
+import '../services/connection.dart';
 import '../services/quality.dart';
 
 class ApiException implements Exception {
@@ -242,13 +246,77 @@ String normalizeBaseUrl(String input) {
   return s;
 }
 
-String describeError(Object e) {
+/// What went wrong with a request, when it is the connection rather than the server's answer.
+enum NetProblem {
+  /// The phone has no network at all (airplane mode, no Wi-Fi and no mobile data).
+  offline,
+
+  /// There is a network, but the server cannot be reached on it.
+  unreachable,
+
+  /// The server took too long to answer.
+  timeout,
+}
+
+/// The connection problem behind [e], or null when [e] is something else (a refusal, a bad
+/// answer). [offline] is what the phone itself says about its network.
+NetProblem? netProblem(Object e, {bool offline = false}) {
   final s = e.toString();
-  if (s.contains('SocketException') || s.contains('ClientException')) {
-    return 'Cannot reach the server. Check the address, and that the phone is on the same network or Tailscale.';
-  }
-  if (s.contains('TimeoutException')) return 'The server did not answer in time.';
-  return s;
+  final timedOut = e is TimeoutException || s.contains('TimeoutException');
+  final noConnection = s.contains('SocketException') ||
+      s.contains('ClientException') ||
+      s.contains('HandshakeException') ||
+      s.contains('Connection closed');
+  if (!timedOut && !noConnection) return null;
+  // ENETUNREACH: Android answers so at once in airplane mode, before the app hears of it.
+  if (offline || s.contains('Network is unreachable') || s.contains('errno = 101')) return NetProblem.offline;
+  return timedOut ? NetProblem.timeout : NetProblem.unreachable;
+}
+
+/// The message for [e] shown to people. Pure: [offline] comes from the caller.
+String errorMessage(Object e, {bool offline = false}) => switch (netProblem(e, offline: offline)) {
+      NetProblem.offline => 'No connection. Downloaded movies and music still play: open Downloads.',
+      NetProblem.unreachable =>
+        'Cannot reach the server. Check the address, and that the phone is on the same network or Tailscale.',
+      NetProblem.timeout => 'The server did not answer in time. Check the connection and try again.',
+      // Anything else as it is, without tokens or links that carry them.
+      null => redactSecrets(e.toString()),
+    };
+
+/// [errorMessage], with what the phone currently says about its network.
+String describeError(Object e) => errorMessage(e, offline: Connection.offline.value);
+
+/// Query parameters that carry a sign-in: Jellyfin's api_key, Subsonic's t (token), s (salt)
+/// and p (password), and the usual names elsewhere.
+const _secretParams = {
+  'api_key', 'apikey', 'token', 'access_token', 'accesstoken', 'x-emby-token', 'x-mediabrowser-token',
+  't', 's', 'p', 'pw', 'password', 'auth', 'key', 'signature', 'sig',
+};
+
+final _urlPattern = RegExp(r'''[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s"'<>()\[\]]+''');
+
+// Token="…", "AccessToken":"…", api_key=…, password: … outside links.
+final _fieldPattern = RegExp(
+    r'''("?)\b(api_key|apikey|accesstoken|access_token|x-emby-token|x-mediabrowser-token|token|password|pw)\1(\s*[=:]\s*)("?)[^"\s,&;]+''',
+    caseSensitive: false);
+final _bearerPattern = RegExp(r'Bearer\s+\S+', caseSensitive: false);
+
+// Jellyfin tokens and Subsonic's md5 token are 32 hex characters. Item ids look the same and
+// are hidden too, which costs little in a problem report.
+final _hexPattern = RegExp(r'\b[0-9a-fA-F]{32,}\b');
+
+/// [text] without sign-in secrets, for logs and problem reports: a link that carries a token
+/// or a password is removed whole, other links lose their query, and token fields are hidden.
+String redactSecrets(String text) {
+  var s = text.replaceAllMapped(_urlPattern, (m) {
+    final uri = Uri.tryParse(m[0]!);
+    if (uri == null || uri.userInfo.isNotEmpty) return '[link removed]';
+    if (uri.queryParametersAll.keys.any((k) => _secretParams.contains(k.toLowerCase()))) return '[link removed]';
+    return uri.hasQuery || uri.hasFragment ? '${uri.scheme}://${uri.authority}${uri.path}' : m[0]!;
+  });
+  s = s.replaceAllMapped(_fieldPattern, (m) => '${m[1]}${m[2]}${m[1]}${m[3]}${m[4]}[hidden]');
+  s = s.replaceAll(_bearerPattern, 'Bearer [hidden]');
+  return s.replaceAll(_hexPattern, '[hidden]');
 }
 
 /// 1:05:09 or 4:07.

@@ -9,6 +9,7 @@ import '../widgets/track_tile.dart';
 import '../widgets/vinyl_art.dart';
 import 'jellyfin_actions.dart';
 import 'playlist_picker.dart';
+import '../widgets/error_view.dart';
 
 /// An album, an artist or a playlist: a cover, the name, Play and Shuffle, and the tracks.
 class TrackListScreen extends StatefulWidget {
@@ -150,19 +151,7 @@ class _TrackListScreenState extends State<TrackListScreen> with JellyfinActions 
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
           if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(describeError(snap.error!), textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton(onPressed: refresh, child: const Text('Retry')),
-                  ],
-                ),
-              ),
-            );
+            return ErrorView(error: snap.error!, onRetry: refresh);
           }
           final tracks = snap.data!;
           final rows = <Widget>[

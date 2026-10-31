@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../services/appearance.dart';
 import '../widgets/library_tiles.dart';
@@ -12,6 +11,7 @@ import 'jellyfin_browser.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 import 'share_screen.dart';
+import '../widgets/error_view.dart';
 
 /// A Jellyfin server's front page: its libraries. What is being watched is inside the movie and
 /// show libraries.
@@ -132,16 +132,7 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
           if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(describeError(snap.error!), textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  FilledButton(onPressed: refresh, child: const Text('Retry')),
-                ]),
-              ),
-            );
+            return ErrorView(error: snap.error!, onRetry: refresh);
           }
           final libraries = snap.data!;
           return RefreshIndicator(

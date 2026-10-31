@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../api/lrclib.dart';
+import '../services/app_links.dart';
+import '../services/app_log.dart';
 import '../services/app_update.dart';
+import '../services/problem_report.dart';
 import '../services/pro.dart';
 import '../services/quality.dart';
 import '../services/track_cache.dart';
@@ -276,6 +280,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
               ListTile(
+                leading: const Icon(Icons.bug_report_outlined),
+                title: const Text('Report a problem'),
+                subtitle: const Text('Write to us from your mail app. Nothing is sent without you'),
+                onTap: () => reportProblem(context),
+              ),
+              ListTile(
                 leading: const Icon(Icons.description_outlined),
                 title: const Text('Open-source licenses'),
                 subtitle: const Text('The free software OwnMedia is built with'),
@@ -291,6 +301,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
             ]),
+    );
+  }
+}
+
+/// Report a problem: the person picks whether recent app events go along, sees them, and the
+/// mail app opens with the message written. Only the person sends it; the app sends nothing.
+Future<void> reportProblem(BuildContext context) async {
+  final withLog = await showDialog<bool>(context: context, builder: (_) => const _ReportDialog());
+  if (withLog == null || !context.mounted) return;
+  final report = await currentReport(withLog: withLog);
+  final to = supportAddress;
+  if (await AppLinks.mail(to: to, subject: report.subject, body: report.body)) return;
+  // No mail app: the text goes to the clipboard, to paste wherever the person writes mail.
+  await Clipboard.setData(ClipboardData(text: '${report.subject}\n\n${report.body}'));
+  if (!context.mounted) return;
+  await showDialog<void>(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: const Text('No mail app found'),
+      content: SelectableText('The report is copied. Paste it into a message to $to.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('OK'))],
+    ),
+  );
+}
+
+class _ReportDialog extends StatefulWidget {
+  const _ReportDialog();
+
+  @override
+  State<_ReportDialog> createState() => _ReportDialogState();
+}
+
+class _ReportDialogState extends State<_ReportDialog> {
+  bool _withLog = false;
+  bool _showLog = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final log = AppLog.lines;
+    return AlertDialog(
+      title: const Text('Report a problem'),
+      content: SingleChildScrollView(
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Your mail app opens with a message to OwnMedia support. It has the app version, '
+              'the phone model and the Android version. You can read and change it before sending.'),
+          const SizedBox(height: 8),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _withLog,
+            onChanged: (v) => setState(() => _withLog = v ?? false),
+            title: const Text('Add recent app events'),
+            subtitle: const Text('Helps find the cause. Passwords, tokens and links with them are left out'),
+          ),
+          if (_withLog)
+            TextButton(
+              onPressed: () => setState(() => _showLog = !_showLog),
+              child: Text(_showLog ? 'Hide events' : 'See what is added (${log.length} lines)'),
+            ),
+          if (_withLog && _showLog)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 240),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: SingleChildScrollView(
+                child: SelectableText(log.isEmpty ? '(none)' : log.join('\n'),
+                    style: theme.textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
+              ),
+            ),
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, _withLog), child: const Text('Write email')),
+      ],
     );
   }
 }

@@ -132,6 +132,23 @@ class MainActivity : AudioServiceActivity() {
                         startActivity(Intent.createChooser(send, call.argument<String>("title")))
                         result.success(null)
                     }
+                    // A message in the mail app, written but not sent: the person sends it
+                    // (Settings, Report a problem). False when the phone has no mail app.
+                    "mail" -> {
+                        val mail = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:")).apply {
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf(call.argument<String>("to")))
+                            putExtra(Intent.EXTRA_SUBJECT, call.argument<String>("subject"))
+                            putExtra(Intent.EXTRA_TEXT, call.argument<String>("body"))
+                        }
+                        result.success(
+                            try {
+                                startActivity(mail)
+                                true
+                            } catch (e: android.content.ActivityNotFoundException) {
+                                false
+                            }
+                        )
+                    }
                     // A web address in the browser (the new version of the app to download).
                     "view" -> {
                         val open = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(call.arguments as String))

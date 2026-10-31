@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../api/common.dart';
 import '../api/jellyfin.dart';
 import '../widgets/media_cards.dart';
 import 'jellyfin_actions.dart';
 import 'jellyfin_browser.dart';
+import '../widgets/error_view.dart';
 
 /// A movie, show or music library as a grid of posters, loaded page by page as it scrolls. Movies
 /// and shows begin with a row of what is being watched.
@@ -135,16 +135,7 @@ class _LibraryScreenState extends State<LibraryScreen> with JellyfinActions {
         ],
       ),
       body: _items.isEmpty && _error != null
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(describeError(_error!), textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  FilledButton(onPressed: _reload, child: const Text('Retry')),
-                ]),
-              ),
-            )
+          ? ErrorView(error: _error!, onRetry: _reload)
           : _items.isEmpty && !_loading
               ? const Center(child: Text('Nothing here'))
               : RefreshIndicator(
