@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/jellyfin.dart';
+import 'artwork.dart';
 
 /// A picture from the server that fades in, with an icon while loading or without a picture.
 class NetImage extends StatelessWidget {
@@ -19,18 +20,7 @@ class NetImage extends StatelessWidget {
       child: Center(child: Icon(icon, color: scheme.onSurfaceVariant, size: 32)),
     );
     if (url == null) return placeholder;
-    return Image.network(
-      url.toString(),
-      headers: headers,
-      fit: fit,
-      errorBuilder: (_, _, _) => placeholder,
-      frameBuilder: (context, child, frame, sync) => sync
-          ? child
-          : Stack(fit: StackFit.expand, children: [
-              placeholder,
-              AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: const Duration(milliseconds: 250), child: child),
-            ]),
-    );
+    return serverImage(url!, headers: headers, fallback: placeholder, fit: fit, fade: true);
   }
 }
 

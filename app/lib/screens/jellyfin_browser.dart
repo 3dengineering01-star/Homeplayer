@@ -4,6 +4,7 @@ import '../api/jellyfin.dart';
 import '../widgets/async_list.dart';
 import '../widgets/track_tile.dart';
 import 'jellyfin_actions.dart';
+import '../widgets/artwork.dart';
 
 /// Libraries at the top level, then any folder: series, season, album...
 class JellyfinBrowser extends StatefulWidget {
@@ -45,8 +46,7 @@ class _JellyfinBrowserState extends State<JellyfinBrowser> with JellyfinActions 
       child: Stack(fit: StackFit.expand, children: [
         url == null
             ? fallback
-            : Image.network(url.toString(),
-                headers: client.headers, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
+            : serverImage(url, headers: client.headers, fallback: fallback),
         if (item.isVideo)
           const Center(child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 36)),
         if (item.isFolder)

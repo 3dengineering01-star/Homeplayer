@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/jellyfin.dart';
+import '../services/artwork_cache.dart';
 
 /// Full-screen photos of one folder: swipe between them, pinch or double-tap to zoom,
 /// tap to hide the bar.
@@ -35,8 +36,8 @@ class _PhotoViewerState extends State<PhotoViewer> {
     return size.longestSide.clamp(720, 2560).round();
   }
 
-  ImageProvider _image(BuildContext context, int i) => NetworkImage(
-        widget.client.photoUrl(widget.photos[i], maxSide: _side(context)).toString(),
+  ImageProvider _image(BuildContext context, int i) => CachedArtwork(
+        widget.client.photoUrl(widget.photos[i], maxSide: _side(context)),
         headers: widget.client.headers,
       );
 

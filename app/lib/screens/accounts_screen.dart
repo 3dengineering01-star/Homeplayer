@@ -5,6 +5,7 @@ import '../api/jellyfin.dart';
 import '../api/subsonic.dart';
 import '../models/account.dart';
 import '../services/account_store.dart';
+import '../services/connection.dart';
 import '../services/invite_inbox.dart';
 import '../services/pro.dart';
 import '../services/own_server.dart';
@@ -48,7 +49,15 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    Connection.offline.addListener(_networkChanged);
     _load();
+  }
+
+  /// The phone lost or found its network: the dots on the cards are asked again.
+  void _networkChanged() {
+    if (!mounted) return;
+    setState(() {});
+    _recheck();
   }
 
   Future<void> _load() async {
@@ -56,7 +65,9 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
     if (!_started) {
       _started = true;
       final last = await AccountStore.lastOpened();
-      final open = pickStartAccount(accounts, last);
+      // Without any network (airplane mode) the list stays, with Downloads on it, instead of a
+      // server page that can only fail.
+      final open = pickStartAccount(accounts, last, offline: await Connection.check());
       // Opened before the list shows, so the list does not flash by on start.
       if (open != null) await _open(open, instant: true);
     }
@@ -136,6 +147,11 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
     final accounts = _accounts;
     final theme = Theme.of(context);
     void push(Widget page) => Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    Future<void> openDownloads() async {
+      final open = await Pro.instance.mayUseAny(accounts ?? const []);
+      if (!context.mounted) return;
+      push(open ? const DownloadsScreen() : const ProScreen());
+    }
     return Scaffold(
       body: accounts == null
           ? const Center(child: CircularProgressIndicator())
@@ -170,11 +186,7 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
                       ActionChip(
                         avatar: const Icon(Icons.download_for_offline_outlined),
                         label: const Text('Downloads'),
-                        onPressed: () async {
-                          final open = await Pro.instance.mayUseAny(accounts);
-                          if (!context.mounted) return;
-                          push(open ? const DownloadsScreen() : const ProScreen());
-                        },
+                        onPressed: openDownloads,
                       ),
                       ActionChip(
                         avatar: const Icon(Icons.palette_outlined),
@@ -193,6 +205,10 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
                             : const SizedBox.shrink(),
                       ),
                     ]),
+                    if (Connection.offline.value && accounts.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      _OfflineNote(onDownloads: openDownloads),
+                    ],
                   ]),
                 ),
               ),
@@ -220,6 +236,7 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
                           account: a,
                           index: i,
                           online: _online[a.id],
+                          phoneOffline: Connection.offline.value,
                           last: a.id == _lastId && accounts.length > 1,
                           onOpen: () {
                             HapticFeedback.selectionClick();
@@ -253,6 +270,7 @@ class _AccountsScreenState extends State<AccountsScreen> with WidgetsBindingObse
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    Connection.offline.removeListener(_networkChanged);
     super.dispose();
   }
 
@@ -288,6 +306,7 @@ class _ServerCard extends StatelessWidget {
     required this.account,
     required this.index,
     required this.online,
+    required this.phoneOffline,
     required this.last,
     required this.onOpen,
     required this.onBackup,
@@ -299,6 +318,9 @@ class _ServerCard extends StatelessWidget {
 
   /// Null while asking.
   final bool? online;
+
+  /// The phone has no network at all, so no server can answer.
+  final bool phoneOffline;
 
   /// Opened last time.
   final bool last;
@@ -316,7 +338,7 @@ class _ServerCard extends StatelessWidget {
     final (dot, status) = switch (online) {
       null => (fg.withValues(alpha: 0.4), 'Checking…'),
       true => (const Color(0xFF2EB872), 'Online'),
-      false => (const Color(0xFFE5484D), 'Not reachable'),
+      false => (const Color(0xFFE5484D), phoneOffline ? 'No connection' : 'Not reachable'),
     };
     final glass = GlassLook.from(context).on;
     final content = Stack(children: [
@@ -538,6 +560,31 @@ class _OwnServerCard extends StatelessWidget {
   }
 }
 
+/// The phone has no network: servers cannot answer, downloads still play.
+class _OfflineNote extends StatelessWidget {
+  const _OfflineNote({required this.onDownloads});
+
+  final VoidCallback onDownloads;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+        child: Row(children: [
+          Icon(Icons.cloud_off_rounded, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 12),
+          const Expanded(child: Text('No connection. Downloads still play.')),
+          TextButton(onPressed: onDownloads, child: const Text('Open')),
+        ]),
+      ),
+    );
+  }
+}
+
 /// No server yet: a friendly start.
 class _Welcome extends StatelessWidget {
   const _Welcome({required this.onAdd, required this.onOwn});
@@ -582,9 +629,10 @@ class _Welcome extends StatelessWidget {
   }
 }
 
-/// The server to open on start: the one opened last, or the only one there is.
-Account? pickStartAccount(List<Account> accounts, String? lastId) =>
-    accounts.where((a) => a.id == lastId).firstOrNull ?? (accounts.length == 1 ? accounts.first : null);
+/// The server to open on start: the one opened last, or the only one there is. None when the
+/// phone is [offline]: the list with Downloads is more use then.
+Account? pickStartAccount(List<Account> accounts, String? lastId, {bool offline = false}) =>
+    offline ? null : accounts.where((a) => a.id == lastId).firstOrNull ?? (accounts.length == 1 ? accounts.first : null);
 
 /// Shows the page at once, without sliding in, and slides it out as usual on Back.
 class _InstantRoute<T> extends MaterialPageRoute<T> {

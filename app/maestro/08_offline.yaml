@@ -1,0 +1,39 @@
+# Airplane mode: the app starts on the server list instead of a server page that can only fail,
+# says there is no connection, Downloads open and a downloaded song plays with no network at all.
+# Needs one finished download whose title has DOWNLOADED in it (by default the song Gripir:
+# long-press it in the album Mannavegr, Download, wait until it is done). Airplane mode is turned
+# off at the end, also when a step fails.
+appId: dev.homeplay.homeplay
+name: Без сети
+env:
+  DOWNLOADED: Gripir
+onFlowComplete:
+  - setAirplaneMode: disabled
+---
+- setAirplaneMode: enabled
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible: ".*No connection. Downloads still play.*"
+    timeout: 15000
+- assertNotVisible: "Libraries"
+- assertVisible: ".*No connection.*"
+- tapOn: "Downloads"
+- extendedWaitUntil:
+    visible: ".*${DOWNLOADED}.*"
+    timeout: 10000
+- tapOn: ".*${DOWNLOADED}.*"
+- extendedWaitUntil:
+    visible: "Now playing.*"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Pause"
+    timeout: 15000
+- tapOn: "Pause"
+- assertVisible: "Play"
+- tapOn: "Close"
+- extendedWaitUntil:
+    visible: "Stop"
+    timeout: 10000
+- tapOn: "Stop"
+- assertNotVisible: "Stop"

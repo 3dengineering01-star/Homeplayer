@@ -246,7 +246,11 @@ class Pro {
     final prefs = await _load();
     final known = prefs.getStringList(_paidServersKey) ?? const <String>[];
     try {
-      final licence = await JellyfinClient(a, await AccountStore.deviceId()).serverLicence();
+      // Short: the answer only decides whether Downloads open, and a slow network must not
+      // hold them up; without it the last answer counts.
+      final licence = await JellyfinClient(a, await AccountStore.deviceId())
+          .serverLicence()
+          .timeout(const Duration(seconds: 5));
       final paid = licence != null && isProPurchase(licence);
       final now = {...known};
       paid ? now.add(a.id) : now.remove(a.id);

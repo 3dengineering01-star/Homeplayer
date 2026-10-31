@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../api/common.dart';
+import 'error_view.dart';
+import 'artwork.dart';
 
 /// Loads a list, shows progress, errors with a retry button, and pull-to-refresh.
 class AsyncList<T> extends StatefulWidget {
@@ -43,16 +44,7 @@ class _AsyncListState<T> extends State<AsyncList<T>> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snap.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Text(describeError(snap.error!), textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                FilledButton(onPressed: _reload, child: const Text('Retry')),
-              ]),
-            ),
-          );
+          return ErrorView(error: snap.error!, onRetry: _reload);
         }
         final items = snap.data!;
         return RefreshIndicator(
@@ -105,8 +97,7 @@ class ArtThumb extends StatelessWidget {
         width: h * aspect,
         child: url == null
             ? fallback
-            : Image.network(url.toString(),
-                headers: headers, fit: BoxFit.cover, errorBuilder: (_, _, _) => fallback),
+            : serverImage(url!, headers: headers, fallback: fallback),
       ),
     );
   }

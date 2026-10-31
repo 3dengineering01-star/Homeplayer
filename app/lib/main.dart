@@ -10,8 +10,10 @@ import 'screens/player_screen.dart';
 import 'screens/tv_screen.dart';
 import 'services/app_links.dart';
 import 'services/app_update.dart';
+import 'services/app_log.dart';
 import 'services/appearance.dart';
 import 'services/backup.dart';
+import 'services/connection.dart';
 import 'services/downloads.dart';
 import 'services/invite_inbox.dart';
 import 'services/pro.dart';
@@ -27,6 +29,10 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Recent events for a problem report the user may choose to send (Settings).
+  AppLog.install();
+  // Airplane mode is told apart from a server that does not answer.
+  Connection.start();
   MediaKit.ensureInitialized();
   await AppearanceStore.load();
   await Playback.init();

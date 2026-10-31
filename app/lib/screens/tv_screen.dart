@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/common.dart';
 import '../api/dlna.dart';
 import '../services/tv_cast.dart';
+import '../widgets/artwork.dart';
 
 /// Picks a TV and opens the remote for [item] on it, from [startAt]. With [replace] the remote
 /// takes the place of the current screen (the player).
@@ -178,10 +179,8 @@ class _TvRemoteScreenState extends State<TvRemoteScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: item.artwork == null || item.artwork!.scheme == 'file'
-                    ? Icon(Icons.tv, size: 56, color: theme.colorScheme.onSurfaceVariant)
-                    : Image.network('${item.artwork}', headers: item.headers, fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Icon(Icons.tv, size: 56, color: theme.colorScheme.onSurfaceVariant)),
+                // A download's own cover, or the server's (kept on the phone).
+                child: artworkImage(item, fallback: Icon(Icons.tv, size: 56, color: theme.colorScheme.onSurfaceVariant)),
               ),
             ),
             const SizedBox(height: 20),

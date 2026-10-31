@@ -7,6 +7,7 @@ import '../widgets/async_list.dart';
 import '../widgets/media_cards.dart';
 import '../widgets/queue_sheet.dart';
 import 'player_screen.dart';
+import '../widgets/error_view.dart';
 
 /// A Subsonic server's music: Home with what is new and what is played, then the artists.
 class SubsonicArtists extends StatelessWidget {
@@ -109,16 +110,7 @@ class _SubsonicHomeState extends State<SubsonicHome> {
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
           if (snap.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(describeError(snap.error!), textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  FilledButton(onPressed: () => setState(() => _shelves = _load()), child: const Text('Retry')),
-                ]),
-              ),
-            );
+            return ErrorView(error: snap.error!, onRetry: () => setState(() => _shelves = _load()));
           }
           final s = snap.data!;
           final theme = Theme.of(context);

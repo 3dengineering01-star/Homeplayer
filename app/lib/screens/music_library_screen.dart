@@ -16,6 +16,7 @@ import 'jellyfin_actions.dart';
 import 'music_folder_view.dart';
 import 'playlist_picker.dart';
 import 'track_list_screen.dart';
+import '../widgets/error_view.dart';
 
 /// The order picked on each tab, kept while the app runs.
 ArtistSort _artistSort = ArtistSort.name;
@@ -776,17 +777,5 @@ class _Failed extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(describeError(error), textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          FilledButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
-      ),
-    ),
-  );
+  Widget build(BuildContext context) => ErrorView(error: error, onRetry: onRetry);
 }
