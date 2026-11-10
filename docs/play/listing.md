@@ -265,8 +265,8 @@ ru-RU:
 • Смотреть и слушать теперь бесплатно навсегда. OwnMedia Pro добавляет доступ для друзей, сохранение фото, Android Auto и показ на телевизоре: 30 дней бесплатно, потом разовая покупка.
 • Обложки альбомов снова видны и хранятся на телефоне между запусками.
 • Большая музыкальная библиотека открывается сразу, и после закрытия приложения тоже.
-• В режиме полёта «Загрузки» открываются сразу.
-• «Сообщить о проблеме» в настройках.
+• В режиме полёта скачанное открывается сразу.
+• «Report a problem» в настройках: письмо нам о проблеме.
 ```
 
 de-DE:
@@ -275,7 +275,7 @@ de-DE:
 • Albumcover sind wieder da und bleiben zwischen den Starts auf dem Handy.
 • Große Musikbibliotheken öffnen sich sofort, auch nachdem die App geschlossen war.
 • Im Flugmodus öffnen sich die Downloads sofort.
-• „Problem melden“ in den Einstellungen.
+• „Report a problem“ in den Einstellungen: eine E-Mail an uns.
 ```
 
 fr-FR:
@@ -284,7 +284,7 @@ fr-FR:
 • Les pochettes d'albums sont de retour et restent sur le téléphone.
 • Les grandes bibliothèques musicales s'ouvrent tout de suite, même après la fermeture de l'app.
 • En mode avion, les téléchargements s'ouvrent tout de suite.
-• « Signaler un problème » dans les réglages.
+• « Report a problem » dans les réglages.
 ```
 
 es-ES:
@@ -293,7 +293,7 @@ es-ES:
 • Las portadas de los álbumes vuelven a verse y se guardan en el teléfono entre usos.
 • Las bibliotecas de música grandes se abren al instante, también después de cerrar la app.
 • En modo avión, las descargas se abren al momento.
-• «Informar de un problema» en los ajustes.
+• «Report a problem» en los ajustes: un correo para nosotros.
 ```
 
 ## Картинки
