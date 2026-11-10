@@ -56,8 +56,8 @@ SETTINGS = {
     # As the owner gave it (17.10.2026), letter for letter.
     "COMPANY_ADDRESS": "Riga, Ganibu dambis 20A, LV-1045",
     "COMPANY_COUNTRY": "Latvia",
-    # The app in Google Play; empty while it is not published (the site offers the beta instead).
-    "PLAY_URL": "",
+    # The app in Google Play (public since 10.11.2026); empty would bring back the "coming soon" texts.
+    "PLAY_URL": "https://play.google.com/store/apps/details?id=dev.homeplay.homeplay",
     # Where OwnMediaSetup.exe is downloaded from; empty while there is no public link. {{root}} makes
     # it a link to the file on this site (copied there from INSTALLER_FILE by the build).
     "INSTALLER_URL": "{{root}}download/OwnMediaSetup.exe",
@@ -168,8 +168,15 @@ def snippets(s, lang="en"):
         mb = round(apk.stat().st_size / 1_000_000)
         sha = hashlib.sha256(apk.read_bytes()).hexdigest()
         warn = u["apk_warn"]
-        out["APK_NOTE"] = f'<p class="hero-note">{u["apk_note"].format(v=v, warn=warn)}</p>'
-        out["APK_META"] = (f'<p class="dl-note">{u["apk_meta"].format(v=v, mb=mb, warn=warn)}</p>'
+        if s["PLAY_URL"]:
+            # Google Play is the way in; the file stays as a quiet link for phones without Google Play.
+            a = f'<a href="{e["APK_URL"]}" download type="application/vnd.android.package-archive">'
+            out["APK_NOTE"] = f'<p class="hero-note">{u["apk_note_play"].format(v=v, a=a)}</p>'
+            meta = u["apk_meta_play"].format(v=v, mb=mb, warn=warn, a=a)
+        else:
+            out["APK_NOTE"] = f'<p class="hero-note">{u["apk_note"].format(v=v, warn=warn)}</p>'
+            meta = u["apk_meta"].format(v=v, mb=mb, warn=warn)
+        out["APK_META"] = (f'<p class="dl-note">{meta}</p>'
                            f'<p class="dl-meta">SHA-256: <code class="sha">{sha}</code></p>')
         out["ANDROID_STATE"] = u["android_state"]
     else:
@@ -178,6 +185,9 @@ def snippets(s, lang="en"):
         out["APK_NOTE"] = ""
         out["APK_META"] = ""
         out["ANDROID_STATE"] = out["PLAY_STATE"]
+    # The main "get the app" button: Google Play once the app is there, the file before that.
+    out["APP_BUTTON"] = out["PLAY_BUTTON"] if s["PLAY_URL"] else out["APK_BUTTON"]
+    out["PLAY_LINE"] = u["play_line"] if s["PLAY_URL"] else u["play_line_soon"]
     out["YEAR"] = str(date.today().year)
     return out
 

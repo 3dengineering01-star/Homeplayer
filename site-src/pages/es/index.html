@@ -11,7 +11,7 @@ path:
         Navidrome. Casi cualquier archivo se reproduce tal cual, en casa y fuera, sin enviar nada a ningún otro
         sitio.</p>
       <div class="btn-row">
-        {{APK_BUTTON}}
+        {{APP_BUTTON}}
         <a class="btn btn-glass" href="{{root}}guides/">{{icon:nas}} Prepara tu servidor</a>
       </div>
       {{APK_NOTE}}
@@ -125,7 +125,7 @@ path:
         <li>Antes, en 0.3.14 y 0.3.15: un inicio para la música, Instant Mix, letras sincronizadas, álbumes sin
           pausas, canciones guardadas por adelantado para zonas sin cobertura y un ahorro de datos móviles.</li>
       </ul>
-      <div class="btn-row">{{APK_BUTTON}}</div>
+      <div class="btn-row">{{APP_BUTTON}}</div>
     </div>
     <div class="whatsnew-shots">{{shot:music-home|El inicio de música con lo añadido recientemente, lo escuchado recientemente y los favoritos|Inicio de música|Añadido, escuchado, favoritos}}{{shot:lyrics|El reproductor de música con letras sincronizadas y FLAC 24 bits 96 kHz bajo la barra de progreso|Letras|Línea a línea, con el formato real}}</div>
   </div>
@@ -329,49 +329,3 @@ path:
   </div>
 </section>
 
-<section id="play">
-  <span id="beta"></span><span id="waitlist"></span>
-  <div class="wrap beta">
-    <div>
-      <h2>Pronto en Google Play</h2>
-      <p class="lead">OwnMedia ya funciona hoy: <a href="{{root}}download/#android">descárgala aquí</a>. También
-        está de camino a Google Play. Déjanos tu correo si quieres un mensaje cuando esté allí.</p>
-      <ul>
-        <li>Un solo correo cuando OwnMedia esté en Google Play. Sin boletines, sin spam.</li>
-        <li>Google pide a las apps nuevas una prueba cerrada de 14 días. Si puedes ayudar, marca la
-          casilla.</li>
-        <li>Tus respuestas van a Formspree, el servicio que entrega este formulario, y solo se usan para
-          esto.</li>
-      </ul>
-    </div>
-    <form id="beta-form" class="glass" novalidate>
-      <div class="field">
-        <label for="email">Correo electrónico</label>
-        <input id="email" name="email" type="email" required autocomplete="email" placeholder="nombre@ejemplo.com" aria-describedby="email-error">
-        <p class="field-error" id="email-error" hidden></p>
-      </div>
-      <fieldset class="field choices">
-        <legend>¿Qué servidor usas? <span class="hint">(elige todos los que correspondan)</span></legend>
-        <label class="choice"><input type="checkbox" name="server" value="jellyfin"><span>Jellyfin</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="navidrome"><span>Navidrome / Subsonic</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="plex"><span>Plex</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="emby"><span>Emby</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="nas"><span>Un NAS o una carpeta compartida</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="none"><span>Nada todavía</span></label>
-      </fieldset>
-      <div class="field">
-        <label for="pain">¿Qué es lo que más te molesta de tu reproductor actual? <span class="hint">(opcional)</span></label>
-        <textarea id="pain" name="pain" maxlength="1000"></textarea>
-      </div>
-      <div class="field">
-        <label class="check"><input type="checkbox" name="tester" value="yes">
-          <span>Puedo probar la app durante 14 días <span class="hint">Opcional. Google pide una prueba cerrada antes de publicar una app.</span></span></label>
-      </div>
-      <div class="hp" aria-hidden="true"><label>Déjalo vacío <input type="text" name="_gotcha" tabindex="-1" autocomplete="off"></label></div>
-      <button class="btn" type="submit">Avísame</button>
-      <div id="form-status" role="status" aria-live="polite"></div>
-      <p class="form-note">Al enviarlo aceptas que te escribamos sobre OwnMedia en Google Play. Consulta la
-        <a href="{{root}}privacy/#website">política de privacidad</a> (en inglés).</p>
-    </form>
-  </div>
-</section>

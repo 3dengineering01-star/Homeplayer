@@ -11,7 +11,7 @@ path:
         Navidrome-Server. Fast jede Datei läuft so, wie sie ist, zu Hause und unterwegs, und nichts geht
         irgendwo anders hin.</p>
       <div class="btn-row">
-        {{APK_BUTTON}}
+        {{APP_BUTTON}}
         <a class="btn btn-glass" href="{{root}}guides/">{{icon:nas}} Server einrichten</a>
       </div>
       {{APK_NOTE}}
@@ -127,7 +127,7 @@ path:
         <li>Davor, in 0.3.14 und 0.3.15: eine Startseite für Musik, Instant Mix, mitlaufende Songtexte,
           lückenlose Alben, vorab gespeicherte Songs für Funklöcher und ein Datensparmodus fürs Mobilfunknetz.</li>
       </ul>
-      <div class="btn-row">{{APK_BUTTON}}</div>
+      <div class="btn-row">{{APP_BUTTON}}</div>
     </div>
     <div class="whatsnew-shots">{{shot:music-home|Die Startseite für Musik mit zuletzt hinzugefügt, zuletzt gehört und Favoriten|Musik-Startseite|Zuletzt hinzugefügt, gehört, Favoriten}}{{shot:lyrics|Der Musik-Player mit mitlaufendem Songtext und FLAC 24-bit 96 kHz unter der Fortschrittsleiste|Songtexte|Zeile für Zeile, mit dem echten Format}}</div>
   </div>
@@ -335,50 +335,3 @@ path:
   </div>
 </section>
 
-<section id="play">
-  <span id="beta"></span><span id="waitlist"></span>
-  <div class="wrap beta">
-    <div>
-      <h2>Bald bei Google Play</h2>
-      <p class="lead">OwnMedia funktioniert schon heute: <a href="{{root}}download/#android">hier
-        herunterladen</a>. Außerdem ist es auf dem Weg zu Google Play. Hinterlasse deine E-Mail, wenn du eine
-        Nachricht möchtest, sobald es dort ist.</p>
-      <ul>
-        <li>Eine E-Mail, wenn OwnMedia bei Google Play ist. Kein Newsletter, kein Spam.</li>
-        <li>Google verlangt von neuen Apps zuerst einen geschlossenen Test über 14 Tage. Wenn du helfen
-          kannst, setz das Häkchen.</li>
-        <li>Deine Antworten gehen an Formspree, den Dienst, der dieses Formular zustellt, und werden nur dafür
-          verwendet.</li>
-      </ul>
-    </div>
-    <form id="beta-form" class="glass" novalidate>
-      <div class="field">
-        <label for="email">E-Mail</label>
-        <input id="email" name="email" type="email" required autocomplete="email" placeholder="name@example.com" aria-describedby="email-error">
-        <p class="field-error" id="email-error" hidden></p>
-      </div>
-      <fieldset class="field choices">
-        <legend>Welchen Server nutzt du? <span class="hint">(alles Zutreffende wählen)</span></legend>
-        <label class="choice"><input type="checkbox" name="server" value="jellyfin"><span>Jellyfin</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="navidrome"><span>Navidrome / Subsonic</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="plex"><span>Plex</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="emby"><span>Emby</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="nas"><span>Ein NAS oder freigegebener Ordner</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="none"><span>Noch nichts</span></label>
-      </fieldset>
-      <div class="field">
-        <label for="pain">Was stört dich an deinem jetzigen Player am meisten? <span class="hint">(optional)</span></label>
-        <textarea id="pain" name="pain" maxlength="1000"></textarea>
-      </div>
-      <div class="field">
-        <label class="check"><input type="checkbox" name="tester" value="yes">
-          <span>Ich kann die App 14 Tage lang testen <span class="hint">Optional. Google verlangt einen geschlossenen Test, bevor eine App öffentlich wird.</span></span></label>
-      </div>
-      <div class="hp" aria-hidden="true"><label>Leer lassen <input type="text" name="_gotcha" tabindex="-1" autocomplete="off"></label></div>
-      <button class="btn" type="submit">Benachrichtigen</button>
-      <div id="form-status" role="status" aria-live="polite"></div>
-      <p class="form-note">Mit dem Absenden bist du einverstanden, dass wir dir wegen OwnMedia bei Google Play
-        schreiben. Siehe die <a href="{{root}}privacy/#website">Datenschutzerklärung</a> (auf Englisch).</p>
-    </form>
-  </div>
-</section>
