@@ -13,7 +13,7 @@
 
 **Краткое описание** (80): `Your movies, music and photos from your home server. No subscriptions, no cloud.`
 
-**Полное описание** (2557):
+**Полное описание** (2685):
 
 ```
 OwnMedia plays your movies, shows, music and photos straight from your home server. Everything stays with you: no subscriptions to someone else's service, and your files and data go nowhere else.
@@ -46,8 +46,8 @@ Send a link in any messenger. They install the app and join your server with one
 ON THE TV AND IN THE CAR
 Send a movie to a TV on your Wi-Fi and use your phone as the remote. Android Auto: your music in the car, with voice search.
 
-30 DAYS FREE, THEN ONE PURCHASE
-For the first 30 days everything is free. After that, OwnMedia Pro: a one-time purchase in Google Play, not a subscription. Friends you invite use it for free when you have Pro.
+FREE TO WATCH AND LISTEN
+Movies, shows, music and photos are free, with no time limit. OwnMedia Pro adds sharing with family and friends, photo backup, Android Auto and playing on the TV. Pro is free for the first 30 days, then a one-time purchase in Google Play, not a subscription. Friends you invite get Pro for free when you have it.
 
 NO STRINGS
 No sign-up, no ads, no tracking. The app talks only to your server. Lyrics that your server doesn't have are fetched from the free LRCLIB collection (you can turn this off).
@@ -61,7 +61,7 @@ OwnMedia is an independent app, not affiliated with Jellyfin or Navidrome.
 
 **Краткое описание** (71): `Ваши фильмы, музыка и фото с домашнего сервера. Без подписок и облаков.`
 
-**Полное описание** (2567):
+**Полное описание** (2724):
 
 ```
 OwnMedia показывает ваши фильмы, сериалы, музыку и фото прямо с домашнего сервера. Всё остаётся у вас: никаких подписок на чужие сервисы, ваши файлы и данные никуда не уходят.
@@ -94,8 +94,8 @@ OwnMedia показывает ваши фильмы, сериалы, музык�
 НА ТЕЛЕВИЗОРЕ И В МАШИНЕ
 Отправьте фильм на телевизор с Wi-Fi — телефон станет пультом. Android Auto: ваша музыка в машине с голосовым поиском.
 
-30 ДНЕЙ БЕСПЛАТНО, ПОТОМ ОДНА ПОКУПКА
-Первые 30 дней всё работает бесплатно. Дальше — OwnMedia Pro: разовая покупка в Google Play, не подписка. Друзья, которых вы пригласили, пользуются бесплатно, если у вас есть Pro.
+СМОТРЕТЬ И СЛУШАТЬ — БЕСПЛАТНО
+Фильмы, сериалы, музыка и фото бесплатно и без ограничения по времени. OwnMedia Pro добавляет доступ для родных и друзей, сохранение фото на сервер, Android Auto и показ на телевизоре. Первые 30 дней Pro бесплатно, потом это разовая покупка в Google Play, не подписка. Друзья, которых вы пригласили, получают Pro бесплатно, если он есть у вас.
 
 БЕЗ ЛИШНЕГО
 Без регистрации, рекламы и слежки. Приложение общается только с вашим сервером. Тексты песен, если их нет на сервере, подгружаются из бесплатной коллекции LRCLIB (это можно отключить).
@@ -109,7 +109,7 @@ OwnMedia — независимое приложение, не связанно�
 
 **Краткое описание** (77): `Deine Filme, Musik und Fotos vom eigenen Heimserver. Ohne Abo und ohne Cloud.`
 
-**Полное описание** (2835):
+**Полное описание** (2993):
 
 ```
 OwnMedia zeigt deine Filme, Serien, Musik und Fotos direkt von deinem Heimserver. Alles bleibt bei dir: kein Abo bei fremden Diensten, und deine Dateien und Daten gehen nirgendwohin.
@@ -142,8 +142,8 @@ Schick einen Link über einen beliebigen Messenger. Die Person installiert die A
 AUF DEM FERNSEHER UND IM AUTO
 Schick einen Film an einen Fernseher in deinem WLAN – das Handy wird zur Fernbedienung. Android Auto: deine Musik im Auto, mit Sprachsuche.
 
-30 TAGE KOSTENLOS, DANN EIN KAUF
-Die ersten 30 Tage ist alles kostenlos. Danach OwnMedia Pro: ein einmaliger Kauf bei Google Play, kein Abo. Freunde, die du einlädst, nutzen es kostenlos, wenn du Pro hast.
+ANSEHEN UND ANHÖREN KOSTENLOS
+Filme, Serien, Musik und Fotos sind kostenlos, ohne Zeitlimit. OwnMedia Pro bringt Teilen mit Familie und Freunden, Foto-Backup, Android Auto und Abspielen auf dem Fernseher. Die ersten 30 Tage ist Pro kostenlos, danach ein einmaliger Kauf bei Google Play, kein Abo. Freunde, die du einlädst, bekommen Pro kostenlos, wenn du es hast.
 
 OHNE HAKEN
 Keine Registrierung, keine Werbung, kein Tracking. Die App spricht nur mit deinem Server. Songtexte, die dein Server nicht hat, kommen aus der kostenlosen Sammlung LRCLIB (das lässt sich abschalten).
@@ -157,7 +157,7 @@ OwnMedia ist eine unabhängige App und steht in keiner Verbindung zu Jellyfin od
 
 **Краткое описание** (75): `Vos films, musiques et photos depuis votre serveur maison. Sans abonnement.`
 
-**Полное описание** (3044):
+**Полное описание** (3204):
 
 ```
 OwnMedia affiche vos films, séries, musiques et photos directement depuis votre serveur à la maison. Tout reste chez vous : aucun abonnement à un service tiers, vos fichiers et vos données ne partent nulle part.
@@ -190,8 +190,8 @@ Envoyez un lien par n'importe quelle messagerie. La personne installe l'applicat
 SUR LA TÉLÉ ET EN VOITURE
 Envoyez un film sur une télé connectée à votre Wi-Fi : le téléphone devient la télécommande. Android Auto : votre musique en voiture, avec la recherche vocale.
 
-30 JOURS GRATUITS, PUIS UN SEUL ACHAT
-Les 30 premiers jours, tout est gratuit. Ensuite, OwnMedia Pro : un achat unique sur Google Play, pas un abonnement. Les amis que vous invitez en profitent gratuitement si vous avez Pro.
+REGARDER ET ÉCOUTER, C'EST GRATUIT
+Films, séries, musique et photos sont gratuits, sans limite de durée. OwnMedia Pro ajoute le partage avec vos proches, la sauvegarde des photos, Android Auto et la lecture sur la télé. Pro est gratuit les 30 premiers jours, puis c'est un achat unique sur Google Play, pas un abonnement. Les amis que vous invitez ont Pro gratuitement si vous l'avez.
 
 SANS CONTREPARTIE
 Pas d'inscription, pas de publicité, pas de pistage. L'application ne parle qu'à votre serveur. Les paroles absentes de votre serveur viennent de la collection gratuite LRCLIB (vous pouvez le désactiver).
@@ -205,7 +205,7 @@ OwnMedia est une application indépendante, sans lien avec Jellyfin ni Navidrome
 
 **Краткое описание** (75): `Tus películas, música y fotos desde tu servidor en casa. Sin suscripciones.`
 
-**Полное описание** (2796):
+**Полное описание** (2957):
 
 ```
 OwnMedia muestra tus películas, series, música y fotos directamente desde tu servidor en casa. Todo se queda contigo: sin suscripciones a servicios ajenos, y tus archivos y datos no van a ningún otro sitio.
@@ -238,8 +238,8 @@ Envía un enlace por cualquier app de mensajería. La persona instala la app y s
 EN LA TELE Y EN EL COCHE
 Envía una película a una tele de tu Wi-Fi y usa el teléfono como mando. Android Auto: tu música en el coche, con búsqueda por voz.
 
-30 DÍAS GRATIS, LUEGO UNA SOLA COMPRA
-Los primeros 30 días todo es gratis. Después, OwnMedia Pro: una compra única en Google Play, no una suscripción. Los amigos que invites lo usan gratis si tú tienes Pro.
+VER Y ESCUCHAR ES GRATIS
+Películas, series, música y fotos son gratis, sin límite de tiempo. OwnMedia Pro añade compartir con familia y amigos, la copia de fotos en el servidor, Android Auto y ver en la tele. Pro es gratis los primeros 30 días y después es una compra única en Google Play, no una suscripción. Los amigos que invitas tienen Pro gratis si tú lo tienes.
 
 SIN LETRA PEQUEÑA
 Sin registro, sin anuncios, sin rastreo. La app solo habla con tu servidor. Las letras que tu servidor no tiene se obtienen de la colección gratuita LRCLIB (se puede desactivar).
@@ -248,6 +248,53 @@ OwnMedia es una app independiente, sin relación con Jellyfin ni Navidrome.
 ```
 
 **Категория:** Music & Audio.
+
+## Что нового в 0.3.20 (до 500 символов на язык)
+
+en-US:
+```
+• Watching and listening are free for good. OwnMedia Pro adds sharing with friends, photo backup, Android Auto and playing on the TV: 30 days free, then a one-time purchase.
+• Album covers show again and stay on the phone between starts.
+• Big music libraries open at once, also after the app was closed.
+• In airplane mode, Downloads open straight away.
+• Report a problem from Settings.
+```
+
+ru-RU:
+```
+• Смотреть и слушать теперь бесплатно навсегда. OwnMedia Pro добавляет доступ для друзей, сохранение фото, Android Auto и показ на телевизоре: 30 дней бесплатно, потом разовая покупка.
+• Обложки альбомов снова видны и хранятся на телефоне между запусками.
+• Большая музыкальная библиотека открывается сразу, и после закрытия приложения тоже.
+• В режиме полёта скачанное открывается сразу.
+• «Report a problem» в настройках: письмо нам о проблеме.
+```
+
+de-DE:
+```
+• Ansehen und Anhören sind jetzt dauerhaft kostenlos. OwnMedia Pro bringt Teilen mit Freunden, Foto-Backup, Android Auto und Abspielen auf dem Fernseher: 30 Tage kostenlos, dann ein einmaliger Kauf.
+• Albumcover sind wieder da und bleiben zwischen den Starts auf dem Handy.
+• Große Musikbibliotheken öffnen sich sofort, auch nachdem die App geschlossen war.
+• Im Flugmodus öffnen sich die Downloads sofort.
+• „Report a problem“ in den Einstellungen: eine E-Mail an uns.
+```
+
+fr-FR:
+```
+• Regarder et écouter, c'est gratuit pour toujours. OwnMedia Pro ajoute le partage avec vos proches, la sauvegarde des photos, Android Auto et la lecture sur la télé : 30 jours gratuits, puis un achat unique.
+• Les pochettes d'albums sont de retour et restent sur le téléphone.
+• Les grandes bibliothèques musicales s'ouvrent tout de suite, même après la fermeture de l'app.
+• En mode avion, les téléchargements s'ouvrent tout de suite.
+• « Report a problem » dans les réglages.
+```
+
+es-ES:
+```
+• Ver y escuchar ahora es gratis para siempre. OwnMedia Pro añade compartir con amigos, la copia de fotos, Android Auto y ver en la tele: 30 días gratis y luego una compra única.
+• Las portadas de los álbumes vuelven a verse y se guardan en el teléfono entre usos.
+• Las bibliotecas de música grandes se abren al instante, también después de cerrar la app.
+• En modo avión, las descargas se abren al momento.
+• «Report a problem» en los ajustes: un correo para nosotros.
+```
 
 ## Картинки
 
