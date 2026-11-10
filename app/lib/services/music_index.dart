@@ -69,7 +69,7 @@ class ArtistGroup {
 List<AlbumGroup> groupByAlbum(List<JellyfinItem> tracks) {
   final groups = <String, List<JellyfinItem>>{};
   for (final t in tracks) {
-    final key = t.albumId ?? (t.album != null ? 'name:${t.album}|${artistOf(t)}' : 'none:${artistOf(t)}');
+    final key = t.albumId ?? (t.album != null ? 'name:${t.album}|${_albumOwner(t)}' : 'none:${artistOf(t)}');
     (groups[key] ??= []).add(t);
   }
   return [
@@ -81,6 +81,21 @@ List<AlbumGroup> groupByAlbum(List<JellyfinItem> tracks) {
         tracks: list..sort(albumOrder),
       ),
   ]..sort((a, b) => _byName(a.name, b.name));
+}
+
+/// What keeps an album without a server album together: its album artist, else the folder it
+/// lies in, else its performer. A compilation with no album artist tag has a different performer
+/// on every track, and by performer it fell apart into an album per track.
+String _albumOwner(JellyfinItem t) => t.albumArtist ?? albumFolder(t.path) ?? artistOf(t);
+
+/// The folder of an album's file at [path]; a disc folder ("CD1", "Disc 2") counts as its album's.
+String? albumFolder(String? path) {
+  if (path == null) return null;
+  final parts = path.split(RegExp(r'[/\\]'))..removeLast();
+  if (parts.length > 1 && RegExp(r'^(cd|dis[ck])\s*\d+$', caseSensitive: false).hasMatch(parts.last.trim())) {
+    parts.removeLast();
+  }
+  return parts.isEmpty || parts.join().isEmpty ? null : parts.join('/');
 }
 
 /// The album's artist; "Various artists" for a compilation without one.

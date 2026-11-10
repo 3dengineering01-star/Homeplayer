@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/jellyfin.dart';
 import '../services/licence.dart';
 import '../services/appearance.dart';
+import '../services/library_order.dart';
 import '../widgets/library_tiles.dart';
 import '../widgets/media_cards.dart';
 import 'backup_screen.dart';
@@ -40,9 +41,15 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
   /// menu item, and the server refuses them anyway.
   bool _owner = false;
 
+  /// The order and hidden libraries the person chose for this server.
+  LibraryOrder _order = const LibraryOrder();
+
   @override
   void initState() {
     super.initState();
+    LibraryOrder.load(client.account.id).then((o) {
+      if (mounted) setState(() => _order = o);
+    });
     client.isAdmin().then((admin) {
       if (mounted) setState(() => _owner = admin);
     }, onError: (Object e) => debugPrint('homeplay owner check failed: $e'));
@@ -84,6 +91,22 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
 
   void _push(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
 
+  Future<void> _arrange(List<JellyfinItem> libraries) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _ArrangeSheet(
+        libraries: libraries,
+        order: _order,
+        onChanged: (o) {
+          setState(() => _order = o);
+          o.save(client.account.id);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -107,6 +130,10 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
               PopupMenuItem(
                 value: () => _push(JellyfinBrowser(client: client, title: widget.title)),
                 child: const ListTile(leading: Icon(Icons.folder_outlined), title: Text('Folders')),
+              ),
+              PopupMenuItem(
+                value: () => _libraries.then(_arrange, onError: (_) {}),
+                child: const ListTile(leading: Icon(Icons.reorder), title: Text('Arrange libraries')),
               ),
               PopupMenuItem(
                 value: () => _push(const DownloadsScreen()),
@@ -138,7 +165,8 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
           if (snap.hasError) {
             return ErrorView(error: snap.error!, onRetry: refresh);
           }
-          final libraries = snap.data!;
+          final all = snap.data!;
+          final libraries = _order.arrange(all, (l) => l.id);
           return RefreshIndicator(
             onRefresh: () async {
               refresh();
@@ -158,12 +186,98 @@ class _JellyfinHomeState extends State<JellyfinHome> with JellyfinActions {
                     ),
                   ]),
                 ),
-              if (libraries.isEmpty)
+              if (all.isEmpty)
                 const Padding(padding: EdgeInsets.all(32), child: Center(child: Text('No libraries on this server'))),
+              if (all.isNotEmpty && libraries.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(children: [
+                    const Text('All libraries are hidden'),
+                    const SizedBox(height: 12),
+                    FilledButton.tonal(onPressed: () => _arrange(all), child: const Text('Arrange libraries')),
+                  ]),
+                ),
             ]),
           );
         },
       ),
+    );
+  }
+}
+
+/// The server's libraries to drag into another order and to show or hide.
+class _ArrangeSheet extends StatefulWidget {
+  const _ArrangeSheet({required this.libraries, required this.order, required this.onChanged});
+
+  final List<JellyfinItem> libraries;
+  final LibraryOrder order;
+  final void Function(LibraryOrder) onChanged;
+
+  @override
+  State<_ArrangeSheet> createState() => _ArrangeSheetState();
+}
+
+class _ArrangeSheetState extends State<_ArrangeSheet> {
+  late LibraryOrder _order = widget.order;
+  late List<JellyfinItem> _all = _order.arrange(widget.libraries, (l) => l.id, withHidden: true);
+
+  void _set(LibraryOrder o) {
+    setState(() => _order = o);
+    widget.onChanged(o);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final height = MediaQuery.sizeOf(context).height;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: height * 0.8),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 12, 8),
+          child: Row(children: [
+            Expanded(child: Text('Arrange libraries', style: Theme.of(context).textTheme.titleLarge)),
+            if (!_order.isDefault)
+              TextButton(
+                onPressed: () {
+                  _all = const LibraryOrder().arrange(widget.libraries, (l) => l.id, withHidden: true);
+                  _set(const LibraryOrder());
+                },
+                child: const Text('Reset'),
+              ),
+          ]),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+          child: Text('Drag to change the order. Untick a library to hide it on this phone; nothing changes on the server.'),
+        ),
+        Flexible(
+          child: ReorderableListView.builder(
+            shrinkWrap: true,
+            buildDefaultDragHandles: false,
+            itemCount: _all.length,
+            onReorderItem: (from, to) {
+              final moved = _all.removeAt(from);
+              _all.insert(to, moved);
+              _set(_order.copyWith(order: [for (final l in _all) l.id]));
+            },
+            itemBuilder: (context, i) {
+              final l = _all[i];
+              final shown = !_order.hidden.contains(l.id);
+              return CheckboxListTile(
+                key: ValueKey(l.id),
+                value: shown,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: Text(l.name, style: shown ? null : TextStyle(color: Theme.of(context).disabledColor)),
+                secondary: ReorderableDragStartListener(index: i, child: const Icon(Icons.drag_handle)),
+                onChanged: (on) => _set(_order.copyWith(
+                  hidden: on == true ? ({..._order.hidden}..remove(l.id)) : {..._order.hidden, l.id},
+                )),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+      ]),
     );
   }
 }

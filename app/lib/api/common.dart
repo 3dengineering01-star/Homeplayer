@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../services/connection.dart';
 import '../services/quality.dart';
+import '../services/video_extras.dart';
 
 class ApiException implements Exception {
   ApiException(this.message);
@@ -45,6 +46,7 @@ class PlayItem {
     this.tvUrl,
     this.ref,
     this.duration,
+    this.extras,
   });
 
   final String title;
@@ -94,6 +96,10 @@ class PlayItem {
   /// converts (it estimates from the bitrate).
   final Duration? duration;
 
+  /// Where a video's intro and credits are and its pictures for seeking, asked from the server
+  /// when the video opens; null where the server has none (music, Subsonic, downloads).
+  final Future<VideoExtras?> Function()? extras;
+
   PlayItem copyWith({
     Uri? url,
     String? audioTrackId,
@@ -121,6 +127,7 @@ class PlayItem {
         tvUrl: tvUrl,
         ref: ref,
         duration: duration,
+        extras: extras,
       );
 }
 

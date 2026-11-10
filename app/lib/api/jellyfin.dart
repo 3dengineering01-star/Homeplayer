@@ -5,8 +5,10 @@ import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
 import '../services/device_name.dart';
+import '../services/mojibake.dart';
 import '../services/quality.dart';
 import '../services/search_filters.dart';
+import '../services/video_extras.dart';
 import 'common.dart';
 import 'discovery.dart';
 import 'lyrics.dart';
@@ -24,7 +26,9 @@ class JellyfinItem {
   Map<String, dynamic> get raw => _j;
 
   String get id => _j['Id'] as String;
-  String get name => (_j['Name'] as String?)?.trim() ?? '';
+
+  /// Mended when old tags garbled it (see mojibake.dart).
+  String get name => fixMojibake((_j['Name'] as String?)?.trim() ?? '');
   String get type => (_j['Type'] as String?) ?? '';
   bool get isFolder => (_j['IsFolder'] as bool?) ?? false;
   String? get collectionType => _j['CollectionType'] as String?;
@@ -66,7 +70,7 @@ class JellyfinItem {
   String? get overview => (_j['Overview'] as String?)?.trim();
   int? get year => (_j['ProductionYear'] as num?)?.toInt();
   String? get seriesId => _j['SeriesId'] as String?;
-  String? get seriesName => (_j['SeriesName'] as String?)?.trim();
+  String? get seriesName => _text(_j['SeriesName']);
   String? get album => _text(_j['Album']);
   String? get albumId => _j['AlbumId'] as String?;
   String? get albumArtist => _text(_j['AlbumArtist']);
@@ -100,7 +104,7 @@ class JellyfinItem {
 
   static String? _text(Object? v) {
     final t = (v as String?)?.trim();
-    return t == null || t.isEmpty ? null : t;
+    return t == null || t.isEmpty ? null : fixMojibake(t);
   }
   String? get seasonId => _j['SeasonId'] as String?;
   int? get indexNumber => (_j['IndexNumber'] as num?)?.toInt();
@@ -852,6 +856,38 @@ class JellyfinClient {
         'mediaSourceId': ?versionId,
       });
 
+  /// Where the intro and credits of a video are and its pictures for seeking. Each part is
+  /// optional: an older server or one without them gives what it has; null when it answers
+  /// nothing at all (offline).
+  Future<VideoExtras?> videoExtras(String itemId, {String? versionId}) async {
+    Future<Map<String, dynamic>?> ask(String path, Map<String, String> query) async {
+      try {
+        return await _get(path, query);
+      } catch (e) {
+        debugPrint('homeplay $path: $e');
+        return null;
+      }
+    }
+
+    final answers = await Future.wait([
+      ask('/MediaSegments/$itemId', const {}),
+      ask('/Items/$itemId', {'userId': account.userId!, 'fields': 'Trickplay,MediaSources'}),
+    ]);
+    final segments = answers[0], item = answers[1];
+    if (segments == null && item == null) return null;
+    // The default file's id, when none was picked: the trickplay pictures are per file.
+    final source = versionId ?? ((item?['MediaSources'] as List?)?.firstOrNull as Map?)?['Id'] as String?;
+    final trickplay = parseTrickplay(item?['Trickplay'], source);
+    return VideoExtras(
+      segments: parseSegments(segments),
+      trickplay: trickplay,
+      sheetUrl: trickplay == null
+          ? null
+          : (sheet) => Uri.parse('$_base/Videos/$itemId/Trickplay/${trickplay.width}/$sheet.jpg')
+              .replace(queryParameters: {'mediaSourceId': ?source}),
+    );
+  }
+
   /// The files of an item with [JellyfinItem.versionCount] above 1, in the server's order.
   Future<List<MediaVersion>> versions(JellyfinItem item) async =>
       ((await _playbackInfo(item.id, const {}))['MediaSources'] as List? ?? const [])
@@ -1135,6 +1171,7 @@ class JellyfinClient {
         container: item.container,
         ref: item.isVideo ? null : TrackRef(TrackSource.jellyfin, item.id, accountId: account.id),
         duration: item.runTime,
+        extras: item.isVideo ? () => videoExtras(item.id, versionId: versionId) : null,
         tvUrl: () async {
           final url = streamUrl(item, versionId: versionId);
           final home = await homeBase();

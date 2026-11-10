@@ -4,7 +4,7 @@ import 'package:homeplay/services/music_index.dart';
 import 'package:homeplay/services/search_index.dart';
 
 JellyfinItem track(String name,
-        {String? album, String? albumId, String? albumArtist, List<String> artists = const [], int? n, int? disc, int? year, String? added, int seconds = 200}) =>
+        {String? album, String? albumId, String? albumArtist, List<String> artists = const [], int? n, int? disc, int? year, String? added, int seconds = 200, String? path}) =>
     JellyfinItem({
       'Id': name,
       'Name': name,
@@ -18,6 +18,7 @@ JellyfinItem track(String name,
       'ProductionYear': ?year,
       'DateCreated': ?added,
       'RunTimeTicks': seconds * 10000000,
+      'Path': ?path,
     });
 
 final _library = [
@@ -66,6 +67,26 @@ void main() {
       track('B', album: 'Hits', albumId: 'h', artists: ['Two']),
     ]);
     expect(albums.single.artist, 'Various artists');
+  });
+
+  test('a compilation the server made no album for stays one album when its files share a folder', () {
+    final albums = groupByAlbum([
+      track('A', album: 'Hits', artists: ['One'], path: r'D:\Music\Hits\01 A.mp3'),
+      track('B', album: 'Hits', artists: ['Two'], path: r'D:\Music\Hits\02 B.mp3'),
+      track('C', album: 'Hits', artists: ['Three'], disc: 2, path:r'D:\Music\Hits\CD2\01 C.mp3'),
+      // The same album name elsewhere is another album.
+      track('D', album: 'Hits', artists: ['Four'], path: '/music/Other/Hits/01 D.mp3'),
+    ]);
+    expect([for (final a in albums) '${a.artist}:${a.tracks.map((t) => t.name).join(',')}'],
+        ['Various artists:A,B,C', 'Four:D']);
+  });
+
+  test('the album folder of a file', () {
+    expect(albumFolder(r'D:\Music\Hits\01 A.mp3'), 'D:/Music/Hits');
+    expect(albumFolder('/music/Hits/Disc 2/01.flac'), '/music/Hits');
+    expect(albumFolder('/music/CD1/01.flac'), '/music', reason: 'the disc folder belongs to its parent');
+    expect(albumFolder('01.flac'), isNull);
+    expect(albumFolder(null), isNull);
   });
 
   test('tracks sort by title, artist, album, date added and length', () {

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:media_kit_video/media_kit_video.dart';
@@ -10,6 +12,7 @@ import '../api/common.dart';
 import '../screens/tv_screen.dart';
 import '../services/pip.dart';
 import '../services/playback.dart';
+import '../services/video_extras.dart';
 import '../services/video_tuning.dart';
 import 'appearance_picker.dart';
 import 'track_sheet.dart';
@@ -58,11 +61,16 @@ class _VideoViewState extends State<VideoView> {
   StreamSubscription<double>? _volumeSub;
 
   // Brief feedback in the middle of the screen: what a gesture did.
-  final ValueNotifier<({IconData icon, String text, double? level})?> _hud = ValueNotifier(null);
+  // [at]: the time a seek goes to, for its picture when the server has them.
+  final ValueNotifier<({IconData icon, String text, double? level, Duration? at})?> _hud = ValueNotifier(null);
   Timer? _hudTimer;
 
   bool _pipAvailable = false;
   final List<StreamSubscription<dynamic>> _subs = [];
+
+  // The intro, the credits and the pictures for seeking, once the server has answered.
+  final ValueNotifier<VideoExtras?> _extras = ValueNotifier(null);
+  Object? _extrasRequest;
 
   @override
   void initState() {
@@ -87,6 +95,35 @@ class _VideoViewState extends State<VideoView> {
       ..add(s.width.listen((_) => _updateAutoPip()));
     _updateAutoPip();
     _scheduleHide();
+    _loadExtras();
+  }
+
+  @override
+  void didUpdateWidget(VideoView old) {
+    super.didUpdateWidget(old);
+    // The same view goes on to the next episode.
+    if (old.item.extras != widget.item.extras) _loadExtras();
+  }
+
+  void _loadExtras() {
+    _extras.value = null;
+    final ask = widget.item.extras;
+    final request = _extrasRequest = Object();
+    if (ask == null) return;
+    ask().then((x) {
+      // An answer for a video that is no longer on the screen is dropped.
+      if (mounted && _extrasRequest == request) _extras.value = x;
+    }, onError: (Object e) => debugPrint('homeplay video extras: $e'));
+  }
+
+  /// Past [s]: to its end, or to the next video when it is the credits at the very end.
+  void _skip(MediaSegment s) {
+    final duration = widget.item.duration ?? _pb.player.state.duration;
+    if (endsVideo(s, duration) && widget.hasNext) {
+      _pb.skipToNext();
+    } else {
+      _pb.seek(s.end);
+    }
   }
 
   @override
@@ -103,6 +140,7 @@ class _VideoViewState extends State<VideoView> {
     SystemChrome.setPreferredOrientations(const []);
     Pip.instance.setAuto(false);
     _hud.dispose();
+    _extras.dispose();
     super.dispose();
   }
 
@@ -146,9 +184,9 @@ class _VideoViewState extends State<VideoView> {
     }
   }
 
-  void _flash(IconData icon, String text, {double? level, bool stay = false}) {
+  void _flash(IconData icon, String text, {double? level, Duration? at, bool stay = false}) {
     _hudTimer?.cancel();
-    _hud.value = (icon: icon, text: text, level: level);
+    _hud.value = (icon: icon, text: text, level: level, at: at);
     if (!stay) _hudTimer = Timer(const Duration(milliseconds: 800), () => _hud.value = null);
   }
 
@@ -238,7 +276,7 @@ class _VideoViewState extends State<VideoView> {
         final total = _pb.player.state.duration;
         final to = _seekTo = seekByDrag(_seekFrom, delta.dx, size.width, total);
         _flash(to >= _seekFrom ? Icons.fast_forward : Icons.fast_rewind,
-            '${formatDuration(to)}  (${signedDuration(to - _seekFrom)})', stay: true);
+            '${formatDuration(to)}  (${signedDuration(to - _seekFrom)})', at: to, stay: true);
       case _Drag.brightness:
         final b = _brightness = dragLevel(_levelStart, delta.dy, size.height);
         _brightnessChanged = true;
@@ -333,7 +371,7 @@ class _VideoViewState extends State<VideoView> {
                     ),
                   ),
                 _Buffering(pb: _pb),
-                _Hud(hud: _hud),
+                _Hud(hud: _hud, extras: _extras, headers: widget.item.headers),
                 IgnorePointer(
                   ignoring: !_controls,
                   child: AnimatedOpacity(
@@ -346,6 +384,8 @@ class _VideoViewState extends State<VideoView> {
                     ),
                   ),
                 ),
+                // Over everything and also with the controls hidden, as on TV apps.
+                if (!_locked) _SkipButton(pb: _pb, extras: _extras, onSkip: _skip),
               ]);
             }),
           ),
@@ -380,7 +420,7 @@ class _VideoViewState extends State<VideoView> {
             child: Column(children: [
               _topBar(context),
               Expanded(child: Center(child: _transport())),
-              _SeekRow(pb: _pb),
+              _SeekRow(pb: _pb, extras: _extras, headers: widget.item.headers),
               _bottomBar(context),
             ]),
           ),
@@ -534,8 +574,10 @@ class _VideoViewState extends State<VideoView> {
 }
 
 class _SeekRow extends StatefulWidget {
-  const _SeekRow({required this.pb});
+  const _SeekRow({required this.pb, required this.extras, required this.headers});
   final Playback pb;
+  final ValueListenable<VideoExtras?> extras;
+  final Map<String, String> headers;
 
   @override
   State<_SeekRow> createState() => _SeekRowState();
@@ -557,7 +599,7 @@ class _SeekRowState extends State<_SeekRow> {
           final total = dur.data!.inMilliseconds.toDouble();
           final current = (_dragging ?? pos.data!.inMilliseconds.toDouble()).clamp(0.0, total > 0 ? total : 0.0);
           final buffered = p.state.buffer.inMilliseconds.toDouble().clamp(0.0, total > 0 ? total : 0.0);
-          return Padding(
+          final row = Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(children: [
               Text(formatDuration(Duration(milliseconds: current.round())), style: const TextStyle(color: Colors.white)),
@@ -585,6 +627,23 @@ class _SeekRowState extends State<_SeekRow> {
               Text(formatDuration(dur.data!), style: const TextStyle(color: Colors.white)),
             ]),
           );
+          final extras = widget.extras.value;
+          final dragging = _dragging;
+          if (dragging == null || extras == null || !extras.canPreview || total <= 0) return row;
+          // The picture above the finger, kept inside the screen.
+          return LayoutBuilder(builder: (context, box) {
+            const width = 176.0;
+            final x = (box.maxWidth * dragging / total - width / 2).clamp(8.0, math.max(8.0, box.maxWidth - width - 8)).toDouble();
+            return Stack(clipBehavior: Clip.none, children: [
+              row,
+              Positioned(
+                left: x,
+                bottom: 52,
+                child: TrickplayTile(
+                    extras: extras, at: Duration(milliseconds: dragging.round()), headers: widget.headers, width: width),
+              ),
+            ]);
+          });
         },
       ),
     );
@@ -607,8 +666,10 @@ class _Buffering extends StatelessWidget {
 }
 
 class _Hud extends StatelessWidget {
-  const _Hud({required this.hud});
-  final ValueNotifier<({IconData icon, String text, double? level})?> hud;
+  const _Hud({required this.hud, required this.extras, required this.headers});
+  final ValueNotifier<({IconData icon, String text, double? level, Duration? at})?> hud;
+  final ValueListenable<VideoExtras?> extras;
+  final Map<String, String> headers;
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
@@ -625,7 +686,10 @@ class _Hud extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       decoration: BoxDecoration(color: const Color(0xCC000000), borderRadius: BorderRadius.circular(12)),
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(h.icon, color: Colors.white, size: 32),
+                        if (h.at != null && (extras.value?.canPreview ?? false))
+                          TrickplayTile(extras: extras.value!, at: h.at!, headers: headers, width: 200)
+                        else
+                          Icon(h.icon, color: Colors.white, size: 32),
                         const SizedBox(height: 6),
                         Text(h.text, style: const TextStyle(color: Colors.white, fontSize: 16)),
                         if (h.level != null) ...[
@@ -645,4 +709,109 @@ class _Hud extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// "Skip intro" and the like while such a part plays, from what the server knows of the video.
+class _SkipButton extends StatelessWidget {
+  const _SkipButton({required this.pb, required this.extras, required this.onSkip});
+  final Playback pb;
+  final ValueListenable<VideoExtras?> extras;
+  final void Function(MediaSegment) onSkip;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<VideoExtras?>(
+        valueListenable: extras,
+        builder: (context, x, _) {
+          final segments = x?.segments ?? const <MediaSegment>[];
+          if (segments.isEmpty) return const SizedBox.shrink();
+          return StreamBuilder<Duration>(
+            stream: pb.player.stream.position,
+            initialData: pb.player.state.position,
+            builder: (context, pos) {
+              final s = skippableAt(segments, pos.data!);
+              if (s == null) return const SizedBox.shrink();
+              return SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 24, bottom: 104),
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xE6FFFFFF),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      ),
+                      onPressed: () => onSkip(s),
+                      icon: const Icon(Icons.skip_next),
+                      label: Text(s.kind.label),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+}
+
+/// The server's picture of the video at [at], [width] wide. The server keeps them in sheets of
+/// many pictures; the sheet is loaded once and only the right part of it is shown.
+class TrickplayTile extends StatelessWidget {
+  const TrickplayTile({super.key, required this.extras, required this.at, required this.headers, this.width = 176});
+
+  final VideoExtras extras;
+  final Duration at;
+  final Map<String, String> headers;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = extras.trickplay!;
+    final tile = t.tileAt(at);
+    // Decoded no larger than it is shown: a whole sheet at full size is tens of megabytes.
+    final tileWidth = math.min(t.width, (width * MediaQuery.devicePixelRatioOf(context)).ceil());
+    final tileHeight = t.height * tileWidth / t.width;
+    final sheet = ResizeImage(
+      NetworkImage(extras.sheetUrl!(tile.sheet).toString(), headers: headers),
+      width: t.columns * tileWidth,
+      allowUpscaling: false,
+    );
+    return Container(
+      width: width,
+      height: width * t.height / t.width,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        border: Border.all(color: Colors.white70),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: FittedBox(
+        fit: BoxFit.fill,
+        child: SizedBox(
+          width: tileWidth.toDouble(),
+          height: tileHeight,
+          child: ClipRect(
+            child: OverflowBox(
+              alignment: Alignment.topLeft,
+              minWidth: 0,
+              minHeight: 0,
+              maxWidth: double.infinity,
+              maxHeight: double.infinity,
+              child: Transform.translate(
+                offset: Offset(-tile.column * tileWidth.toDouble(), -tile.row * tileHeight),
+                child: Image(
+                  image: sheet,
+                  filterQuality: FilterQuality.medium,
+                  errorBuilder: (_, e, _) {
+                    debugPrint('homeplay trickplay sheet ${tile.sheet}: $e');
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

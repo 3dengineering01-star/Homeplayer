@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/account.dart';
+import '../services/mojibake.dart';
 import 'lyrics.dart';
 import '../services/account_store.dart';
 import '../services/quality.dart';
@@ -102,7 +103,7 @@ class SubsonicClient {
         for (final a in ((group as Map)['artist'] as List?) ?? const [])
           SubsonicEntry(
             id: '${a['id']}',
-            title: '${a['name']}',
+            title: fixMojibake('${a['name']}'),
             subtitle: a['albumCount'] != null ? '${a['albumCount']} albums' : null,
             coverArt: a['coverArt'] as String?,
           ),
@@ -116,7 +117,7 @@ class SubsonicClient {
       for (final a in list)
         SubsonicEntry(
           id: '${a['id']}',
-          title: '${a['name'] ?? a['title']}',
+          title: fixMojibake('${a['name'] ?? a['title']}'),
           subtitle: a['year']?.toString(),
           coverArt: a['coverArt'] as String?,
         ),
@@ -137,8 +138,8 @@ class SubsonicClient {
       for (final a in ((r['albumList2'] as Map?)?['album'] as List?) ?? const [])
         SubsonicEntry(
           id: '${a['id']}',
-          title: '${a['name'] ?? a['title']}'.trim(),
-          subtitle: (a['artist'] as String?)?.trim(),
+          title: fixMojibake('${a['name'] ?? a['title']}'.trim()),
+          subtitle: _mended(a['artist']),
           coverArt: a['coverArt'] as String?,
           starred: a['starred'] != null,
         ),
@@ -157,10 +158,16 @@ class SubsonicClient {
     return [for (final s in ((r['starred2'] as Map?)?['song'] as List?) ?? const []) _song(s as Map)];
   }
 
+  /// Text from the server, mended when old tags garbled it (see mojibake.dart).
+  static String? _mended(Object? v) {
+    final t = (v as String?)?.trim();
+    return t == null ? null : fixMojibake(t);
+  }
+
   static SubsonicEntry _song(Map s) => SubsonicEntry(
         id: '${s['id']}',
-        title: '${s['title']}'.trim(),
-        subtitle: (s['artist'] as String?)?.trim(),
+        title: fixMojibake('${s['title']}'.trim()),
+        subtitle: _mended(s['artist']),
         coverArt: s['coverArt'] as String?,
         duration: s['duration'] is num ? Duration(seconds: (s['duration'] as num).toInt()) : null,
         starred: s['starred'] != null,
