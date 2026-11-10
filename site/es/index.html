@@ -74,10 +74,10 @@
         Navidrome. Casi cualquier archivo se reproduce tal cual, en casa y fuera, sin enviar nada a ningún otro
         sitio.</p>
       <div class="btn-row">
-        <a class="btn" href="../download/OwnMedia.apk" download type="application/vnd.android.package-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg> Descargar para Android</a>
+        <a class="btn" href="https://play.google.com/store/apps/details?id=dev.homeplay.homeplay" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4.5v15l12-7.5z"/></svg> Disponible en Google Play</a>
         <a class="btn btn-glass" href="../es/guides/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 7h8M8 11h8"/><circle cx="12" cy="16.5" r="1.5"/></svg> Prepara tu servidor</a>
       </div>
-      <p class="hero-note">Versión 0.3.20 para teléfonos Android. Si el teléfono avisa de un desarrollador desconocido, toca <i>Más detalles</i> → <i>Instalar de todas formas</i>. La app te avisa cuando sale una versión nueva.<small>Pronto en Google Play.</small></p>
+      <p class="hero-note">Versión 0.3.20. ¿Tu teléfono no tiene Google Play? <a href="../download/OwnMedia.apk" download type="application/vnd.android.package-archive">Descarga el archivo de la app</a>.</p>
       <ul class="hero-points">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg> Sin cuenta</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg> Sin anuncios</li>
@@ -188,7 +188,7 @@
         <li>Antes, en 0.3.14 y 0.3.15: un inicio para la música, Instant Mix, letras sincronizadas, álbumes sin
           pausas, canciones guardadas por adelantado para zonas sin cobertura y un ahorro de datos móviles.</li>
       </ul>
-      <div class="btn-row"><a class="btn" href="../download/OwnMedia.apk" download type="application/vnd.android.package-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg> Descargar para Android</a></div>
+      <div class="btn-row"><a class="btn" href="https://play.google.com/store/apps/details?id=dev.homeplay.homeplay" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4.5v15l12-7.5z"/></svg> Disponible en Google Play</a></div>
     </div>
     <div class="whatsnew-shots"></div>
   </div>
@@ -389,53 +389,6 @@
         </div>
       </details>
     </div>
-  </div>
-</section>
-
-<section id="play">
-  <span id="beta"></span><span id="waitlist"></span>
-  <div class="wrap beta">
-    <div>
-      <h2>Pronto en Google Play</h2>
-      <p class="lead">OwnMedia ya funciona hoy: <a href="../es/download/#android">descárgala aquí</a>. También
-        está de camino a Google Play. Déjanos tu correo si quieres un mensaje cuando esté allí.</p>
-      <ul>
-        <li>Un solo correo cuando OwnMedia esté en Google Play. Sin boletines, sin spam.</li>
-        <li>Google pide a las apps nuevas una prueba cerrada de 14 días. Si puedes ayudar, marca la
-          casilla.</li>
-        <li>Tus respuestas van a Formspree, el servicio que entrega este formulario, y solo se usan para
-          esto.</li>
-      </ul>
-    </div>
-    <form id="beta-form" class="glass" novalidate>
-      <div class="field">
-        <label for="email">Correo electrónico</label>
-        <input id="email" name="email" type="email" required autocomplete="email" placeholder="nombre@ejemplo.com" aria-describedby="email-error">
-        <p class="field-error" id="email-error" hidden></p>
-      </div>
-      <fieldset class="field choices">
-        <legend>¿Qué servidor usas? <span class="hint">(elige todos los que correspondan)</span></legend>
-        <label class="choice"><input type="checkbox" name="server" value="jellyfin"><span>Jellyfin</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="navidrome"><span>Navidrome / Subsonic</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="plex"><span>Plex</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="emby"><span>Emby</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="nas"><span>Un NAS o una carpeta compartida</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="none"><span>Nada todavía</span></label>
-      </fieldset>
-      <div class="field">
-        <label for="pain">¿Qué es lo que más te molesta de tu reproductor actual? <span class="hint">(opcional)</span></label>
-        <textarea id="pain" name="pain" maxlength="1000"></textarea>
-      </div>
-      <div class="field">
-        <label class="check"><input type="checkbox" name="tester" value="yes">
-          <span>Puedo probar la app durante 14 días <span class="hint">Opcional. Google pide una prueba cerrada antes de publicar una app.</span></span></label>
-      </div>
-      <div class="hp" aria-hidden="true"><label>Déjalo vacío <input type="text" name="_gotcha" tabindex="-1" autocomplete="off"></label></div>
-      <button class="btn" type="submit">Avísame</button>
-      <div id="form-status" role="status" aria-live="polite"></div>
-      <p class="form-note">Al enviarlo aceptas que te escribamos sobre OwnMedia en Google Play. Consulta la
-        <a href="../privacy/#website">política de privacidad</a> (en inglés).</p>
-    </form>
   </div>
 </section>
 </main>

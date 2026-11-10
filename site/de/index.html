@@ -74,10 +74,10 @@
         Navidrome-Server. Fast jede Datei läuft so, wie sie ist, zu Hause und unterwegs, und nichts geht
         irgendwo anders hin.</p>
       <div class="btn-row">
-        <a class="btn" href="../download/OwnMedia.apk" download type="application/vnd.android.package-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg> Für Android herunterladen</a>
+        <a class="btn" href="https://play.google.com/store/apps/details?id=dev.homeplay.homeplay" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4.5v15l12-7.5z"/></svg> Bei Google Play laden</a>
         <a class="btn btn-glass" href="../de/guides/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 7h8M8 11h8"/><circle cx="12" cy="16.5" r="1.5"/></svg> Server einrichten</a>
       </div>
-      <p class="hero-note">Version 0.3.20 für Android-Handys. Warnt das Handy vor einem unbekannten Entwickler, tippe auf <i>Weitere Details</i> → <i>Trotzdem installieren</i>. Die App sagt dir, wenn eine neue Version da ist.<small>Bald bei Google Play.</small></p>
+      <p class="hero-note">Version 0.3.20. Kein Google Play auf dem Handy? <a href="../download/OwnMedia.apk" download type="application/vnd.android.package-archive">App-Datei herunterladen</a>.</p>
       <ul class="hero-points">
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg> Kein Konto</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg> Keine Werbung</li>
@@ -190,7 +190,7 @@
         <li>Davor, in 0.3.14 und 0.3.15: eine Startseite für Musik, Instant Mix, mitlaufende Songtexte,
           lückenlose Alben, vorab gespeicherte Songs für Funklöcher und ein Datensparmodus fürs Mobilfunknetz.</li>
       </ul>
-      <div class="btn-row"><a class="btn" href="../download/OwnMedia.apk" download type="application/vnd.android.package-archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg> Für Android herunterladen</a></div>
+      <div class="btn-row"><a class="btn" href="https://play.google.com/store/apps/details?id=dev.homeplay.homeplay" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7 4.5v15l12-7.5z"/></svg> Bei Google Play laden</a></div>
     </div>
     <div class="whatsnew-shots"></div>
   </div>
@@ -395,54 +395,6 @@
         </div>
       </details>
     </div>
-  </div>
-</section>
-
-<section id="play">
-  <span id="beta"></span><span id="waitlist"></span>
-  <div class="wrap beta">
-    <div>
-      <h2>Bald bei Google Play</h2>
-      <p class="lead">OwnMedia funktioniert schon heute: <a href="../de/download/#android">hier
-        herunterladen</a>. Außerdem ist es auf dem Weg zu Google Play. Hinterlasse deine E-Mail, wenn du eine
-        Nachricht möchtest, sobald es dort ist.</p>
-      <ul>
-        <li>Eine E-Mail, wenn OwnMedia bei Google Play ist. Kein Newsletter, kein Spam.</li>
-        <li>Google verlangt von neuen Apps zuerst einen geschlossenen Test über 14 Tage. Wenn du helfen
-          kannst, setz das Häkchen.</li>
-        <li>Deine Antworten gehen an Formspree, den Dienst, der dieses Formular zustellt, und werden nur dafür
-          verwendet.</li>
-      </ul>
-    </div>
-    <form id="beta-form" class="glass" novalidate>
-      <div class="field">
-        <label for="email">E-Mail</label>
-        <input id="email" name="email" type="email" required autocomplete="email" placeholder="name@example.com" aria-describedby="email-error">
-        <p class="field-error" id="email-error" hidden></p>
-      </div>
-      <fieldset class="field choices">
-        <legend>Welchen Server nutzt du? <span class="hint">(alles Zutreffende wählen)</span></legend>
-        <label class="choice"><input type="checkbox" name="server" value="jellyfin"><span>Jellyfin</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="navidrome"><span>Navidrome / Subsonic</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="plex"><span>Plex</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="emby"><span>Emby</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="nas"><span>Ein NAS oder freigegebener Ordner</span></label>
-        <label class="choice"><input type="checkbox" name="server" value="none"><span>Noch nichts</span></label>
-      </fieldset>
-      <div class="field">
-        <label for="pain">Was stört dich an deinem jetzigen Player am meisten? <span class="hint">(optional)</span></label>
-        <textarea id="pain" name="pain" maxlength="1000"></textarea>
-      </div>
-      <div class="field">
-        <label class="check"><input type="checkbox" name="tester" value="yes">
-          <span>Ich kann die App 14 Tage lang testen <span class="hint">Optional. Google verlangt einen geschlossenen Test, bevor eine App öffentlich wird.</span></span></label>
-      </div>
-      <div class="hp" aria-hidden="true"><label>Leer lassen <input type="text" name="_gotcha" tabindex="-1" autocomplete="off"></label></div>
-      <button class="btn" type="submit">Benachrichtigen</button>
-      <div id="form-status" role="status" aria-live="polite"></div>
-      <p class="form-note">Mit dem Absenden bist du einverstanden, dass wir dir wegen OwnMedia bei Google Play
-        schreiben. Siehe die <a href="../privacy/#website">Datenschutzerklärung</a> (auf Englisch).</p>
-    </form>
   </div>
 </section>
 </main>

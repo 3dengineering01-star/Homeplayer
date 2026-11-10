@@ -61,6 +61,12 @@ UI = {
                      "your browser. The app tells you when a new version is out; it installs over the old one, "
                      "and your servers and settings stay."),
         "android_state": "The app for your phone: movies, shows, music and photos from your servers.",
+        "play_line": "On Google Play",
+        "play_line_soon": "Coming to Google Play",
+        "apk_note_play": "Version {v}. No Google Play on your phone? {a}Download the app file</a>.",
+        "apk_meta_play": ("No Google Play on your phone? {a}Download the app file</a> (version {v}, {mb} MB). "
+                          "{warn} If it asks, allow installing apps from your browser. The app tells you when a "
+                          "new version is out."),
         "og_alt": "OwnMedia: movies, music and photos from your own server",
     },
     "de": {
@@ -113,6 +119,12 @@ UI = {
                      "Installation von Apps aus deinem Browser. Die App sagt dir, wenn eine neue Version da ist; "
                      "sie wird über die alte installiert, deine Server und Einstellungen bleiben."),
         "android_state": "Die App für dein Handy: Filme, Serien, Musik und Fotos von deinen Servern.",
+        "play_line": "Bei Google Play",
+        "play_line_soon": "Bald bei Google Play",
+        "apk_note_play": "Version {v}. Kein Google Play auf dem Handy? {a}App-Datei herunterladen</a>.",
+        "apk_meta_play": ("Kein Google Play auf dem Handy? {a}Lade die App-Datei herunter</a> (Version {v}, "
+                          "{mb} MB). {warn} Wenn das Handy fragt, erlaube die Installation von Apps aus deinem "
+                          "Browser. Die App sagt dir, wenn eine neue Version da ist."),
         "og_alt": "OwnMedia: Filme, Musik und Fotos von deinem eigenen Server",
     },
     "fr": {
@@ -167,6 +179,12 @@ UI = {
                      f"version sort{NBSP}; elle s’installe par-dessus l’ancienne, et vos serveurs et réglages "
                      "sont conservés."),
         "android_state": f"L’app pour votre téléphone{NBSP}: films, séries, musique et photos de vos serveurs.",
+        "play_line": "Sur Google Play",
+        "play_line_soon": "Bientôt sur Google Play",
+        "apk_note_play": f"Version {{v}}. Pas de Google Play sur votre téléphone{NBSP}? {{a}}Téléchargez le fichier de l’app</a>.",
+        "apk_meta_play": (f"Pas de Google Play sur votre téléphone{NBSP}? {{a}}Téléchargez le fichier de l’app</a> "
+                          "(version {v}, {mb} Mo). {warn} Si on vous le demande, autorisez l’installation "
+                          "d’applications depuis votre navigateur. L’app vous prévient quand une nouvelle version sort."),
         "og_alt": f"OwnMedia{NBSP}: films, musique et photos de votre propre serveur",
     },
     "es": {
@@ -219,6 +237,12 @@ UI = {
                      "desde tu navegador. La app te avisa cuando sale una versión nueva; se instala encima de la "
                      "anterior y tus servidores y ajustes se conservan."),
         "android_state": "La app para tu teléfono: películas, series, música y fotos de tus servidores.",
+        "play_line": "En Google Play",
+        "play_line_soon": "Pronto en Google Play",
+        "apk_note_play": "Versión {v}. ¿Tu teléfono no tiene Google Play? {a}Descarga el archivo de la app</a>.",
+        "apk_meta_play": ("¿Tu teléfono no tiene Google Play? {a}Descarga el archivo de la app</a> (versión {v}, "
+                          "{mb} MB). {warn} Si te lo pide, permite instalar apps desde tu navegador. La app te "
+                          "avisa cuando sale una versión nueva."),
         "og_alt": "OwnMedia: películas, música y fotos de tu propio servidor",
     },
 }
