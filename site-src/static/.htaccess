@@ -61,6 +61,13 @@ AddType application/vnd.android.package-archive .apk
   </IfModule>
 </FilesMatch>
 
+# Files, not pages: the app, the installer and the font licence stay out of search results.
+<FilesMatch "\.(apk|exe)$|^OFL-.*\.txt$">
+  <IfModule mod_headers.c>
+    Header set X-Robots-Tag "noindex"
+  </IfModule>
+</FilesMatch>
+
 # The app asks for version.json once a day to offer an update: never answer from a stale copy.
 <Files "version.json">
   <IfModule mod_headers.c>
