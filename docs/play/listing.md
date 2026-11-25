@@ -249,6 +249,53 @@ OwnMedia es una app independiente, sin relación con Jellyfin ni Navidrome.
 
 **Категория:** Music & Audio.
 
+## Что нового в 0.3.21 (до 500 символов на язык)
+
+en-US:
+```
+• "Skip intro" and "Skip credits" in the video player, where your Jellyfin server marks them (for example with Intro Skipper).
+• A picture of the place you seek to, when Jellyfin has trickplay on.
+• Arrange and hide the libraries on a server's front page: ⋮ → Arrange libraries.
+• Names garbled by old MP3 tags show right.
+• A compilation without an album artist stays one album.
+```
+
+ru-RU:
+```
+• Кнопки «Skip intro» и «Skip credits» в видеоплеере, если сервер Jellyfin отмечает заставки (например, плагином Intro Skipper).
+• Кадр того места, куда перематываете, если в Jellyfin включён trickplay.
+• Библиотеки сервера можно переставить и спрятать: ⋮ → Arrange libraries.
+• Названия, испорченные старыми тегами MP3, показываются правильно.
+• Сборник без исполнителя альбома не распадается на части.
+```
+
+de-DE:
+```
+• „Skip intro“ und „Skip credits“ im Videoplayer, wenn dein Jellyfin-Server sie markiert (z. B. mit Intro Skipper).
+• Ein Bild der Stelle, zu der du spulst, wenn Trickplay in Jellyfin an ist.
+• Bibliotheken eines Servers ordnen und ausblenden: ⋮ → Arrange libraries.
+• Von alten MP3-Tags verstümmelte Namen erscheinen richtig.
+• Ein Sampler ohne Albuminterpreten bleibt ein Album.
+```
+
+fr-FR:
+```
+• « Skip intro » et « Skip credits » dans le lecteur vidéo, si votre serveur Jellyfin les repère (par exemple avec Intro Skipper).
+• L'image de l'endroit où vous avancez, si trickplay est activé dans Jellyfin.
+• Rangez et masquez les bibliothèques d'un serveur : ⋮ → Arrange libraries.
+• Les noms abîmés par de vieux tags MP3 s'affichent correctement.
+• Une compilation sans artiste d'album reste un seul album.
+```
+
+es-ES:
+```
+• «Skip intro» y «Skip credits» en el reproductor de vídeo, si tu servidor Jellyfin los marca (por ejemplo, con Intro Skipper).
+• Una imagen del punto al que avanzas, si trickplay está activado en Jellyfin.
+• Ordena y oculta las bibliotecas de un servidor: ⋮ → Arrange libraries.
+• Los nombres estropeados por etiquetas MP3 antiguas se ven bien.
+• Un recopilatorio sin artista del álbum queda como un solo álbum.
+```
+
 ## Что нового в 0.3.20 (до 500 символов на язык)
 
 en-US:
