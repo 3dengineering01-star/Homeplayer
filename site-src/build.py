@@ -28,6 +28,7 @@ No third-party code: Python's standard library only.
 
 import hashlib
 import html
+import json
 import os
 import json
 import re
@@ -329,6 +330,33 @@ def footer(sn, lang, key, keys):
 </footer>"""
 
 
+def app_data(meta, sn, url):
+    """On the front page, what search engines read about the app (schema.org): an Android app,
+    free, from this company, in Google Play. Not run by browsers, so the CSP leaves it alone."""
+    if meta["path"] != "" or meta.get("noindex"):
+        return ""
+    app = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "OwnMedia",
+        "description": meta["description"],
+        "url": url,
+        "inLanguage": meta["lang"],
+        "operatingSystem": "Android",
+        "applicationCategory": "MultimediaApplication",
+        "image": sn["SITE_URL"] + "/img/apple-touch-icon.png",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
+        "publisher": {"@type": "Organization", "name": sn["COMPANY_NAME"], "url": sn["SITE_URL"]},
+    }
+    if sn.get("PLAY_URL"):
+        app["installUrl"] = sn["PLAY_URL"]
+        app["downloadUrl"] = sn["PLAY_URL"]
+    if sn.get("APP_VERSION"):
+        app["softwareVersion"] = html.unescape(sn["APP_VERSION"])
+    text = json.dumps(app, ensure_ascii=False).replace("</", "<\\/")
+    return f'\n<script type="application/ld+json">{text}</script>'
+
+
 def page(meta, body, sn, asset_v, keys):
     key, lang = meta["path"], meta["lang"]
     path = prefix(lang) + key
@@ -360,7 +388,7 @@ def page(meta, body, sn, asset_v, keys):
 <meta http-equiv="Content-Security-Policy" content="{CSP}">
 <title>{title_e}</title>
 <meta name="description" content="{desc_e}">{robots}
-<link rel="canonical" href="{url}">{alternates}
+<link rel="canonical" href="{url}">{alternates}{app_data(meta, sn, url)}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OwnMedia">
 <meta property="og:locale" content="{OG_LOCALE[lang]}">
