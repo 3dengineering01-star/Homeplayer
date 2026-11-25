@@ -11,12 +11,12 @@
 
 **Название** (27): `OwnMedia: home media player`
 
-**Краткое описание** (80): `Your movies, music and photos from your home server. No subscriptions, no cloud.`
+**Краткое описание** (74): `Play your Jellyfin & Navidrome movies, music and photos. No subscriptions.`
 
-**Полное описание** (2685):
+**Полное описание** (2768):
 
 ```
-OwnMedia plays your movies, shows, music and photos straight from your home server. Everything stays with you: no subscriptions to someone else's service, and your files and data go nowhere else.
+OwnMedia is a video and music player for Jellyfin, Navidrome and other Subsonic servers: it plays your movies, shows, music and photos straight from your home server. Everything stays with you: no subscriptions to someone else's service, and your files and data go nowhere else.
 
 WHAT YOU NEED
 A computer or a network storage drive with the free Jellyfin or Navidrome program. No server yet? An ordinary Windows computer becomes one in a few minutes: the program from ownmedia.app sets everything up for you.
@@ -59,12 +59,12 @@ OwnMedia is an independent app, not affiliated with Jellyfin or Navidrome.
 
 **Название** (29): `OwnMedia: домашний медиаплеер`
 
-**Краткое описание** (71): `Ваши фильмы, музыка и фото с домашнего сервера. Без подписок и облаков.`
+**Краткое описание** (73): `Плеер для Jellyfin и Navidrome: ваши фильмы, музыка и фото. Без подписок.`
 
-**Полное описание** (2724):
+**Полное описание** (2805):
 
 ```
-OwnMedia показывает ваши фильмы, сериалы, музыку и фото прямо с домашнего сервера. Всё остаётся у вас: никаких подписок на чужие сервисы, ваши файлы и данные никуда не уходят.
+OwnMedia — видео- и музыкальный плеер для Jellyfin, Navidrome и других серверов Subsonic: показывает ваши фильмы, сериалы, музыку и фото прямо с домашнего сервера. Всё остаётся у вас: никаких подписок на чужие сервисы, ваши файлы и данные никуда не уходят.
 
 ЧТО НУЖНО ДЛЯ РАБОТЫ
 Компьютер или сетевое хранилище с бесплатной программой Jellyfin или Navidrome. Нет сервера? Обычный компьютер с Windows станет им за несколько минут — программа с сайта ownmedia.app всё настроит сама.
@@ -107,12 +107,12 @@ OwnMedia — независимое приложение, не связанно�
 
 **Название** (26): `OwnMedia: Heim-Mediaplayer`
 
-**Краткое описание** (77): `Deine Filme, Musik und Fotos vom eigenen Heimserver. Ohne Abo und ohne Cloud.`
+**Краткое описание** (74): `Player für Jellyfin und Navidrome: deine Filme, Musik und Fotos. Ohne Abo.`
 
-**Полное описание** (2993):
+**Полное описание** (3079):
 
 ```
-OwnMedia zeigt deine Filme, Serien, Musik und Fotos direkt von deinem Heimserver. Alles bleibt bei dir: kein Abo bei fremden Diensten, und deine Dateien und Daten gehen nirgendwohin.
+OwnMedia ist ein Video- und Musikplayer für Jellyfin, Navidrome und andere Subsonic-Server: Er zeigt deine Filme, Serien, Musik und Fotos direkt von deinem Heimserver. Alles bleibt bei dir: kein Abo bei fremden Diensten, und deine Dateien und Daten gehen nirgendwohin.
 
 WAS DU BRAUCHST
 Einen Computer oder ein Netzlaufwerk (NAS) mit dem kostenlosen Programm Jellyfin oder Navidrome. Noch kein Server? Ein normaler Windows-Computer wird in wenigen Minuten zu einem: Das Programm von ownmedia.app richtet alles für dich ein.
@@ -155,12 +155,12 @@ OwnMedia ist eine unabhängige App und steht in keiner Verbindung zu Jellyfin od
 
 **Название** (29): `OwnMedia : lecteur multimédia`
 
-**Краткое описание** (75): `Vos films, musiques et photos depuis votre serveur maison. Sans abonnement.`
+**Краткое описание** (78): `Lecteur Jellyfin et Navidrome : vos films, musique et photos. Sans abonnement.`
 
-**Полное описание** (3204):
+**Полное описание** (3298):
 
 ```
-OwnMedia affiche vos films, séries, musiques et photos directement depuis votre serveur à la maison. Tout reste chez vous : aucun abonnement à un service tiers, vos fichiers et vos données ne partent nulle part.
+OwnMedia est un lecteur vidéo et musique pour Jellyfin, Navidrome et les autres serveurs Subsonic : il affiche vos films, séries, musiques et photos directement depuis votre serveur à la maison. Tout reste chez vous : aucun abonnement à un service tiers, vos fichiers et vos données ne partent nulle part.
 
 CE QU'IL VOUS FAUT
 Un ordinateur ou un stockage réseau (NAS) avec le logiciel gratuit Jellyfin ou Navidrome. Pas encore de serveur ? Un ordinateur Windows ordinaire en devient un en quelques minutes : le programme du site ownmedia.app configure tout pour vous.
@@ -203,12 +203,12 @@ OwnMedia est une application indépendante, sans lien avec Jellyfin ni Navidrome
 
 **Название** (28): `OwnMedia: multimedia en casa`
 
-**Краткое описание** (75): `Tus películas, música y fotos desde tu servidor en casa. Sin suscripciones.`
+**Краткое описание** (76): `Reproductor Jellyfin y Navidrome: tus películas, música y fotos. Sin cuotas.`
 
-**Полное описание** (2957):
+**Полное описание** (3047):
 
 ```
-OwnMedia muestra tus películas, series, música y fotos directamente desde tu servidor en casa. Todo se queda contigo: sin suscripciones a servicios ajenos, y tus archivos y datos no van a ningún otro sitio.
+OwnMedia es un reproductor de vídeo y música para Jellyfin, Navidrome y otros servidores Subsonic: muestra tus películas, series, música y fotos directamente desde tu servidor en casa. Todo se queda contigo: sin suscripciones a servicios ajenos, y tus archivos y datos no van a ningún otro sitio.
 
 QUÉ NECESITAS
 Un ordenador o un almacenamiento en red (NAS) con el programa gratuito Jellyfin o Navidrome. ¿Aún no tienes servidor? Un ordenador normal con Windows se convierte en uno en pocos minutos: el programa de ownmedia.app lo configura todo por ti.
